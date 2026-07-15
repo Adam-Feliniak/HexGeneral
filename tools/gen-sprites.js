@@ -541,6 +541,70 @@ function craneGrid() {
   return toRows(g);
 }
 
+// ---------- złoża surowców 30x28 ----------
+
+// szyb naftowy: żółty kiwon (koń pompowy) na stalowym podeście, z kałużą ropy
+function resOil() {
+  const g = makeGrid(30, 28);
+  rect(g, 4, 24, 22, 3, 'g');            // podest
+  rect(g, 4, 24, 22, 1, 'G');
+  for (let j = 0; j < 14; j++) {         // trójnóg
+    P(g, Math.round(14 - j / 3), 10 + j, 'g');
+    P(g, Math.round(14 - j / 3) + 1, 10 + j, 'g');
+    P(g, Math.round(14 + j / 3), 10 + j, 'g');
+    P(g, Math.round(14 + j / 3) + 1, 10 + j, 'g');
+  }
+  rect(g, 3, 8, 24, 3, 'y');             // belka wahacza
+  rect(g, 3, 10, 24, 1, 'Y');
+  ellipseFill(g, 5, 9.5, 3, 3, 'g');     // przeciwwaga
+  ellipseFill(g, 4, 8.5, 1.4, 1.4, 'G');
+  rect(g, 25, 11, 4, 6, 'Y');            // łeb kiwona
+  rect(g, 27, 17, 1, 7, 'e');            // żerdź
+  outline(g);
+  ellipseFill(g, 24, 26.5, 4, 1.4, 'e'); // kałuża ropy (bez konturu)
+  return toRows(g);
+}
+
+// pole uprawne: łan zboża w rządkach + mały wiatrak
+function resFarm() {
+  const g = makeGrid(30, 28);
+  ellipseFill(g, 15, 20, 13, 7, 's');    // łan
+  for (let y = 15; y <= 26; y += 3) {    // rządki
+    for (let x = 3; x <= 27; x++) if (g[y][x] === 's') g[y][x] = 'S';
+  }
+  for (let y = 13; y <= 26; y++) {       // kłosy
+    for (let x = 3; x <= 27; x++) {
+      if (g[y][x] === 's' && (x * 7 + y * 5) % 11 === 0) g[y][x] = 'z';
+    }
+  }
+  for (let j = 1; j <= 4; j++) {         // śmigła wiatraka
+    P(g, 6 - j, 6 - j, 'W'); P(g, 6 + j, 6 + j, 'W');
+    P(g, 6 - j, 6 + j, 'W'); P(g, 6 + j, 6 - j, 'W');
+  }
+  P(g, 6, 6, 'e');
+  rect(g, 4, 8, 4, 9, 'd');              // wieżyczka
+  rect(g, 6, 8, 1, 9, 'D');
+  outline(g);
+  return toRows(g);
+}
+
+// kopalnia: hałda z obudowanym wejściem i wagonikiem
+function resMine() {
+  const g = makeGrid(30, 28);
+  ellipseFill(g, 15, 17, 13, 9, 'r');    // hałda
+  ellipseFill(g, 10, 12, 6, 3.5, 'w');
+  ellipseFill(g, 21, 21, 6, 3, 'R');
+  rect(g, 10, 15, 9, 11, 'e');           // wejście
+  rect(g, 9, 14, 11, 1, 'k');            // drewniana obudowa
+  rect(g, 9, 14, 1, 12, 'k');
+  rect(g, 19, 14, 1, 12, 'K');
+  rect(g, 22, 21, 6, 4, 'g');            // wagonik
+  rect(g, 22, 21, 6, 1, 'G');
+  P(g, 23, 25, 'e'); P(g, 26, 25, 'e');
+  outline(g);
+  return toRows(g);
+}
+
 // ---------- drzewa 26x28 — dwa warianty ----------
 
 // posiane deterministycznie plamki tekstury w koronie
@@ -888,6 +952,9 @@ const hq = img => dropShadow(img);
 save('city_port', hq(gridToPixels(cityPort(), BASE_PAL)));
 save('crane', hq(gridToPixels(craneGrid(), BASE_PAL)));
 [tree0(), tree1()].forEach((rows, i) => save('tree_' + i, hq(gridToPixels(rows, BASE_PAL))));
+save('res_oil', hq(gridToPixels(resOil(), BASE_PAL)));
+save('res_farm', hq(gridToPixels(resFarm(), BASE_PAL)));
+save('res_mine', hq(gridToPixels(resMine(), BASE_PAL)));
 [rock0(), rock1()].forEach((rows, i) => save('rock_' + i, hq(gridToPixels(rows, BASE_PAL))));
 for (let v = 0; v < 3; v++) {
   save('hex_sand_' + v, sandTile(v));

@@ -12,6 +12,7 @@ const HEX_W = Math.sqrt(3) * HEX;     // szerokość heksa (pointy-top)
 const MOVES_PER_TURN = 5;
 const MAX_ARMY = 99;
 const CITY_COUNT = 16;
+const RESOURCE_COUNT = 6;             // złoża surowców na mapie
 
 const PLAYERS_DEF = [
   { name: 'Karmazynia', color: '#d64550', dark: '#8c2530', isHuman: true },
@@ -123,6 +124,7 @@ function generateMap() {
         c, r,
         land: land[r][c],
         city: null,       // { name, capitalOf, port }
+        resource: null,   // 'oil' | 'farm' | 'mine'
         owner: -1,
         army: null,       // { player, str, vet, moved }
         shade: rnd(-1, 1), // drobna wariacja koloru terenu
@@ -158,6 +160,21 @@ function generateMap() {
     if (!t.city) continue;
     t.city.port = neighborCoords(t.c, t.r)
       .some(([nc, nr]) => inBounds(nc, nr) && !tiles[nr][nc].land);
+  }
+
+  // złoża surowców: typ zależy od terenu (trawa/piach/skały)
+  const resSpots = shuffle(tiles.flat().filter(t => t.land && !t.city));
+  let resPlaced = 0;
+  for (const t of resSpots) {
+    if (resPlaced >= RESOURCE_COUNT) break;
+    let ok = true;
+    for (const row of tiles) for (const o of row) {
+      if ((o.city && hexDist(t.c, t.r, o.c, o.r) < 2) ||
+          (o.resource && hexDist(t.c, t.r, o.c, o.r) < 3)) { ok = false; break; }
+    }
+    if (!ok) continue;
+    t.resource = t.shade < -0.45 ? 'mine' : t.shade > 0.15 ? 'farm' : 'oil';
+    resPlaced++;
   }
 
   // linia brzegowa: ląd zapamiętuje krawędzie z wodą (piana),
@@ -378,9 +395,25 @@ function executeMove(from, to) {
 
 // ---------- Produkcja ----------
 function produce(playerId) {
+  const cities = [];
   for (const row of state.tiles) for (const t of row) {
-    if (!t.city || t.owner !== playerId) continue;
-    const gain = (t.city.capitalOf === playerId) ? 3 : 1;
+    if (t.city && t.owner === playerId) cities.push(t);
+  }
+  // każde własne złoże dodaje +1 produkcji najbliższemu własnemu miastu
+  const bonus = new Map();
+  if (cities.length) {
+    for (const row of state.tiles) for (const t of row) {
+      if (!t.resource || t.owner !== playerId) continue;
+      let best = null, bd = Infinity;
+      for (const c of cities) {
+        const d = hexDist(t.c, t.r, c.c, c.r);
+        if (d < bd) { bd = d; best = c; }
+      }
+      bonus.set(best, (bonus.get(best) || 0) + 1);
+    }
+  }
+  for (const t of cities) {
+    const gain = (t.city.capitalOf === playerId ? 3 : 1) + (bonus.get(t) || 0);
     if (t.army && t.army.player === playerId) {
       t.army.str = Math.min(MAX_ARMY, t.army.str + gain);
     } else if (!t.army) {
@@ -430,6 +463,7 @@ function runAIPlayers(idx) {
 function aiTargets(playerId) {
   const targets = [];
   for (const row of state.tiles) for (const t of row) {
+    if (t.resource && t.owner !== playerId) { targets.push({ t, val: 7 }); continue; }
     if (!t.city) continue;
     if (t.owner === playerId) continue;
     let val;
@@ -589,6 +623,7 @@ function loadSprites() {
     cityPort: loadSprite('city_port'),
     crane: loadSprite('crane'),
     trees: [loadSprite('tree_0'), loadSprite('tree_1')],
+    res: { oil: loadSprite('res_oil'), farm: loadSprite('res_farm'), mine: loadSprite('res_mine') },
     rocks: [loadSprite('rock_0'), loadSprite('rock_1')],
     hexSand: [0, 1, 2].map(v => loadSprite('hex_sand_' + v)),
     hexGrass: [0, 1, 2].map(v => loadSprite('hex_grass_' + v)),
@@ -686,8 +721,15 @@ function drawTile(t) {
 }
 
 function drawDecor(t) {
-  if (!t.land || t.city || t.army) return;
+  if (!t.land || t.city) return;
   const { x, y } = hexCenter(t.c, t.r);
+  // złoże rysuje się też pod stojącą armią
+  if (t.resource) {
+    const spr = SPR.res[t.resource];
+    if (sprOk(spr)) ctx.drawImage(spr, Math.round(x - 15), Math.round(y - 16), 30, 28);
+    return;
+  }
+  if (t.army) return;
   const v = (t.c * 5 + t.r * 11) % 2; // wariant dekoracji per heks
   if (t.shade > 0.55 && sprOk(SPR.trees[v])) {
     ctx.drawImage(SPR.trees[v], Math.round(x - 13), Math.round(y - 17), 26, 28);
@@ -887,9 +929,10 @@ function updateUI() {
   const box = document.getElementById('players');
   box.innerHTML = '';
   for (const p of state.players) {
-    let cities = 0, str = 0;
+    let cities = 0, str = 0, res = 0;
     for (const row of state.tiles) for (const t of row) {
       if (t.city && t.owner === p.id) cities++;
+      if (t.resource && t.owner === p.id) res++;
       if (t.army && t.army.player === p.id) str += t.army.str;
     }
     const div = document.createElement('div');
@@ -899,7 +942,7 @@ function updateUI() {
     div.innerHTML =
       `<span class="player-dot" style="background:${p.color}"></span>` +
       `<span class="player-name">${p.name}${p.isHuman ? ' (Ty)' : ''}</span>` +
-      `<span class="player-stats">🏛 ${cities} ⚔ ${str}</span>`;
+      `<span class="player-stats">🏛 ${cities} ⛏ ${res} ⚔ ${str}</span>`;
     box.appendChild(div);
   }
 }
@@ -959,6 +1002,10 @@ function tileTooltip(t) {
     lines.push(t.city.capitalOf >= 0
       ? `★ Stolica: <b>${t.city.name}</b>`
       : `🏛 Miasto: <b>${t.city.name}</b>${t.city.port ? ' (port ⚓)' : ''}`);
+  }
+  if (t.resource) {
+    const RES_NAMES = { oil: '🛢 Szyb naftowy', farm: '🌾 Pole uprawne', mine: '⛏ Kopalnia' };
+    lines.push(`${RES_NAMES[t.resource]} — <b>+1</b> produkcji najbliższego miasta`);
   }
   if (t.army) {
     const m = Math.min(110, moraleAt(t.army.player, t) + t.army.vet);
