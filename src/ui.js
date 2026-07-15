@@ -6,15 +6,15 @@
 function updateUI() {
   if (typeof document === 'undefined' || !state || state.screen !== 'game') return;
   const cp = currentPlayer();
-  document.getElementById('turn-label').textContent = `Tura ${state.turn}`;
+  document.getElementById('turn-label').textContent = i18n.t('game.turn', { n: state.turn });
   document.getElementById('moves-label').textContent =
-    state.phase === 'over' ? 'Koniec gry'
-    : cp.isHuman ? `Ruchy: ${state.movesLeft}/${MOVES_PER_TURN}`
-    : 'Ruch przeciwników…';
+    state.phase === 'over' ? i18n.t('game.gameOver')
+    : cp.isHuman ? i18n.t('game.movesLeft', { moves: state.movesLeft, total: MOVES_PER_TURN })
+    : i18n.t('game.enemyMoving');
   document.getElementById('turn-player-label').textContent =
     state.phase === 'over' ? ''
     : state.mode === 'multi'
-      ? (cp.isHuman ? `👤 Gracz ${cp.id + 1}: ${cp.name}, twoja tura!` : `🤖 Bot ${cp.name} rozgrywa turę…`)
+      ? (cp.isHuman ? i18n.t('game.yourTurnMulti', { n: cp.id + 1, name: cp.name }) : i18n.t('game.botTurnMulti', { name: cp.name }))
       : '';
   document.getElementById('end-turn').disabled = state.phase === 'over' || !cp.isHuman;
   updateTimerDisplay(performance.now());
@@ -33,7 +33,7 @@ function updateUI() {
       + (!p.alive ? ' dead' : '')
       + (p.alive && state.phase !== 'over' && p.id === state.currentPlayerIndex ? ' active' : '');
     const icon = p.isHuman ? '👤' : '🤖';
-    const tyTag = state.mode === 'single' && p.isHuman ? ' (Ty)' : '';
+    const tyTag = state.mode === 'single' && p.isHuman ? ' ' + i18n.t('game.youTag') : '';
     const diffBadge = !p.isHuman ? `<span class="diff-badge">${resolveDifficulty(p.difficulty).label}</span>` : '';
     div.innerHTML =
       `<span class="player-dot" style="background:${p.color}"></span>` +
@@ -46,8 +46,8 @@ function updateUI() {
   if (footer) {
     const hasBots = state.players.some(p => !p.isHuman);
     footer.textContent = hasBots
-      ? `Seed: ${state.mapSeed} · Trudność botów: ${resolveDifficulty(state.aiDifficulty).label}`
-      : `Seed: ${state.mapSeed}`;
+      ? i18n.t('game.seedFooterWithDifficulty', { seed: state.mapSeed, difficulty: resolveDifficulty(state.aiDifficulty).label })
+      : i18n.t('game.seedFooter', { seed: state.mapSeed });
   }
 }
 
@@ -63,7 +63,7 @@ function updateTimerDisplay(now) {
     return;
   }
   const left = Math.max(0, Math.ceil(state.timeLimit - (now - state.turnStartTime) / 1000));
-  el.textContent = `⏱ ${left}s`;
+  el.textContent = i18n.t('game.timer', { s: left });
   el.classList.toggle('low', left <= 10);
 }
 

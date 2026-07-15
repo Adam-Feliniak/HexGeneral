@@ -11,9 +11,9 @@ function captureTile(t, playerId) {
     conquerEmpire(t.city.capitalOf, playerId);
     t.city.capitalOf = -1; // zdobyta stolica staje się zwykłym miastem
   } else if (t.city && prevOwner !== playerId && prevOwner >= 0) {
-    addLog(`<b>${state.players[playerId].name}</b> zdobywa miasto ${t.city.name}.`);
+    addLog(i18n.t('log.captureCity', { player: state.players[playerId].name, city: t.city.name }));
   } else if (t.city && prevOwner < 0) {
-    addLog(`<b>${state.players[playerId].name}</b> zajmuje ${t.city.name}.`);
+    addLog(i18n.t('log.claimCity', { player: state.players[playerId].name, city: t.city.name }));
   }
 }
 
@@ -31,8 +31,8 @@ function conquerEmpire(loserId, winnerId) {
   }
   // aneksja to też zmiana właściciela — złoża dostają świeżo wytyczone drogi
   for (const t of transferredResources) establishRoad(t, winnerId);
-  addLog(`💥 <b>${winner.name}</b> zdobywa stolicę — <b>${loser.name}</b> upada!`);
-  showBanner(`${loser.name} zostaje zaanektowana przez ${winner.name}!`);
+  addLog(i18n.t('log.conquerEmpire', { winner: winner.name, loser: loser.name }));
+  showBanner(i18n.t('banner.empireAnnexed', { loser: loser.name, winner: winner.name }));
   checkGameOver();
 }
 
@@ -42,18 +42,18 @@ function checkGameOver() {
     state.phase = 'over';
     const win = alive[0];
     if (state.mode === 'multi') {
-      showOverlay('★ ZWYCIĘSTWO! ★',
-        `Gracz ${win.id + 1}: ${win.name} jednoczy świat w turze ${state.turn}.`);
+      showOverlay(i18n.t('overlay.victoryMultiTitle'),
+        i18n.t('overlay.victoryMultiText', { n: win.id + 1, name: win.name, turn: state.turn }));
     } else {
       showOverlay(
-        win.isHuman ? '★ MISSION COMPLETE! ★' : 'GAME OVER',
+        win.isHuman ? i18n.t('overlay.missionCompleteTitle') : i18n.t('overlay.gameOverTitle'),
         win.isHuman
-          ? `Zjednoczyłeś świat pod sztandarem imperium ${win.name} w turze ${state.turn}.`
-          : `Świat podbiło imperium ${win.name}. Spróbuj jeszcze raz!`
+          ? i18n.t('overlay.missionCompleteText', { name: win.name, turn: state.turn })
+          : i18n.t('overlay.aiWinsText', { name: win.name })
       );
     }
   } else if (state.mode === 'single' && !state.players[state.human].alive && state.phase !== 'over') {
     state.phase = 'over';
-    showOverlay('GAME OVER', 'Twoja stolica padła. Spróbuj jeszcze raz!');
+    showOverlay(i18n.t('overlay.gameOverTitle'), i18n.t('overlay.capitalFellText'));
   }
 }

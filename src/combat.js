@@ -76,7 +76,7 @@ function resolveBattle(from, to) {
     att.str -= loss;
     att.vet = Math.min(15, att.vet + 4);
     floaters.push({ x: c.x, y: c.y, text: `-${def.str}`, color: '#ff7b7b', t: 0 });
-    addLog(`<b>${state.players[att.player].name}</b> rozbija armię (${def.str}) — straty ${loss}.`);
+    addLog(i18n.t('log.battleWon', { winner: state.players[att.player].name, defStr: def.str, loss }));
     to.army = null;
     return true;
   } else {
@@ -84,7 +84,7 @@ function resolveBattle(from, to) {
     def.str -= loss;
     def.vet = Math.min(15, def.vet + 4);
     floaters.push({ x: c.x, y: c.y, text: `-${att.str}`, color: '#ffd27b', t: 0 });
-    addLog(`Atak <b>${state.players[att.player].name}</b> (${att.str}) odparty — obrońca traci ${loss}.`);
+    addLog(i18n.t('log.battleLost', { attacker: state.players[att.player].name, attStr: att.str, loss }));
     from.army = null;
     return false;
   }

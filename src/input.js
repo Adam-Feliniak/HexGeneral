@@ -20,8 +20,8 @@ function switchHuman(id) {
   state.aiPlayers = state.players.filter(p => !p.isHuman).map(p => ({ id: p.id, difficulty: p.difficulty }));
   state.currentPlayerIndex = id;
   state.selected = null;
-  addLog(`Przejmujesz dowodzenie: <b>${state.players[id].name}</b>!`);
-  showBanner(`Grasz jako ${state.players[id].name}!`);
+  addLog(i18n.t('log.empireSwitch', { name: state.players[id].name }));
+  showBanner(i18n.t('banner.empireSwitch', { name: state.players[id].name }));
   updateUI();
 }
 
@@ -80,29 +80,29 @@ function canvasPos(ev) {
 
 function tileTooltip(t) {
   const lines = [];
-  if (!t.land) lines.push('🌊 Morze');
-  else if (t.owner >= 0) lines.push(`Ziemie: <b>${state.players[t.owner].name}</b>`);
-  else lines.push('Ziemia niczyja');
+  if (!t.land) lines.push(i18n.t('tooltip.sea'));
+  else if (t.owner >= 0) lines.push(i18n.t('tooltip.landOf', { player: state.players[t.owner].name }));
+  else lines.push(i18n.t('tooltip.unclaimedLand'));
   if (t.city) {
     lines.push(t.city.capitalOf >= 0
-      ? `★ Stolica: <b>${t.city.name}</b>`
-      : `🏛 Miasto: <b>${t.city.name}</b>${t.city.port ? ' (port ⚓)' : ''}`);
+      ? i18n.t('tooltip.capital', { city: t.city.name })
+      : i18n.t('tooltip.city', { city: t.city.name }) + (t.city.port ? i18n.t('tooltip.portSuffix') : ''));
   }
   if (t.resource) {
-    const RES_NAMES = { oil: '🛢 Szyb naftowy', farm: '🌾 Pole uprawne', mine: '⛏ Kopalnia' };
-    lines.push(`${RES_NAMES[t.resource]} — <b>+1</b> produkcji, gdy ma drogę do miasta`);
+    const RES_NAMES = { oil: i18n.t('tooltip.resourceOil'), farm: i18n.t('tooltip.resourceFarm'), mine: i18n.t('tooltip.resourceMine') };
+    lines.push(i18n.t('tooltip.resourceBonus', { resource: RES_NAMES[t.resource] }));
     if (t.owner >= 0) {
-      if (t.road && isRoadActive(t)) lines.push(`🚚 Zaopatruje: <b>${t.road.city.city.name}</b>`);
-      else if (t.road) lines.push('🚧 Droga przerwana przez wroga — brak dostaw');
-      else lines.push('🚧 Brak drogi do miasta — brak dostaw');
+      if (t.road && isRoadActive(t)) lines.push(i18n.t('tooltip.supplying', { city: t.road.city.city.name }));
+      else if (t.road) lines.push(i18n.t('tooltip.roadCut'));
+      else lines.push(i18n.t('tooltip.noRoad'));
     }
   }
   if (t.army) {
     const m = Math.min(110, moraleAt(t.army.player, t) + t.army.vet);
-    lines.push(`⚔ Armia ${state.players[t.army.player].name}: siła <b>${t.army.str}</b>, morale <b>${m}%</b>`);
+    lines.push(i18n.t('tooltip.army', { player: state.players[t.army.player].name, str: t.army.str, morale: m }));
   }
   if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
-    lines.push('👉 Kliknij, aby zagrać tym imperium');
+    lines.push(i18n.t('tooltip.pickEmpireHint'));
   }
   return lines.join('<br>');
 }

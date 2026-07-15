@@ -302,6 +302,18 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
   color: #fff3d6;
 }
 
+.lang-picker {
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 2px solid #16140c;
+  justify-content: center;
+}
+
+.lang-picker button {
+  flex: none;
+  min-width: 44px;
+}
+
 /* wybornik trudności ma 5 przycisków ("NIGHTMARE" najdłuższy) — węższa czcionka
    i większy min-width wymuszają zawijanie na 2 rzędy zamiast ścieśniania tekstu */
 #sp-diff-group button, #mp-diff-group button {

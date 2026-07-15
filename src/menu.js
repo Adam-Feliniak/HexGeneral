@@ -22,7 +22,7 @@ function goToScreen(name) {
 }
 
 function timeLimitLabel(t) {
-  return isFinite(t) ? `${t}s` : '∞ brak limitu';
+  return isFinite(t) ? i18n.t('lobby.mp.timeSeconds', { s: t }) : i18n.t('lobby.mp.noLimit');
 }
 
 // trudność wybrana w lobby -> wartość do newGame() (klucz presetu albo liczba 0-100)
@@ -66,7 +66,7 @@ function renderSeedGroup(groupId, inputId, previewId, setup, onChange) {
   const box = document.getElementById(groupId);
   box.innerHTML = '';
   const randBtn = document.createElement('button');
-  randBtn.textContent = 'Losowy';
+  randBtn.textContent = i18n.t('lobby.common.random');
   randBtn.className = setup.seedMode === 'random' ? 'selected' : '';
   randBtn.addEventListener('click', () => {
     setup.seedMode = 'random';
@@ -75,7 +75,7 @@ function renderSeedGroup(groupId, inputId, previewId, setup, onChange) {
   });
   box.appendChild(randBtn);
   const customBtn = document.createElement('button');
-  customBtn.textContent = 'Własny';
+  customBtn.textContent = i18n.t('lobby.common.custom');
   customBtn.className = setup.seedMode === 'custom' ? 'selected' : '';
   customBtn.addEventListener('click', () => { setup.seedMode = 'custom'; onChange(); });
   box.appendChild(customBtn);
@@ -87,9 +87,9 @@ function renderSeedGroup(groupId, inputId, previewId, setup, onChange) {
   input.oninput = () => {
     const v = parseInt(input.value, 10);
     setup.seedValue = Number.isFinite(v) ? v : setup.seedValue;
-    preview.textContent = `Seed: ${setup.seedValue}`;
+    preview.textContent = i18n.t('lobby.common.seedPreview', { seed: setup.seedValue });
   };
-  preview.textContent = `Seed: ${setup.seedValue}`;
+  preview.textContent = i18n.t('lobby.common.seedPreview', { seed: setup.seedValue });
 }
 
 function renderSpSetup() {
@@ -168,12 +168,12 @@ function renderOptions() {
   const seedBox = document.getElementById('opt-seed-group');
   seedBox.innerHTML = '';
   const noneBtn = document.createElement('button');
-  noneBtn.textContent = 'Brak (losowy)';
+  noneBtn.textContent = i18n.t('lobby.common.noneRandom');
   noneBtn.className = opt.defaultSeed == null ? 'selected' : '';
   noneBtn.addEventListener('click', () => { opt.defaultSeed = null; applyOptionsToSetups(); renderOptions(); });
   seedBox.appendChild(noneBtn);
   const customBtn = document.createElement('button');
-  customBtn.textContent = 'Własny';
+  customBtn.textContent = i18n.t('lobby.common.custom');
   customBtn.className = opt.defaultSeed != null ? 'selected' : '';
   customBtn.addEventListener('click', () => {
     if (opt.defaultSeed == null) opt.defaultSeed = randomSeed();
@@ -195,7 +195,21 @@ function renderOptions() {
   select.onchange = () => { opt.defaultDifficulty = select.value; applyOptionsToSetups(); };
 }
 
+function renderLangPicker() {
+  const box = document.getElementById('lang-picker');
+  if (!box) return;
+  box.innerHTML = '';
+  for (const lang of I18N_LANGS) {
+    const btn = document.createElement('button');
+    btn.textContent = lang.toUpperCase();
+    btn.className = i18n.lang === lang ? 'selected' : '';
+    btn.addEventListener('click', () => { i18n.setLanguage(lang); applyI18n(); });
+    box.appendChild(btn);
+  }
+}
+
 function initMenu() {
+  renderLangPicker();
   document.getElementById('menu-single').addEventListener('click', () => goToScreen('sp-setup'));
   document.getElementById('menu-multi').addEventListener('click', () => goToScreen('mp-setup'));
   document.getElementById('menu-options-btn').addEventListener('click', () => goToScreen('options'));

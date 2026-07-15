@@ -10,21 +10,22 @@
 <div id="menu-main" class="menu-screen">
   <div class="menu-box">
     <h1>⬡ Hex General</h1>
-    <button id="menu-single">Pojedynczy gracz</button>
-    <button id="menu-multi">Gra wieloosobowa</button>
-    <button id="menu-options-btn">Opcje</button>
-    <button id="menu-exit">Wyjście</button>
+    <button id="menu-single" data-i18n="menu.singlePlayer">Pojedynczy gracz</button>
+    <button id="menu-multi" data-i18n="menu.multiPlayer">Gra wieloosobowa</button>
+    <button id="menu-options-btn" data-i18n="menu.options">Opcje</button>
+    <button id="menu-exit" data-i18n="menu.exit">Wyjście</button>
+    <div id="lang-picker" class="choice-group lang-picker"></div>
   </div>
 </div>
 <div id="menu-sp-setup" class="menu-screen" hidden>
   <div class="menu-box">
-    <h2>Pojedynczy gracz</h2>
+    <h2 data-i18n="lobby.sp.title">Pojedynczy gracz</h2>
     <div class="menu-field">
-      <span>Liczba botów</span>
+      <span data-i18n="lobby.sp.botCount">Liczba botów</span>
       <div id="sp-bots-group" class="choice-group"></div>
     </div>
     <div class="menu-field">
-      <span>Trudność botów</span>
+      <span data-i18n="lobby.common.difficulty">Trudność botów</span>
       <div id="sp-diff-group" class="choice-group"></div>
       <div id="sp-diff-custom-wrap" class="custom-diff" hidden>
         <input type="range" id="sp-diff-slider" min="0" max="100" step="5">
@@ -32,30 +33,30 @@
       </div>
     </div>
     <div class="menu-field">
-      <span>Seed mapy</span>
+      <span data-i18n="lobby.common.seed">Seed mapy</span>
       <div id="sp-seed-group" class="choice-group"></div>
       <div class="seed-row">
         <input type="number" id="sp-seed-input" placeholder="np. 12345" hidden>
         <span id="sp-seed-preview" class="seed-preview"></span>
       </div>
     </div>
-    <button id="sp-start">Start grę</button>
-    <button id="sp-back">Wróć</button>
+    <button id="sp-start" data-i18n="lobby.common.start">Start grę</button>
+    <button id="sp-back" data-i18n="lobby.common.back">Wróć</button>
   </div>
 </div>
 <div id="menu-mp-setup" class="menu-screen" hidden>
   <div class="menu-box">
-    <h2>Gra wieloosobowa</h2>
+    <h2 data-i18n="lobby.mp.title">Gra wieloosobowa</h2>
     <div class="menu-field">
-      <span>Liczba graczy</span>
+      <span data-i18n="lobby.mp.playerCount">Liczba graczy</span>
       <div id="mp-count-group" class="choice-group"></div>
     </div>
     <div class="menu-field">
-      <span>Dodaj botów</span>
+      <span data-i18n="lobby.mp.botCount">Dodaj botów</span>
       <div id="mp-bots-group" class="choice-group"></div>
     </div>
     <div class="menu-field" id="mp-diff-field">
-      <span>Trudność botów</span>
+      <span data-i18n="lobby.common.difficulty">Trudność botów</span>
       <div id="mp-diff-group" class="choice-group"></div>
       <div id="mp-diff-custom-wrap" class="custom-diff" hidden>
         <input type="range" id="mp-diff-slider" min="0" max="100" step="5">
@@ -63,7 +64,7 @@
       </div>
     </div>
     <div class="menu-field">
-      <span>Seed mapy</span>
+      <span data-i18n="lobby.common.seed">Seed mapy</span>
       <div id="mp-seed-group" class="choice-group"></div>
       <div class="seed-row">
         <input type="number" id="mp-seed-input" placeholder="np. 12345" hidden>
@@ -71,25 +72,25 @@
       </div>
     </div>
     <div class="menu-field">
-      <span>Limit czasu na turę</span>
+      <span data-i18n="lobby.mp.timeLimit">Limit czasu na turę</span>
       <div id="mp-time-group" class="choice-group"></div>
     </div>
-    <button id="mp-start">Start grę</button>
-    <button id="mp-back">Wróć</button>
+    <button id="mp-start" data-i18n="lobby.common.start">Start grę</button>
+    <button id="mp-back" data-i18n="lobby.common.back">Wróć</button>
   </div>
 </div>
 <div id="menu-options" class="menu-screen" hidden>
   <div class="menu-box">
-    <h2>Opcje</h2>
+    <h2 data-i18n="lobby.options.title">Opcje</h2>
     <div class="menu-field">
-      <span>Domyślny seed</span>
+      <span data-i18n="lobby.options.defaultSeed">Domyślny seed</span>
       <div id="opt-seed-group" class="choice-group"></div>
       <div class="seed-row">
         <input type="number" id="opt-seed-input" placeholder="np. 12345" hidden>
       </div>
     </div>
     <div class="menu-field">
-      <span>Domyślna trudność botów</span>
+      <span data-i18n="lobby.options.defaultDifficulty">Domyślna trudność botów</span>
       <select id="opt-diff-select" class="menu-select">
         <option value="easy">Easy</option>
         <option value="normal">Normal</option>
@@ -97,7 +98,7 @@
         <option value="nightmare">Nightmare</option>
       </select>
     </div>
-    <button id="options-back">Wróć</button>
+    <button id="options-back" data-i18n="lobby.common.back">Wróć</button>
   </div>
 </div>
 <div id="app" hidden>
@@ -115,26 +116,26 @@
     </div>
     <div id="turn-player-label"></div>
     <div id="players"></div>
-    <button id="end-turn">Zakończ turę ⏎</button>
-    <button id="new-game">Nowa mapa</button>
-    <button id="menu-btn">Menu główne</button>
+    <button id="end-turn" data-i18n="game.endTurn">Zakończ turę ⏎</button>
+    <button id="new-game" data-i18n="game.newMap">Nowa mapa</button>
+    <button id="menu-btn" data-i18n="game.mainMenu">Menu główne</button>
     <div id="log"></div>
     <details id="help">
-      <summary>Jak grać?</summary>
+      <summary data-i18n="help.summary">Jak grać?</summary>
       <ul>
-        <li><b>Cel:</b> zdobądź stolice wszystkich wrogów.</li>
-        <li>Na starcie możesz kliknąć <b>dowolną stolicę</b>, by zagrać tym imperium (dopóki nie wykonasz ruchu).</li>
-        <li>Masz <b>5 ruchów</b> na turę; każda armia może ruszyć się raz.</li>
-        <li>Kliknij swoją armię, potem podświetlone pole obok.</li>
-        <li>Wejście na pole z własną armią <b>łączy</b> armie (maks. 99).</li>
-        <li>Armie poniżej 20 siły to <b>piechota</b>, od 20 wzwyż — <b>czołgi</b>.</li>
-        <li>Miasta produkują <b>+1</b> siły na turę, stolica <b>+3</b>.</li>
-        <li><b>Złoża</b> (szyb naftowy, pole, kopalnia) dają <b>+1</b> produkcji, gdy mają drogę do miasta — drogę wytycza się raz, przy zajęciu złoża, i przerywa ją wróg wchodzący na trasę.</li>
-        <li><b>Morale</b> spada z odległością od najbliższego własnego miasta i na morzu — wpływa na siłę w walce.</li>
-        <li>Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.</li>
-        <li>Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu.</li>
-        <li>Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
-        <li>Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
+        <li data-i18n-html="help.goal"><b>Cel:</b> zdobądź stolice wszystkich wrogów.</li>
+        <li data-i18n-html="help.pickEmpire">Na starcie możesz kliknąć <b>dowolną stolicę</b>, by zagrać tym imperium (dopóki nie wykonasz ruchu).</li>
+        <li data-i18n-html="help.moves">Masz <b>5 ruchów</b> na turę; każda armia może ruszyć się raz.</li>
+        <li data-i18n-html="help.clickArmy">Kliknij swoją armię, potem podświetlone pole obok.</li>
+        <li data-i18n-html="help.merge">Wejście na pole z własną armią <b>łączy</b> armie (maks. 99).</li>
+        <li data-i18n-html="help.unitTypes">Armie poniżej 20 siły to <b>piechota</b>, od 20 wzwyż — <b>czołgi</b>.</li>
+        <li data-i18n-html="help.production">Miasta produkują <b>+1</b> siły na turę, stolica <b>+3</b>.</li>
+        <li data-i18n-html="help.resources"><b>Złoża</b> (szyb naftowy, pole, kopalnia) dają <b>+1</b> produkcji, gdy mają drogę do miasta — drogę wytycza się raz, przy zajęciu złoża, i przerywa ją wróg wchodzący na trasę.</li>
+        <li data-i18n-html="help.morale"><b>Morale</b> spada z odległością od najbliższego własnego miasta i na morzu — wpływa na siłę w walce.</li>
+        <li data-i18n-html="help.support">Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.</li>
+        <li data-i18n-html="help.ports">Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu.</li>
+        <li data-i18n-html="help.annex">Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
+        <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
       </ul>
     </details>
     <div id="seed-footer"></div>
@@ -144,11 +145,13 @@
   <div id="overlay-box">
     <h2 id="overlay-title"></h2>
     <p id="overlay-text"></p>
-    <button id="overlay-btn">Nowa gra</button>
-    <button id="overlay-menu-btn">Menu główne</button>
+    <button id="overlay-btn" data-i18n="overlay.newGame">Nowa gra</button>
+    <button id="overlay-menu-btn" data-i18n="overlay.mainMenu">Menu główne</button>
   </div>
 </div>
 <script src="src/config.js"></script>
+<script src="src/locales-data.js"></script>
+<script src="src/i18n.js"></script>
 <script src="src/geometry.js"></script>
 <script src="src/utils.js"></script>
 <script src="src/mapgen.js"></script>

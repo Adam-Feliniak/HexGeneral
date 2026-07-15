@@ -15,5 +15,6 @@ if (typeof document !== 'undefined' && canvas) {
     options: defaultOptions(),
   };
   applyScreen();
+  applyI18n();
   requestAnimationFrame(frame);
 }

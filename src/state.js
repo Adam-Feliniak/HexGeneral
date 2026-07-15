@@ -73,14 +73,16 @@ function newGame(opts = {}) {
     tiles[r][c].army = { player: p.id, str: 5, vet: 0, movesUsed: 0 };
   });
   if (mode === 'multi') {
-    addLog('Nowa gra wieloosobowa! Zdobądź stolice pozostałych graczy.');
+    addLog(i18n.t('log.newGameMulti'));
   } else {
-    addLog('Nowa gra! Zdobądź stolice wrogów.');
-    addLog('Przed pierwszym ruchem możesz kliknąć obcą stolicę, by zagrać tym imperium.');
+    addLog(i18n.t('log.newGameSingle'));
+    addLog(i18n.t('log.newGameHint'));
   }
   hideOverlay();
   applyScreen();
-  showBanner(mode === 'multi' ? `Gracz 1: ${state.players[0].name} zaczyna!` : 'MISSION START!');
+  showBanner(mode === 'multi'
+    ? i18n.t('banner.mpGameStart', { name: state.players[0].name })
+    : i18n.t('banner.missionStart'));
   updateUI();
 }
 

@@ -29,9 +29,11 @@ function startTurn() {
   state.turnStartTime = performance.now();
   resetMoved(p.id);
   if (state.mode === 'multi') {
-    showBanner(p.isHuman ? `Gracz ${p.id + 1}: ${p.name} — Twoja tura!` : `🤖 ${p.name} wykonuje ruch…`);
+    showBanner(p.isHuman
+      ? i18n.t('banner.yourTurnMulti', { n: p.id + 1, name: p.name })
+      : i18n.t('banner.botTurnMulti', { name: p.name }));
   } else if (p.isHuman) {
-    showBanner(`Tura ${state.turn} — Twój ruch`);
+    showBanner(i18n.t('banner.yourTurnSingle', { turn: state.turn }));
   }
   updateUI();
   if (!p.isHuman) aiStep(p.id, MOVES_PER_TURN, endTurn);
@@ -67,7 +69,7 @@ function checkTurnTimer(now) {
   if (!p.isHuman) return;
   const elapsed = (now - state.turnStartTime) / 1000;
   if (elapsed >= state.timeLimit) {
-    addLog(`⏰ Czas minął — <b>${p.name}</b> traci turę.`);
+    addLog(i18n.t('log.turnTimeout', { name: p.name }));
     endTurn();
   }
 }
