@@ -149,55 +149,71 @@ function tankGrid() {
   return toRows(g);
 }
 
-// ---------- piechur 24x30, dwie klatki (kroki / nogi razem) ----------
+// ---------- piechur 24x30, cztery klatki chodu (painter, jak czołg/miasta) ----------
 
-const SOLDIER_TOP = [
-  '........oooooooo........',
-  '......oohhhhhhhhoo......',
-  '.....ohhhhhhhbbbbo......',
-  '.....ohhhbbbbbbbbo......',
-  '.....obbbbbbbbbbbo......',
-  '.....oBBBBBBBBBBBo......',
-  '......ooooooooooo.......',
-  '......onnnnnnnnno.......',
-  '......onnnnennneo.......',
-  '......oNnnnnnnnNo.......',
-  '.......oNNNNNNNo........',
-  '.....oobbbbbbbboo.......',
-  '....obbbbbbbbbbbbo......',
-  '..okkobbbbbbbbbbbo......',
-  '..okkobbbbbbbbbnnGgggggg',
-  '..okkobbbbbbbbbnKKgggggg',
-  '..oKkobbbbbbbbbbbo......',
-  '..oKKobbbbbbbbbbbo......',
-  '...ooeeeyyeeeeeoo.......',
-];
-const SOLDIER_LEGS_A = [
-  '....obbbbbbbbbbbo.......',
-  '....obbbbo.obbbbo.......',
-  '...obbbbo..obbbbo.......',
-  '...obbbo...obbbbo.......',
-  '...oBBBo....oBBBo.......',
-  '...oBBBo....oBBBo.......',
-  '..okkkko....okkkko......',
-  '..okkkko....okkkko......',
-  '.okkkkko....okkkkko.....',
-  '.oKKKKko....oKKKKko.....',
-  '.oooooo.....ooooooo.....',
-];
-const SOLDIER_LEGS_B = [
-  '....obbbbbbbbbbbo.......',
-  '.....obbbbobbbbo........',
-  '.....obbbbobbbbo........',
-  '.....obbbobbbbo.........',
-  '.....oBBBoBBBBo.........',
-  '.....oBBBoBBBo..........',
-  '....okkkokkkko..........',
-  '....okkkokkkko..........',
-  '...okkkkokkkkko.........',
-  '...oKKKkoKKKkko.........',
-  '...ooooo.oooooo.........',
-];
+// głowa + tułów + karabin trzymany po przekątnej (kolba-komora-magazynek-lufa-wylot) —
+// stała część sylwetki, animują się tylko nogi (legsGrid)
+function soldierTop() {
+  const g = makeGrid(24, 19);
+
+  // hełm (kopuła + rondo w cieniu)
+  ellipseFill(g, 12, 3.5, 5.5, 3.6, 'b');
+  ellipseFill(g, 11, 2.2, 5, 2.4, 'h');
+  rect(g, 6, 6, 13, 1, 'B');
+
+  // twarz
+  rect(g, 8, 7, 8, 4, 'n');
+  P(g, 10, 8, 'e'); P(g, 13, 8, 'e');
+  rect(g, 9, 10, 6, 1, 'N');
+  rect(g, 10, 11, 4, 1, 'N');
+
+  // tułów (zaokrąglony, szerokie ramiona)
+  rect(g, 5, 12, 14, 3, 'b');
+  ellipseFill(g, 12, 15.5, 7.5, 4.5, 'b');
+  rect(g, 6, 17, 12, 1, 'B');
+  rect(g, 9, 13, 1, 5, 'B');
+  rect(g, 14, 13, 1, 5, 'B');
+
+  // karabin: kolba (lewy dół) -> komora ze zwisającym magazynkiem -> lufa -> wylot
+  rect(g, 1, 16, 6, 2, 'K');
+  rect(g, 6, 15, 3, 2, 'K');
+  rect(g, 9, 14, 6, 2, 'g');
+  rect(g, 9, 14, 6, 1, 'G');
+  rect(g, 10, 16, 2, 3, 'K');
+  rect(g, 15, 13, 6, 2, 'g');
+  rect(g, 15, 13, 6, 1, 'G');
+  rect(g, 20, 11, 3, 2, 'g');
+  P(g, 22, 11, 'W'); P(g, 22, 12, 'W');
+
+  // dłonie na broni (tylna na kolbie, przednia na komorze)
+  rect(g, 4, 15, 2, 2, 'n');
+  rect(g, 12, 13, 2, 2, 'n');
+
+  // pas z klamrą
+  for (let x = 7; x <= 16; x++) P(g, x, 18, (x % 2) ? 'y' : 'e');
+
+  outline(g);
+  return toRows(g);
+}
+
+// nogi w jednej z 4 faz marszu (phase 0..3) — nogi rozjeżdżają się na przemian
+// w lewo/prawo (scherzo), z fazami pośrednimi "razem" dla płynnego cyklu
+function legsGrid(phase) {
+  const g = makeGrid(24, 11);
+  const OFFSETS = [0, 3, 0, -3];
+  const off = OFFSETS[phase % 4];
+
+  const leg = (hipX, foot) => {
+    rect(g, hipX - 2, 0, 4, 5, 'B');
+    rect(g, hipX + foot - 2, 5, 4, 5, 'k');
+    rect(g, hipX + foot - 2, 9, 4, 1, 'K');
+  };
+  leg(9, off);
+  leg(15, -off);
+
+  outline(g);
+  return toRows(g);
+}
 
 // ---------- okręty — trzy klasy wg siły armii (piana malowana PO konturze,
 // żeby kilwater nie dostał ciemnego obrysu) ----------
@@ -969,10 +985,10 @@ save('bg', bgTile());
 PLAYERS.forEach((p, i) => {
   const pal = { ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4) };
   save('tank_' + i, hq(gridToPixels(tankGrid(), pal)));
-  save('soldier_' + i, composeH([
-    hq(gridToPixels(SOLDIER_TOP.concat(SOLDIER_LEGS_A), pal)),
-    hq(gridToPixels(SOLDIER_TOP.concat(SOLDIER_LEGS_B), pal)),
-  ]));
+  const top = soldierTop();
+  save('soldier_' + i, composeH(
+    [0, 1, 2, 3].map(phase => hq(gridToPixels(top.concat(legsGrid(phase)), pal)))
+  ));
   save('capital_' + i, hq(gridToPixels(capitalGrid(), pal)));
   save('ship0_' + i, hq(gridToPixels(ship0(), pal)));
   save('ship1_' + i, hq(gridToPixels(ship1(), pal)));

@@ -200,7 +200,9 @@ function drawArmy(t, now) {
     const spr = infantry ? SPR.soldiers[army.player] : SPR.tanks[army.player];
     if (sprOk(spr)) {
       if (infantry) {
-        const fr = Math.floor(now / 280) % 2;
+        // animacja marszu (4 klatki) tylko dla jednostki aktualnie zaznaczonej przez
+        // gracza — reszta piechoty stoi (statyczna klatka 0), żeby plansza się nie "migotała"
+        const fr = state.selected === t ? Math.floor(now / 150) % 4 : 0;
         ctx.drawImage(spr, fr * 24, 0, 24, 30, x - 12, y - 17, 24, 30);
       } else {
         ctx.drawImage(spr, x - 24, y - 15, 48, 28);
