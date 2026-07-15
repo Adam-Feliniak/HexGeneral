@@ -52,11 +52,7 @@ function resourceLinks(playerId) {
 function produce(playerId) {
   const p = state.players[playerId];
   const diff = p.isHuman ? null : resolveDifficulty(p.difficulty);
-  const hasNightmareBot = state.aiPlayers && state.aiPlayers.some(a => a.difficulty === 'nightmare');
-  let mult = diff ? diff.economy : 1;
-  // kompensacja: gdy w grze jest bot Nightmare, wszyscy pozostali (poza nim) dostają
-  // bonus produkcji, żeby wyrównać jego skrajną agresję i ekonomię
-  if (hasNightmareBot && (!diff || diff.key !== 'nightmare')) mult *= 1.15;
+  const mult = diff ? diff.economy : 1;
 
   const bonus = new Map();
   for (const { city } of resourceLinks(playerId)) {

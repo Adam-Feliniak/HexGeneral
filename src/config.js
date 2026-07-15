@@ -23,11 +23,13 @@ const SP_BOT_COUNT_OPTIONS = [1, 2, 3];
 // bojowych w ocenie AI, aggressionThreshold: mnożnik progów przewagi siły
 // wymaganych do ataku (niższy = atakuje przy gorszym stosunku sił),
 // thinkDelay: opóźnienie (ms) między kolejnymi ruchami bota
+// (Nightmare economy 1.725 = 1.5 bazowe * 1.15 dodatkowego handicapu ekonomicznego,
+// żeby był wyraźnie najtrudniejszy)
 const AI_DIFFICULTY_PRESETS = {
-  easy:      { key: 'easy',      label: 'Easy',      economy: 0.5,  aggression: 0.7, aggressionThreshold: 1.3,  thinkDelay: 260, compensation: false },
-  normal:    { key: 'normal',    label: 'Normal',    economy: 1.0,  aggression: 1.0, aggressionThreshold: 1.0,  thinkDelay: 160, compensation: false },
-  hard:      { key: 'hard',      label: 'Hard',      economy: 1.25, aggression: 1.35, aggressionThreshold: 0.85, thinkDelay: 110, compensation: false },
-  nightmare: { key: 'nightmare', label: 'Nightmare', economy: 1.5,  aggression: 1.7, aggressionThreshold: 0.7,  thinkDelay: 70,  compensation: true },
+  easy:      { key: 'easy',      label: 'Easy',      economy: 0.5,   aggression: 0.7, aggressionThreshold: 1.3,  thinkDelay: 260 },
+  normal:    { key: 'normal',    label: 'Normal',    economy: 1.0,   aggression: 1.0, aggressionThreshold: 1.0,  thinkDelay: 160 },
+  hard:      { key: 'hard',      label: 'Hard',      economy: 1.25,  aggression: 1.35, aggressionThreshold: 0.85, thinkDelay: 110 },
+  nightmare: { key: 'nightmare', label: 'Nightmare', economy: 1.725, aggression: 1.7, aggressionThreshold: 0.7,  thinkDelay: 70 },
 };
 const AI_DIFFICULTY_ORDER = ['easy', 'normal', 'hard', 'nightmare'];
 
@@ -43,7 +45,6 @@ function resolveDifficulty(diff) {
     key: 'custom', label: `Custom ${Math.round(diff)}%`,
     economy: lerp('economy'), aggression: lerp('aggression'),
     aggressionThreshold: lerp('aggressionThreshold'), thinkDelay: Math.round(lerp('thinkDelay')),
-    compensation: false,
   };
 }
 
