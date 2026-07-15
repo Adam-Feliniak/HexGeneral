@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hex Imperium — strategia heksagonalna</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="board-wrap">
+    <canvas id="board"></canvas>
+    <div id="tooltip" hidden></div>
+    <div id="banner" hidden></div>
+  </div>
+  <aside id="sidebar">
+    <h1>⬡ Hex Imperium</h1>
+    <div id="turn-info">
+      <div id="turn-label">Tura 1</div>
+      <div id="moves-label">Ruchy: 5/5</div>
+    </div>
+    <div id="players"></div>
+    <button id="end-turn">Zakończ turę ⏎</button>
+    <button id="new-game">Nowa mapa</button>
+    <div id="log"></div>
+    <details id="help">
+      <summary>Jak grać?</summary>
+      <ul>
+        <li><b>Cel:</b> zdobądź stolice wszystkich wrogów.</li>
+        <li>Na starcie możesz kliknąć <b>dowolną stolicę</b>, by zagrać tym imperium (dopóki nie wykonasz ruchu).</li>
+        <li>Masz <b>5 ruchów</b> na turę; każda armia może ruszyć się raz.</li>
+        <li>Kliknij swoją armię, potem podświetlone pole obok.</li>
+        <li>Wejście na pole z własną armią <b>łączy</b> armie (maks. 99).</li>
+        <li>Armie poniżej 20 siły to <b>piechota</b>, od 20 wzwyż — <b>czołgi</b>.</li>
+        <li>Miasta produkują <b>+1</b> siły na turę, stolica <b>+3</b>.</li>
+        <li><b>Morale</b> spada z odległością od najbliższego własnego miasta i na morzu — wpływa na siłę w walce.</li>
+        <li>Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.</li>
+        <li>Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu.</li>
+        <li>Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
+        <li>Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
+      </ul>
+    </details>
+  </aside>
+</div>
+<div id="overlay" hidden>
+  <div id="overlay-box">
+    <h2 id="overlay-title"></h2>
+    <p id="overlay-text"></p>
+    <button id="overlay-btn">Nowa gra</button>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

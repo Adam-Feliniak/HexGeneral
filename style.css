@@ -1,0 +1,229 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  background: #14120a;
+  color: #d8d2b0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+}
+
+#board-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-width: 0;
+  padding: 12px;
+  /* pixel-artowa nitowana blacha (assets/bg.png, generowana) */
+  background: #14120a url("assets/bg.png");
+  background-size: 96px 96px;
+  image-rendering: pixelated;
+}
+
+#board {
+  max-width: 100%;
+  max-height: calc(100vh - 24px);
+  border: 3px solid #16140c;
+  border-radius: 4px;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+#sidebar {
+  width: 300px;
+  flex: none;
+  background: #262a16;
+  /* pas ostrzegawczy na styku planszy i panelu */
+  border-left: 8px solid #16140c;
+  border-image: repeating-linear-gradient(-45deg, #ffd91c 0 9px, #16140c 9px 18px) 8;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+#sidebar h1 {
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #ffd91c;
+  text-shadow: 2px 2px 0 #16140c, 4px 4px 0 rgba(0, 0, 0, 0.4);
+}
+
+#turn-info {
+  display: flex;
+  justify-content: space-between;
+  background: #303620;
+  border: 2px solid #16140c;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.45);
+  padding: 10px 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #ffd91c;
+}
+
+#players {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #303620;
+  border: 2px solid #16140c;
+  padding: 7px 10px;
+  font-size: 14px;
+}
+
+.player-row.active {
+  border-color: #ffd91c;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.player-row.dead { opacity: 0.35; text-decoration: line-through; }
+
+.player-dot {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 2px solid #16140c;
+}
+
+.player-name { flex: 1; font-weight: 700; }
+
+.player-stats { color: #b0ac86; font-size: 12px; white-space: nowrap; }
+
+button {
+  background: #4a5526;
+  color: #f0ecc8;
+  border: 2px solid #16140c;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55);
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: transform 0.05s;
+}
+
+button:hover { background: #5b6930; }
+
+button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55); }
+
+#end-turn { background: #b3591d; color: #fff3d6; }
+#end-turn:hover { background: #c96a26; }
+#end-turn:disabled { opacity: 0.45; cursor: default; transform: none; }
+
+#log {
+  flex: 1;
+  min-height: 80px;
+  background: #1a1d10;
+  border: 2px solid #16140c;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+#log .log-line { color: #b0ac86; }
+#log .log-line b { color: #ffd91c; }
+
+#help summary {
+  cursor: pointer;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 13px;
+  color: #c9c398;
+}
+
+#help ul {
+  margin: 8px 0 0 18px;
+  font-size: 12.5px;
+  color: #b0ac86;
+  line-height: 1.55;
+}
+
+#tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(22, 24, 12, 0.95);
+  border: 2px solid #6b7434;
+  padding: 6px 9px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  z-index: 5;
+  max-width: 230px;
+}
+
+#tooltip b { color: #ffd91c; }
+
+#banner {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(22, 24, 12, 0.92);
+  border: 2px solid #ffd91c;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+  padding: 8px 22px;
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #ffd91c;
+  z-index: 4;
+  pointer-events: none;
+}
+
+#overlay[hidden] { display: none; }
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 8, 4, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+#overlay-box {
+  background: #262a16;
+  /* ramka jak taśma ostrzegawcza — arcade'owe "MISSION COMPLETE" */
+  border: 6px solid #16140c;
+  border-image: repeating-linear-gradient(-45deg, #ffd91c 0 9px, #16140c 9px 18px) 6;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.6);
+  padding: 32px 44px;
+  text-align: center;
+}
+
+#overlay-box h2 {
+  font-family: Impact, "Arial Black", sans-serif;
+  font-weight: 400;
+  font-size: 34px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #ffd91c;
+  text-shadow: 3px 3px 0 #16140c;
+  margin-bottom: 10px;
+}
+
+#overlay-box p { color: #b0ac86; margin-bottom: 20px; }
