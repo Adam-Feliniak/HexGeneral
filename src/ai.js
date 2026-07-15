@@ -18,7 +18,7 @@ function aiTargets(playerId) {
   return targets;
 }
 
-function aiPickMove(playerId) {
+function aiPickMove(playerId, diff) {
   const armies = [];
   for (const row of state.tiles) for (const t of row) {
     if (t.army && t.army.player === playerId && t.army.movesUsed < moveCap(t)) armies.push(t);
@@ -49,10 +49,13 @@ function aiPickMove(playerId) {
         let defPow = armyPowerAt(to.army, to) + 0.12 * supportFor(to.army.player, to, null);
         if (to.city) defPow *= (to.city.capitalOf >= 0 ? 1.25 : 1.15);
         const ratio = myPow / Math.max(0.1, defPow);
-        if (to.city && to.city.capitalOf >= 0 && ratio > 0.8) score = 100 + ratio * 10;
-        else if (ratio > 1.05) score = 40 + ratio * 5 + (to.city ? 15 : 0);
-        else if (ratio > 0.8) score = 5 + from.army.str * 0.25; // atak na wyniszczenie — najpierw duże stosy
-        else if (threat && to === threat && ratio > 0.9) score = 60;
+        // AT: mnożnik progów ataku (trudność) — łatwe AI potrzebuje większej przewagi,
+        // trudne/koszmarne atakuje nawet przy gorszym stosunku sił
+        const AT = diff.aggressionThreshold;
+        if (to.city && to.city.capitalOf >= 0 && ratio > 0.8 * AT) score = (100 + ratio * 10) * diff.aggression;
+        else if (ratio > 1.05 * AT) score = (40 + ratio * 5 + (to.city ? 15 : 0)) * diff.aggression;
+        else if (ratio > 0.8 * AT) score = (5 + from.army.str * 0.25) * diff.aggression; // atak na wyniszczenie — najpierw duże stosy
+        else if (threat && to === threat && ratio > 0.9 * AT) score = 60 * diff.aggression;
         else score = -Infinity;
       } else if (to.army && to.army.player === playerId) {
         // łączenie armii: traktuj jak marsz w stronę celu (siła idzie do przodu)
@@ -98,7 +101,8 @@ function aiPickMove(playerId) {
 function aiStep(playerId, movesLeft, done) {
   if (state.phase === 'over') { updateUI(); return; }
   if (movesLeft <= 0) { done(); return; }
-  const mv = aiPickMove(playerId);
+  const diff = resolveDifficulty(state.players[playerId].difficulty);
+  const mv = aiPickMove(playerId, diff);
   if (!mv) { done(); return; }
   executeMove(mv.from, mv.to);
   if (state.phase === 'over') return;
@@ -106,5 +110,5 @@ function aiStep(playerId, movesLeft, done) {
   setTimeout(() => {
     if (state.gameId !== gid) return; // gra została zrestartowana w międzyczasie
     aiStep(playerId, movesLeft - 1, done);
-  }, 160);
+  }, diff.thinkDelay);
 }

@@ -16,6 +16,36 @@ const RESOURCE_COUNT = 6;             // złoża surowców na mapie
 const TURN_TIME_LIMIT_DEFAULT = 120;
 const TURN_TIME_LIMIT_OPTIONS = [60, 120, Infinity];
 const MP_PLAYER_COUNTS = [2, 3, 4, 5, 6];
+const BOT_COUNT_OPTIONS = [0, 1, 2, 3];
+const SP_BOT_COUNT_OPTIONS = [1, 2, 3];
+
+// poziomy trudności AI — economy: mnożnik produkcji, aggression: waga ruchów
+// bojowych w ocenie AI, aggressionThreshold: mnożnik progów przewagi siły
+// wymaganych do ataku (niższy = atakuje przy gorszym stosunku sił),
+// thinkDelay: opóźnienie (ms) między kolejnymi ruchami bota
+const AI_DIFFICULTY_PRESETS = {
+  easy:      { key: 'easy',      label: 'Easy',      economy: 0.5,  aggression: 0.7, aggressionThreshold: 1.3,  thinkDelay: 260, compensation: false },
+  normal:    { key: 'normal',    label: 'Normal',    economy: 1.0,  aggression: 1.0, aggressionThreshold: 1.0,  thinkDelay: 160, compensation: false },
+  hard:      { key: 'hard',      label: 'Hard',      economy: 1.25, aggression: 1.35, aggressionThreshold: 0.85, thinkDelay: 110, compensation: false },
+  nightmare: { key: 'nightmare', label: 'Nightmare', economy: 1.5,  aggression: 1.7, aggressionThreshold: 0.7,  thinkDelay: 70,  compensation: true },
+};
+const AI_DIFFICULTY_ORDER = ['easy', 'normal', 'hard', 'nightmare'];
+
+// diff: klucz presetu ('easy'..'nightmare') albo liczba 0-100 (suwak custom,
+// interpolowany między Easy i Nightmare)
+function resolveDifficulty(diff) {
+  if (diff == null) return AI_DIFFICULTY_PRESETS.normal;
+  if (typeof diff === 'string') return AI_DIFFICULTY_PRESETS[diff] || AI_DIFFICULTY_PRESETS.normal;
+  const t = Math.max(0, Math.min(100, diff)) / 100;
+  const a = AI_DIFFICULTY_PRESETS.easy, b = AI_DIFFICULTY_PRESETS.nightmare;
+  const lerp = k => a[k] + (b[k] - a[k]) * t;
+  return {
+    key: 'custom', label: `Custom ${Math.round(diff)}%`,
+    economy: lerp('economy'), aggression: lerp('aggression'),
+    aggressionThreshold: lerp('aggressionThreshold'), thinkDelay: Math.round(lerp('thinkDelay')),
+    compensation: false,
+  };
+}
 
 const PLAYERS_DEF = [
   { name: 'Karmazynia', color: '#d64550', dark: '#8c2530', isHuman: true },

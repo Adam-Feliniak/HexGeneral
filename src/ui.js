@@ -13,8 +13,9 @@ function updateUI() {
     : 'Ruch przeciwników…';
   document.getElementById('turn-player-label').textContent =
     state.phase === 'over' ? ''
-    : state.mode === 'multi' ? `Gracz ${cp.id + 1}: ${cp.name}, twoja tura!`
-    : '';
+    : state.mode === 'multi'
+      ? (cp.isHuman ? `👤 Gracz ${cp.id + 1}: ${cp.name}, twoja tura!` : `🤖 Bot ${cp.name} rozgrywa turę…`)
+      : '';
   document.getElementById('end-turn').disabled = state.phase === 'over' || !cp.isHuman;
   updateTimerDisplay(performance.now());
 
@@ -31,12 +32,22 @@ function updateUI() {
     div.className = 'player-row'
       + (!p.alive ? ' dead' : '')
       + (p.alive && state.phase !== 'over' && p.id === state.currentPlayerIndex ? ' active' : '');
-    const label = state.mode === 'multi' ? '' : (p.isHuman ? ' (Ty)' : '');
+    const icon = p.isHuman ? '👤' : '🤖';
+    const tyTag = state.mode === 'single' && p.isHuman ? ' (Ty)' : '';
+    const diffBadge = !p.isHuman ? `<span class="diff-badge">${resolveDifficulty(p.difficulty).label}</span>` : '';
     div.innerHTML =
       `<span class="player-dot" style="background:${p.color}"></span>` +
-      `<span class="player-name">${p.name}${label}</span>` +
+      `<span class="player-name">${icon} ${p.name}${tyTag}${diffBadge}</span>` +
       `<span class="player-stats">🏛 ${cities} ⛏ ${res} ⚔ ${str}</span>`;
     box.appendChild(div);
+  }
+
+  const footer = document.getElementById('seed-footer');
+  if (footer) {
+    const hasBots = state.players.some(p => !p.isHuman);
+    footer.textContent = hasBots
+      ? `Seed: ${state.mapSeed} · Trudność botów: ${resolveDifficulty(state.aiDifficulty).label}`
+      : `Seed: ${state.mapSeed}`;
   }
 }
 

@@ -12,8 +12,35 @@
     <h1>⬡ Hex Imperium</h1>
     <button id="menu-single">Pojedynczy gracz</button>
     <button id="menu-multi">Gra wieloosobowa</button>
-    <button id="menu-options">Opcje</button>
+    <button id="menu-options-btn">Opcje</button>
     <button id="menu-exit">Wyjście</button>
+  </div>
+</div>
+<div id="menu-sp-setup" class="menu-screen" hidden>
+  <div class="menu-box">
+    <h2>Pojedynczy gracz</h2>
+    <div class="menu-field">
+      <span>Liczba botów</span>
+      <div id="sp-bots-group" class="choice-group"></div>
+    </div>
+    <div class="menu-field">
+      <span>Trudność botów</span>
+      <div id="sp-diff-group" class="choice-group"></div>
+      <div id="sp-diff-custom-wrap" class="custom-diff" hidden>
+        <input type="range" id="sp-diff-slider" min="0" max="100" step="5">
+        <span id="sp-diff-slider-val"></span>
+      </div>
+    </div>
+    <div class="menu-field">
+      <span>Seed mapy</span>
+      <div id="sp-seed-group" class="choice-group"></div>
+      <div class="seed-row">
+        <input type="number" id="sp-seed-input" placeholder="np. 12345" hidden>
+        <span id="sp-seed-preview" class="seed-preview"></span>
+      </div>
+    </div>
+    <button id="sp-start">Start grę</button>
+    <button id="sp-back">Wróć</button>
   </div>
 </div>
 <div id="menu-mp-setup" class="menu-screen" hidden>
@@ -22,6 +49,26 @@
     <div class="menu-field">
       <span>Liczba graczy</span>
       <div id="mp-count-group" class="choice-group"></div>
+    </div>
+    <div class="menu-field">
+      <span>Dodaj botów</span>
+      <div id="mp-bots-group" class="choice-group"></div>
+    </div>
+    <div class="menu-field" id="mp-diff-field">
+      <span>Trudność botów</span>
+      <div id="mp-diff-group" class="choice-group"></div>
+      <div id="mp-diff-custom-wrap" class="custom-diff" hidden>
+        <input type="range" id="mp-diff-slider" min="0" max="100" step="5">
+        <span id="mp-diff-slider-val"></span>
+      </div>
+    </div>
+    <div class="menu-field">
+      <span>Seed mapy</span>
+      <div id="mp-seed-group" class="choice-group"></div>
+      <div class="seed-row">
+        <input type="number" id="mp-seed-input" placeholder="np. 12345" hidden>
+        <span id="mp-seed-preview" class="seed-preview"></span>
+      </div>
     </div>
     <div class="menu-field">
       <span>Limit czasu na turę</span>
@@ -34,7 +81,22 @@
 <div id="menu-options" class="menu-screen" hidden>
   <div class="menu-box">
     <h2>Opcje</h2>
-    <p>Wkrótce dostępne.</p>
+    <div class="menu-field">
+      <span>Domyślny seed</span>
+      <div id="opt-seed-group" class="choice-group"></div>
+      <div class="seed-row">
+        <input type="number" id="opt-seed-input" placeholder="np. 12345" hidden>
+      </div>
+    </div>
+    <div class="menu-field">
+      <span>Domyślna trudność botów</span>
+      <select id="opt-diff-select" class="menu-select">
+        <option value="easy">Easy</option>
+        <option value="normal">Normal</option>
+        <option value="hard">Hard</option>
+        <option value="nightmare">Nightmare</option>
+      </select>
+    </div>
     <button id="options-back">Wróć</button>
   </div>
 </div>
@@ -75,6 +137,7 @@
         <li>Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
       </ul>
     </details>
+    <div id="seed-footer"></div>
   </aside>
 </div>
 <div id="overlay" hidden>

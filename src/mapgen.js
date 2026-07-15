@@ -3,10 +3,11 @@
    GENERATOR MAPY — kontynenty, stolice, miasta, złoża, wybrzeże
    ============================================================ */
 
-function generateMap(playerCount = PLAYERS_DEF.length) {
+function generateMap(playerCount = PLAYERS_DEF.length, seed = null) {
+  const rand = seed != null ? makeRng(seed) : Math.random;
   let land = [];
   for (let r = 0; r < MAP_H; r++) {
-    land.push(Array.from({ length: MAP_W }, () => Math.random() < 0.58));
+    land.push(Array.from({ length: MAP_W }, () => rand() < 0.58));
   }
   // automat komórkowy — wygładzenie kontynentów
   for (let it = 0; it < 3; it++) {
@@ -46,14 +47,14 @@ function generateMap(playerCount = PLAYERS_DEF.length) {
         road: null,       // { owner, city, path } — droga wytyczona przy zajęciu złoża
         owner: -1,
         army: null,       // { player, str, vet, movesUsed }
-        shade: rnd(-1, 1), // drobna wariacja koloru terenu
+        shade: rnd(-1, 1, rand), // drobna wariacja koloru terenu
       });
     }
     tiles.push(row);
   }
 
   // stolice
-  const names = shuffle(CITY_NAMES.slice());
+  const names = shuffle(CITY_NAMES.slice(), rand);
   PLAYERS_DEF.slice(0, playerCount).forEach((p, i) => {
     const [c, r] = CAPITAL_SPOTS[i];
     tiles[r][c].city = { name: p.name, capitalOf: i, port: false };
@@ -61,7 +62,7 @@ function generateMap(playerCount = PLAYERS_DEF.length) {
   });
 
   // miasta
-  const landTiles = shuffle(tiles.flat().filter(t => t.land && !t.city));
+  const landTiles = shuffle(tiles.flat().filter(t => t.land && !t.city), rand);
   let placed = 0;
   for (const t of landTiles) {
     if (placed >= CITY_COUNT) break;
@@ -70,7 +71,7 @@ function generateMap(playerCount = PLAYERS_DEF.length) {
       if (o.city && hexDist(t.c, t.r, o.c, o.r) < 3) { ok = false; break; }
     }
     if (!ok) continue;
-    t.city = { name: names[placed % names.length], capitalOf: -1, port: false, variant: irnd(3) };
+    t.city = { name: names[placed % names.length], capitalOf: -1, port: false, variant: irnd(3, rand) };
     placed++;
   }
 
@@ -82,7 +83,7 @@ function generateMap(playerCount = PLAYERS_DEF.length) {
   }
 
   // złoża surowców: typ zależy od terenu (trawa/piach/skały)
-  const resSpots = shuffle(tiles.flat().filter(t => t.land && !t.city));
+  const resSpots = shuffle(tiles.flat().filter(t => t.land && !t.city), rand);
   let resPlaced = 0;
   for (const t of resSpots) {
     if (resPlaced >= RESOURCE_COUNT) break;

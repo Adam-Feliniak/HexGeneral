@@ -50,13 +50,22 @@ function resourceLinks(playerId) {
 }
 
 function produce(playerId) {
+  const p = state.players[playerId];
+  const diff = p.isHuman ? null : resolveDifficulty(p.difficulty);
+  const hasNightmareBot = state.aiPlayers && state.aiPlayers.some(a => a.difficulty === 'nightmare');
+  let mult = diff ? diff.economy : 1;
+  // kompensacja: gdy w grze jest bot Nightmare, wszyscy pozostali (poza nim) dostają
+  // bonus produkcji, żeby wyrównać jego skrajną agresję i ekonomię
+  if (hasNightmareBot && (!diff || diff.key !== 'nightmare')) mult *= 1.15;
+
   const bonus = new Map();
   for (const { city } of resourceLinks(playerId)) {
     bonus.set(city, (bonus.get(city) || 0) + 1);
   }
   for (const row of state.tiles) for (const t of row) {
     if (!t.city || t.owner !== playerId) continue;
-    const gain = (t.city.capitalOf === playerId ? 3 : 1) + (bonus.get(t) || 0);
+    const base = (t.city.capitalOf === playerId ? 3 : 1) + (bonus.get(t) || 0);
+    const gain = Math.max(1, Math.round(base * mult));
     if (t.army && t.army.player === playerId) {
       t.army.str = Math.min(MAX_ARMY, t.army.str + gain);
     } else if (!t.army) {

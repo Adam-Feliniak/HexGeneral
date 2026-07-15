@@ -29,7 +29,7 @@ function startTurn() {
   state.turnStartTime = performance.now();
   resetMoved(p.id);
   if (state.mode === 'multi') {
-    showBanner(`Gracz ${p.id + 1}: ${p.name} — Twoja tura!`);
+    showBanner(p.isHuman ? `Gracz ${p.id + 1}: ${p.name} — Twoja tura!` : `🤖 ${p.name} wykonuje ruch…`);
   } else if (p.isHuman) {
     showBanner(`Tura ${state.turn} — Twój ruch`);
   }

@@ -257,6 +257,9 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
   flex-direction: column;
   gap: 12px;
   min-width: 320px;
+  max-width: 420px;
+  max-height: 92vh;
+  overflow-y: auto;
 }
 
 .menu-box h1, .menu-box h2 {
@@ -297,6 +300,92 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
 .choice-group button.selected {
   background: #b3591d;
   color: #fff3d6;
+}
+
+/* wybornik trudności ma 5 przycisków ("NIGHTMARE" najdłuższy) — węższa czcionka
+   i większy min-width wymuszają zawijanie na 2 rzędy zamiast ścieśniania tekstu */
+#sp-diff-group button, #mp-diff-group button {
+  min-width: 84px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.choice-group button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+}
+
+.custom-diff {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.custom-diff input[type="range"] { flex: 1; }
+
+.custom-diff span {
+  font-weight: 700;
+  color: #ffd91c;
+  min-width: 3.2em;
+  text-align: right;
+}
+
+.seed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.seed-row input[type="number"] {
+  flex: 1;
+  background: #1a1d10;
+  color: #f0ecc8;
+  border: 2px solid #16140c;
+  padding: 7px 9px;
+  font-size: 13px;
+}
+
+.seed-preview {
+  font-size: 12px;
+  color: #b0ac86;
+  white-space: nowrap;
+}
+
+.menu-select {
+  width: 100%;
+  background: #4a5526;
+  color: #f0ecc8;
+  border: 2px solid #16140c;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55);
+  padding: 9px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.diff-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: #1a1d10;
+  border: 1px solid #6b7434;
+  border-radius: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #ffd91c;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+#seed-footer {
+  font-size: 11px;
+  color: #6e6a52;
+  text-align: center;
+  letter-spacing: 0.5px;
 }
 
 #turn-player-label {

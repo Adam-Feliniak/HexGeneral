@@ -12,7 +12,12 @@ function canPickEmpire() {
 
 function switchHuman(id) {
   state.human = id;
-  state.players.forEach(p => { p.isHuman = p.id === id; });
+  state.players.forEach(p => {
+    p.isHuman = p.id === id;
+    // porzucone imperium przechodzi pod AI z trudnością tej gry
+    if (!p.isHuman && p.difficulty == null) p.difficulty = state.aiDifficulty;
+  });
+  state.aiPlayers = state.players.filter(p => !p.isHuman).map(p => ({ id: p.id, difficulty: p.difficulty }));
   state.currentPlayerIndex = id;
   state.selected = null;
   addLog(`Przejmujesz dowodzenie: <b>${state.players[id].name}</b>!`);

@@ -1,6 +1,6 @@
 'use strict';
 /* ============================================================
-   MENU — ekran startowy, submenu gry wieloosobowej, nawigacja
+   MENU — ekran startowy, lobby (single/multi), opcje, nawigacja
    ============================================================ */
 
 function applyScreen() {
@@ -8,54 +8,214 @@ function applyScreen() {
   const s = state.screen;
   document.getElementById('app').hidden = s !== 'game';
   document.getElementById('menu-main').hidden = s !== 'menu';
+  document.getElementById('menu-sp-setup').hidden = s !== 'sp-setup';
   document.getElementById('menu-mp-setup').hidden = s !== 'mp-setup';
   document.getElementById('menu-options').hidden = s !== 'options';
 }
 
 function goToScreen(name) {
   state.screen = name;
+  if (name === 'sp-setup') renderSpSetup();
   if (name === 'mp-setup') renderMpSetup();
+  if (name === 'options') renderOptions();
   applyScreen();
 }
 
 function timeLimitLabel(t) {
-  return isFinite(t) ? `${t}s` : '∞ nieskończony';
+  return isFinite(t) ? `${t}s` : '∞ brak limitu';
+}
+
+// trudność wybrana w lobby -> wartość do newGame() (klucz presetu albo liczba 0-100)
+function effectiveDifficulty(setup) {
+  return setup.difficulty === 'custom' ? setup.customDiff : setup.difficulty;
+}
+
+// wspólny wybornik trudności (Easy/Normal/Hard/Nightmare/Custom + suwak) — używany
+// zarówno w lobby single, jak i multi
+function renderDifficultyGroup(groupId, customWrapId, sliderId, sliderValId, setup, onChange) {
+  const box = document.getElementById(groupId);
+  box.innerHTML = '';
+  for (const key of AI_DIFFICULTY_ORDER) {
+    const btn = document.createElement('button');
+    btn.textContent = AI_DIFFICULTY_PRESETS[key].label;
+    btn.className = setup.difficulty === key ? 'selected' : '';
+    btn.addEventListener('click', () => { setup.difficulty = key; onChange(); });
+    box.appendChild(btn);
+  }
+  const customBtn = document.createElement('button');
+  customBtn.textContent = 'Custom';
+  customBtn.className = setup.difficulty === 'custom' ? 'selected' : '';
+  customBtn.addEventListener('click', () => { setup.difficulty = 'custom'; onChange(); });
+  box.appendChild(customBtn);
+
+  const wrap = document.getElementById(customWrapId);
+  wrap.hidden = setup.difficulty !== 'custom';
+  const slider = document.getElementById(sliderId);
+  const valEl = document.getElementById(sliderValId);
+  slider.value = setup.customDiff;
+  valEl.textContent = `${setup.customDiff}%`;
+  slider.oninput = () => {
+    setup.customDiff = Number(slider.value);
+    valEl.textContent = `${setup.customDiff}%`;
+  };
+}
+
+// wspólny wybornik seeda (Losowy/Własny) — Losowy od razu losuje i pokazuje konkretną
+// liczbę (żeby dało się ją zobaczyć w lobby, patrz #...-seed-preview), Własny odsłania pole
+function renderSeedGroup(groupId, inputId, previewId, setup, onChange) {
+  const box = document.getElementById(groupId);
+  box.innerHTML = '';
+  const randBtn = document.createElement('button');
+  randBtn.textContent = 'Losowy';
+  randBtn.className = setup.seedMode === 'random' ? 'selected' : '';
+  randBtn.addEventListener('click', () => {
+    setup.seedMode = 'random';
+    setup.seedValue = randomSeed();
+    onChange();
+  });
+  box.appendChild(randBtn);
+  const customBtn = document.createElement('button');
+  customBtn.textContent = 'Własny';
+  customBtn.className = setup.seedMode === 'custom' ? 'selected' : '';
+  customBtn.addEventListener('click', () => { setup.seedMode = 'custom'; onChange(); });
+  box.appendChild(customBtn);
+
+  const input = document.getElementById(inputId);
+  const preview = document.getElementById(previewId);
+  input.hidden = setup.seedMode !== 'custom';
+  input.value = setup.seedValue;
+  input.oninput = () => {
+    const v = parseInt(input.value, 10);
+    setup.seedValue = Number.isFinite(v) ? v : setup.seedValue;
+    preview.textContent = `Seed: ${setup.seedValue}`;
+  };
+  preview.textContent = `Seed: ${setup.seedValue}`;
+}
+
+function renderSpSetup() {
+  const setup = state.spSetup;
+  const botsBox = document.getElementById('sp-bots-group');
+  botsBox.innerHTML = '';
+  for (const n of SP_BOT_COUNT_OPTIONS) {
+    const btn = document.createElement('button');
+    btn.textContent = n;
+    btn.className = n === setup.bots ? 'selected' : '';
+    btn.addEventListener('click', () => { setup.bots = n; renderSpSetup(); });
+    botsBox.appendChild(btn);
+  }
+  renderDifficultyGroup('sp-diff-group', 'sp-diff-custom-wrap', 'sp-diff-slider', 'sp-diff-slider-val', setup, renderSpSetup);
+  renderSeedGroup('sp-seed-group', 'sp-seed-input', 'sp-seed-preview', setup, renderSpSetup);
 }
 
 function renderMpSetup() {
+  const setup = state.mpSetup;
+  const maxBots = 6 - setup.count; // gracze + boty razem <= 6 imperiów
+  if (setup.bots > maxBots) setup.bots = Math.max(0, maxBots);
+
   const countBox = document.getElementById('mp-count-group');
   countBox.innerHTML = '';
   for (const n of MP_PLAYER_COUNTS) {
     const btn = document.createElement('button');
     btn.textContent = n;
-    btn.className = n === state.mpSetup.count ? 'selected' : '';
-    btn.addEventListener('click', () => { state.mpSetup.count = n; renderMpSetup(); });
+    btn.className = n === setup.count ? 'selected' : '';
+    btn.addEventListener('click', () => { setup.count = n; renderMpSetup(); });
     countBox.appendChild(btn);
   }
+
+  const botsBox = document.getElementById('mp-bots-group');
+  botsBox.innerHTML = '';
+  for (const n of BOT_COUNT_OPTIONS) {
+    const disabled = n > maxBots;
+    const btn = document.createElement('button');
+    btn.textContent = n;
+    btn.className = (n === setup.bots ? 'selected' : '') + (disabled ? ' disabled' : '');
+    btn.disabled = disabled;
+    btn.addEventListener('click', () => { setup.bots = n; renderMpSetup(); });
+    botsBox.appendChild(btn);
+  }
+
+  document.getElementById('mp-diff-field').hidden = setup.bots === 0;
+  if (setup.bots > 0) {
+    renderDifficultyGroup('mp-diff-group', 'mp-diff-custom-wrap', 'mp-diff-slider', 'mp-diff-slider-val', setup, renderMpSetup);
+  }
+
+  renderSeedGroup('mp-seed-group', 'mp-seed-input', 'mp-seed-preview', setup, renderMpSetup);
 
   const timeBox = document.getElementById('mp-time-group');
   timeBox.innerHTML = '';
   for (const t of TURN_TIME_LIMIT_OPTIONS) {
     const btn = document.createElement('button');
     btn.textContent = timeLimitLabel(t);
-    btn.className = t === state.mpSetup.time ? 'selected' : '';
-    btn.addEventListener('click', () => { state.mpSetup.time = t; renderMpSetup(); });
+    btn.className = t === setup.time ? 'selected' : '';
+    btn.addEventListener('click', () => { setup.time = t; renderMpSetup(); });
     timeBox.appendChild(btn);
   }
 }
 
-function initMenu() {
-  document.getElementById('menu-single').addEventListener('click', () => {
-    newGame({ mode: 'single', playerCount: 4 });
+// domyślny seed/trudność z Opcji spływają od razu do obu lobby (single/multi),
+// żeby przy kolejnym wejściu w submenu były już ustawione
+function applyOptionsToSetups() {
+  const opt = state.options;
+  for (const setup of [state.spSetup, state.mpSetup]) {
+    setup.difficulty = opt.defaultDifficulty;
+    if (opt.defaultSeed != null) { setup.seedMode = 'custom'; setup.seedValue = opt.defaultSeed; }
+    else { setup.seedMode = 'random'; setup.seedValue = randomSeed(); }
+  }
+}
+
+function renderOptions() {
+  const opt = state.options;
+  const seedBox = document.getElementById('opt-seed-group');
+  seedBox.innerHTML = '';
+  const noneBtn = document.createElement('button');
+  noneBtn.textContent = 'Brak (losowy)';
+  noneBtn.className = opt.defaultSeed == null ? 'selected' : '';
+  noneBtn.addEventListener('click', () => { opt.defaultSeed = null; applyOptionsToSetups(); renderOptions(); });
+  seedBox.appendChild(noneBtn);
+  const customBtn = document.createElement('button');
+  customBtn.textContent = 'Własny';
+  customBtn.className = opt.defaultSeed != null ? 'selected' : '';
+  customBtn.addEventListener('click', () => {
+    if (opt.defaultSeed == null) opt.defaultSeed = randomSeed();
+    applyOptionsToSetups();
+    renderOptions();
   });
+  seedBox.appendChild(customBtn);
+
+  const input = document.getElementById('opt-seed-input');
+  input.hidden = opt.defaultSeed == null;
+  input.value = opt.defaultSeed != null ? opt.defaultSeed : '';
+  input.oninput = () => {
+    const v = parseInt(input.value, 10);
+    if (Number.isFinite(v)) { opt.defaultSeed = v; applyOptionsToSetups(); }
+  };
+
+  const select = document.getElementById('opt-diff-select');
+  select.value = opt.defaultDifficulty;
+  select.onchange = () => { opt.defaultDifficulty = select.value; applyOptionsToSetups(); };
+}
+
+function initMenu() {
+  document.getElementById('menu-single').addEventListener('click', () => goToScreen('sp-setup'));
   document.getElementById('menu-multi').addEventListener('click', () => goToScreen('mp-setup'));
-  document.getElementById('menu-options').addEventListener('click', () => goToScreen('options'));
+  document.getElementById('menu-options-btn').addEventListener('click', () => goToScreen('options'));
   document.getElementById('menu-exit').addEventListener('click', () => location.reload());
+  document.getElementById('sp-back').addEventListener('click', () => goToScreen('menu'));
   document.getElementById('mp-back').addEventListener('click', () => goToScreen('menu'));
   document.getElementById('options-back').addEventListener('click', () => goToScreen('menu'));
-  document.getElementById('mp-start').addEventListener('click', () => {
-    newGame({ mode: 'multi', playerCount: state.mpSetup.count, timeLimit: state.mpSetup.time });
+
+  document.getElementById('sp-start').addEventListener('click', () => {
+    const s = state.spSetup;
+    newGame({ humanCount: 1, botCount: s.bots, aiDifficulty: effectiveDifficulty(s), seed: s.seedValue });
   });
+  document.getElementById('mp-start').addEventListener('click', () => {
+    const s = state.mpSetup;
+    newGame({
+      humanCount: s.count, botCount: s.bots, aiDifficulty: effectiveDifficulty(s),
+      seed: s.seedValue, timeLimit: s.time,
+    });
+  });
+
   document.getElementById('menu-btn').addEventListener('click', () => goToScreen('menu'));
   document.getElementById('overlay-menu-btn').addEventListener('click', () => {
     hideOverlay();

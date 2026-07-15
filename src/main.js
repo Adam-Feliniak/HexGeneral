@@ -8,7 +8,12 @@ if (typeof document !== 'undefined' && canvas) {
   loadSprites();
   initInput();
   initMenu();
-  state = { screen: 'menu', mpSetup: { count: MP_PLAYER_COUNTS[2], time: TURN_TIME_LIMIT_DEFAULT } };
+  state = {
+    screen: 'menu',
+    spSetup: defaultSpSetup(),
+    mpSetup: defaultMpSetup(),
+    options: defaultOptions(),
+  };
   applyScreen();
   requestAnimationFrame(frame);
 }
