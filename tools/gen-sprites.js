@@ -11,7 +11,7 @@ const path = require('path');
 
 const OUT_DIR = path.join(__dirname, '..', 'assets');
 
-// kolory graczy — muszą zgadzać się z PLAYERS_DEF w game.js
+// kolory graczy — muszą zgadzać się z PLAYERS_DEF w src/config.js
 const PLAYERS = [
   { color: '#d64550', dark: '#8c2530' },
   { color: '#3f7fd6', dark: '#24518f' },
