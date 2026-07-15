@@ -1,4 +1,4 @@
-# Hex Imperium
+# Hex General
 
 Turowa strategia heksagonalna 2D — czysty JS + Canvas, bez zależności. Otwórz `index.html` bezpośrednio w przeglądarce.
 
