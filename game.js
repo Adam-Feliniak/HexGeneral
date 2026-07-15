@@ -125,6 +125,7 @@ function generateMap() {
         land: land[r][c],
         city: null,       // { name, capitalOf, port }
         resource: null,   // 'oil' | 'farm' | 'mine'
+        road: null,       // { owner, city, path } — droga wytyczona przy zajęciu złoża
         owner: -1,
         army: null,       // { player, str, vet, moved }
         shade: rnd(-1, 1), // drobna wariacja koloru terenu
@@ -325,9 +326,35 @@ function resolveBattle(from, to) {
   }
 }
 
+// wytycza drogę złoże -> najbliższe własne miasto (BFS po lądzie);
+// wołane raz przy KAŻDEJ zmianie właściciela złoża — trasa potem się nie zmienia,
+// może tylko zostać przerwana, gdy wróg zajmie któryś z jej heksów
+function establishRoad(t, playerId) {
+  t.road = null;
+  let best = null, bd = Infinity;
+  for (const row of state.tiles) for (const c of row) {
+    if (c.city && c.owner === playerId) {
+      const d = hexDist(t.c, t.r, c.c, c.r);
+      if (d < bd) { bd = d; best = c; }
+    }
+  }
+  if (!best) return; // brak własnego miasta w zasięgu — złoże na zawsze bez zasilania
+  const path = landPath(t, best);
+  if (path && path.length > 1) t.road = { owner: playerId, city: best, path };
+}
+
+// droga aktywna = istnieje I żaden jej heks nie należy do wroga — pola niczyje
+// (owner -1) NIE przerywają drogi, liczy się tylko realne zajęcie przez przeciwnika
+function isRoadActive(t) {
+  const rd = t.road;
+  if (!rd || rd.owner !== t.owner) return false;
+  return rd.path.every(p => p.owner === rd.owner || p.owner < 0);
+}
+
 function captureTile(t, playerId) {
   const prevOwner = t.owner;
   if (t.land) t.owner = playerId;
+  if (t.resource && prevOwner !== playerId) establishRoad(t, playerId);
   if (t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== playerId) {
     conquerEmpire(t.city.capitalOf, playerId);
     t.city.capitalOf = -1; // zdobyta stolica staje się zwykłym miastem
@@ -342,10 +369,16 @@ function conquerEmpire(loserId, winnerId) {
   const loser = state.players[loserId];
   const winner = state.players[winnerId];
   loser.alive = false;
+  const transferredResources = [];
   for (const row of state.tiles) for (const t of row) {
-    if (t.owner === loserId) t.owner = winnerId;
+    if (t.owner === loserId) {
+      t.owner = winnerId;
+      if (t.resource) transferredResources.push(t);
+    }
     if (t.army && t.army.player === loserId) t.army = null;
   }
+  // aneksja to też zmiana właściciela — złoża dostają świeżo wytyczone drogi
+  for (const t of transferredResources) establishRoad(t, winnerId);
   addLog(`💥 <b>${winner.name}</b> zdobywa stolicę — <b>${loser.name}</b> upada!`);
   showBanner(`${loser.name} zostaje zaanektowana przez ${winner.name}!`);
   checkGameOver();
@@ -394,25 +427,24 @@ function executeMove(from, to) {
 }
 
 // ---------- Produkcja ----------
-function produce(playerId) {
-  const cities = [];
+// własne złoża z AKTYWNĄ (niezerwaną) drogą do miasta — to ono dostaje +1 produkcji;
+// trasa jest stała (ustalona przy zajęciu złoża), tu tylko sprawdzamy, czy nie jest przerwana
+function resourceLinks(playerId) {
+  const links = [];
   for (const row of state.tiles) for (const t of row) {
-    if (t.city && t.owner === playerId) cities.push(t);
+    if (!t.resource || t.owner !== playerId || !isRoadActive(t)) continue;
+    links.push({ res: t, city: t.road.city });
   }
-  // każde własne złoże dodaje +1 produkcji najbliższemu własnemu miastu
+  return links;
+}
+
+function produce(playerId) {
   const bonus = new Map();
-  if (cities.length) {
-    for (const row of state.tiles) for (const t of row) {
-      if (!t.resource || t.owner !== playerId) continue;
-      let best = null, bd = Infinity;
-      for (const c of cities) {
-        const d = hexDist(t.c, t.r, c.c, c.r);
-        if (d < bd) { bd = d; best = c; }
-      }
-      bonus.set(best, (bonus.get(best) || 0) + 1);
-    }
+  for (const { city } of resourceLinks(playerId)) {
+    bonus.set(city, (bonus.get(city) || 0) + 1);
   }
-  for (const t of cities) {
+  for (const row of state.tiles) for (const t of row) {
+    if (!t.city || t.owner !== playerId) continue;
     const gain = (t.city.capitalOf === playerId ? 3 : 1) + (bonus.get(t) || 0);
     if (t.army && t.army.player === playerId) {
       t.army.str = Math.min(MAX_ARMY, t.army.str + gain);
@@ -420,6 +452,26 @@ function produce(playerId) {
       t.army = { player: playerId, str: gain, vet: 0, moved: true };
     }
   }
+}
+
+// najkrótsza ścieżka po lądzie (BFS) — trasa drogi złoże -> miasto
+function landPath(a, b) {
+  const prev = new Map([[a, null]]);
+  const queue = [a];
+  while (queue.length) {
+    const t = queue.shift();
+    if (t === b) {
+      const path = [];
+      for (let n = b; n; n = prev.get(n)) path.push(n);
+      return path.reverse();
+    }
+    for (const n of neighborsOf(t)) {
+      if (!n.land || prev.has(n)) continue;
+      prev.set(n, t);
+      queue.push(n);
+    }
+  }
+  return null;
 }
 
 // ---------- Tury ----------
@@ -738,6 +790,51 @@ function drawDecor(t) {
   }
 }
 
+// asfaltowe drogi złoże -> zaopatrywane miasto; trasy są stałe (ustalone przy
+// zajęciu złoża, patrz establishRoad), więc tu tylko odczytujemy i rysujemy —
+// bez ponownego liczenia BFS. Przerwane drogi (wróg na trasie) rysują się przygaszone.
+function drawRoadPath(path, active) {
+  const pts = path.map(t => hexCenter(t.c, t.r));
+  const trace = () => {
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  };
+  if (active) {
+    ctx.strokeStyle = '#23211a';   // ciemny brzeg nawierzchni
+    ctx.lineWidth = 8;
+    trace(); ctx.stroke();
+    ctx.strokeStyle = '#45423a';   // asfalt
+    ctx.lineWidth = 5;
+    trace(); ctx.stroke();
+    ctx.strokeStyle = '#cfc79a';   // przerywana linia środkowa
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 6]);
+    trace(); ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    // droga przerwana przez wroga — widoczna, ale wygaszona i kreskowana na czerwono
+    ctx.strokeStyle = 'rgba(80,20,20,0.5)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([3, 5]);
+    trace(); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function drawRoads() {
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const row of state.tiles) for (const t of row) {
+    if (!t.resource || !t.road) continue;
+    drawRoadPath(t.road.path, isRoadActive(t));
+  }
+}
+
 function drawBorders() {
   ctx.lineWidth = 3;
   ctx.lineCap = 'round';
@@ -844,6 +941,7 @@ function draw(now) {
   ctx.fillRect(0, 0, BOARD_PX_W, BOARD_PX_H);
 
   for (const row of state.tiles) for (const t of row) drawTile(t);
+  drawRoads();
   drawBorders();
 
   // podświetlenia
@@ -1005,7 +1103,12 @@ function tileTooltip(t) {
   }
   if (t.resource) {
     const RES_NAMES = { oil: '🛢 Szyb naftowy', farm: '🌾 Pole uprawne', mine: '⛏ Kopalnia' };
-    lines.push(`${RES_NAMES[t.resource]} — <b>+1</b> produkcji najbliższego miasta`);
+    lines.push(`${RES_NAMES[t.resource]} — <b>+1</b> produkcji, gdy ma drogę do miasta`);
+    if (t.owner >= 0) {
+      if (t.road && isRoadActive(t)) lines.push(`🚚 Zaopatruje: <b>${t.road.city.city.name}</b>`);
+      else if (t.road) lines.push('🚧 Droga przerwana przez wroga — brak dostaw');
+      else lines.push('🚧 Brak drogi do miasta — brak dostaw');
+    }
   }
   if (t.army) {
     const m = Math.min(110, moraleAt(t.army.player, t) + t.army.vet);
@@ -1068,6 +1171,7 @@ if (typeof module !== 'undefined' && module.exports) {
     generateMap, newGame, produce, resolveBattle, executeMove,
     aiPickMove, hexDist, neighborCoords, moraleAt, resetMoved, mixColor,
     getState: () => state, setState: s => { state = s; },
-    endHumanTurn, runAIPlayers, onTileClick, canPickEmpire, MAP_W, MAP_H,
+    endHumanTurn, runAIPlayers, onTileClick, canPickEmpire, resourceLinks,
+    captureTile, isRoadActive, MAP_W, MAP_H,
   };
 }
