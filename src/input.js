@@ -35,10 +35,10 @@ function onTileClick(t) {
   }
   const sel = state.selected;
   if (sel && sel !== t && validMoves(sel).includes(t)) {
-    executeMove(sel, t);
-    state.movesLeft--;
-    // droga daje +1 do ruchu: jeśli jednostce zostały jeszcze ruchy, zostaje zaznaczona,
-    // żeby można było od razu wykonać kolejny krok bez ponownego klikania na nią
+    const hops = executeMove(sel, t);
+    state.movesLeft -= hops;
+    // jednostka na drodze ma zasięg 2 — jeśli zostały jej jeszcze ruchy, zostaje
+    // zaznaczona, żeby można było od razu wykonać kolejny ruch bez ponownego klikania na nią
     state.selected = (t.army && t.army.player === cp.id &&
       t.army.movesUsed < moveCap(t) && state.movesLeft > 0) ? t : null;
     if (state.movesLeft <= 0 && state.phase !== 'over') {

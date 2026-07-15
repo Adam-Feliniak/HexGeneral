@@ -29,7 +29,7 @@ function isRoadActive(t) {
 }
 
 // czy pole leży na aktywnej drodze danego gracza — jednostka na takim polu
-// dostaje +1 do limitu ruchów w tej turze (patrz moveCap w combat.js)
+// ma zasięg ruchu 2 zamiast 1 w tej turze (patrz moveCap w combat.js)
 function tileOnRoad(t, playerId) {
   for (const row of state.tiles) for (const res of row) {
     if (!res.resource || res.owner !== playerId || !isRoadActive(res)) continue;

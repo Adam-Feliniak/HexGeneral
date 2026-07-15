@@ -41,15 +41,38 @@ function canStep(from, to, playerId) {
   return true;
 }
 
-// limit ruchów jednostki w tej turze — 1, albo 2 gdy stoi na aktywnej drodze
+// zasięg ruchu jednostki w tej turze (w polach) — 1, albo 2 gdy stoi na aktywnej drodze
 function moveCap(t) {
   if (!t.army) return 0;
   return tileOnRoad(t, t.army.player) ? 2 : 1;
 }
 
+// pola osiągalne w tej turze wraz z trasą do nich (Map<pole, ścieżka[]>, bez pola startowego) —
+// pole pośrednie musi być puste (starcie albo połączenie armii zawsze kończy ruch,
+// więc nie da się "przeskoczyć" przez zajęty hex) — jedynie ostatnie pole na trasie
+// może mieć armię: wroga (walka) albo własną (połączenie)
+function reachableMoves(t) {
+  if (!t.army) return new Map();
+  const seen = new Map([[t, []]]);
+  let frontier = [t];
+  for (let step = 0; step < moveCap(t); step++) {
+    const next = [];
+    for (const cur of frontier) {
+      if (cur !== t && cur.army) continue;
+      for (const n of neighborsOf(cur)) {
+        if (seen.has(n) || !canStep(cur, n, t.army.player)) continue;
+        seen.set(n, [...seen.get(cur), n]);
+        next.push(n);
+      }
+    }
+    frontier = next;
+  }
+  seen.delete(t);
+  return seen;
+}
+
 function validMoves(t) {
-  if (!t.army) return [];
-  return neighborsOf(t).filter(n => canStep(t, n, t.army.player));
+  return [...reachableMoves(t).keys()];
 }
 
 function supportFor(playerId, battleTile, excludeTile) {
@@ -90,12 +113,19 @@ function resolveBattle(from, to) {
   }
 }
 
-// wykonuje ruch armii (zakłada, że jest legalny); zwraca true jeśli ruch doszedł do skutku
+// wykonuje ruch armii na pole `to` (zakłada, że jest w reachableMoves(from));
+// zwraca liczbę pól faktycznie pokonanych (1 albo 2 przy skoku po drodze) —
+// tyle kosztuje to w puli ruchów tury (state.movesLeft)
 function executeMove(from, to) {
+  const path = reachableMoves(from).get(to) || [to];
   const army = from.army;
+  // pola pośrednie na trasie są zawsze puste (patrz reachableMoves) — armia
+  // przechodząca przez nie zajmuje je tak samo jak dawny ruch krok-po-kroku
+  for (const step of path.slice(0, -1)) captureTile(step, army.player);
+
   if (to.army && to.army.player !== army.player) {
     const won = resolveBattle(from, to);
-    if (!won) { updateUI(); return true; } // armia atakująca zniszczona — ruch zużyty
+    if (!won) { updateUI(); return path.length; } // armia atakująca zniszczona — ruch zużyty
   }
   if (to.army && to.army.player === army.player) {
     // łączenie armii
@@ -106,11 +136,11 @@ function executeMove(from, to) {
   } else {
     from.army = null;
     to.army = army;
-    army.movesUsed++;
+    army.movesUsed += path.length;
     captureTile(to, army.player);
   }
   const a = hexCenter(from.c, from.r), b = hexCenter(to.c, to.r);
   anims.push({ tile: to, x0: a.x, y0: a.y, x1: b.x, y1: b.y, t: 0 });
   updateUI();
-  return true;
+  return path.length;
 }

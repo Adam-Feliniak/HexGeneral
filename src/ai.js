@@ -104,11 +104,11 @@ function aiStep(playerId, movesLeft, done) {
   const diff = resolveDifficulty(state.players[playerId].difficulty);
   const mv = aiPickMove(playerId, diff);
   if (!mv) { done(); return; }
-  executeMove(mv.from, mv.to);
+  const hops = executeMove(mv.from, mv.to);
   if (state.phase === 'over') return;
   const gid = state.gameId;
   setTimeout(() => {
     if (state.gameId !== gid) return; // gra została zrestartowana w międzyczasie
-    aiStep(playerId, movesLeft - 1, done);
+    aiStep(playerId, movesLeft - hops, done);
   }, diff.thinkDelay);
 }
