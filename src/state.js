@@ -29,7 +29,7 @@ function newGame(opts = {}) {
     : (prevOptions ? prevOptions.defaultDifficulty : 'normal');
   const timeLimit = opts.timeLimit !== undefined ? opts.timeLimit
     : hadGame ? state.timeLimit : Infinity;
-  const mapSeed = opts.seed != null ? opts.seed : Math.floor(Math.random() * 10000000);
+  const mapSeed = opts.seed != null ? opts.seed : randomSeed();
 
   const playerCount = Math.min(6, Math.max(1, humanCount) + Math.max(0, botCount));
   const actualHumanCount = Math.min(Math.max(1, humanCount), playerCount);
@@ -98,7 +98,7 @@ function defaultMpSetup() {
 function defaultOptions() {
   return { defaultSeed: null, defaultDifficulty: 'normal' };
 }
-function randomSeed() { return Math.floor(Math.random() * 10000000); }
+function randomSeed() { return Math.floor(Math.random() * (SEED_MAX_VALUE + 1)); }
 
 function tileAt(c, r) { return inBounds(c, r) ? state.tiles[r][c] : null; }
 

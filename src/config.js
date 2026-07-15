@@ -19,6 +19,10 @@ const MP_PLAYER_COUNTS = [2, 3, 4, 5, 6];
 const BOT_COUNT_OPTIONS = [0, 1, 2, 3];
 const SP_BOT_COUNT_OPTIONS = [1, 2, 3];
 
+// seed mapy — max 6 cyfr (pole "Własny" w lobby)
+const SEED_MAX_DIGITS = 6;
+const SEED_MAX_VALUE = 999999;
+
 // poziomy trudności AI — economy: mnożnik produkcji, aggression: waga ruchów
 // bojowych w ocenie AI, aggressionThreshold: mnożnik progów przewagi siły
 // wymaganych do ataku (niższy = atakuje przy gorszym stosunku sił),

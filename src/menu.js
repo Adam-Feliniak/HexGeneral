@@ -30,6 +30,15 @@ function effectiveDifficulty(setup) {
   return setup.difficulty === 'custom' ? setup.customDiff : setup.difficulty;
 }
 
+// ogranicza pole seeda do max SEED_MAX_DIGITS cyfr — przycina tekst w polu
+// (type=number ignoruje maxlength) i zwraca sparsowaną wartość
+function clampSeedInput(input) {
+  const digits = input.value.replace(/[^0-9]/g, '').slice(0, SEED_MAX_DIGITS);
+  if (digits !== input.value) input.value = digits;
+  const v = parseInt(digits, 10);
+  return Number.isFinite(v) ? Math.min(v, SEED_MAX_VALUE) : null;
+}
+
 // wspólny wybornik trudności (Easy/Normal/Hard/Nightmare/Custom + suwak) — używany
 // zarówno w lobby single, jak i multi
 function renderDifficultyGroup(groupId, customWrapId, sliderId, sliderValId, setup, onChange) {
@@ -85,8 +94,8 @@ function renderSeedGroup(groupId, inputId, previewId, setup, onChange) {
   input.hidden = setup.seedMode !== 'custom';
   input.value = setup.seedValue;
   input.oninput = () => {
-    const v = parseInt(input.value, 10);
-    setup.seedValue = Number.isFinite(v) ? v : setup.seedValue;
+    const v = clampSeedInput(input);
+    setup.seedValue = v !== null ? v : setup.seedValue;
     preview.textContent = i18n.t('lobby.common.seedPreview', { seed: setup.seedValue });
   };
   preview.textContent = i18n.t('lobby.common.seedPreview', { seed: setup.seedValue });
@@ -186,8 +195,8 @@ function renderOptions() {
   input.hidden = opt.defaultSeed == null;
   input.value = opt.defaultSeed != null ? opt.defaultSeed : '';
   input.oninput = () => {
-    const v = parseInt(input.value, 10);
-    if (Number.isFinite(v)) { opt.defaultSeed = v; applyOptionsToSetups(); }
+    const v = clampSeedInput(input);
+    if (v !== null) { opt.defaultSeed = v; applyOptionsToSetups(); }
   };
 
   const select = document.getElementById('opt-diff-select');
