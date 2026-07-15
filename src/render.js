@@ -180,7 +180,8 @@ function drawArmy(t, now) {
     x = anim.x0 + (anim.x1 - anim.x0) * k;
     y = anim.y0 + (anim.y1 - anim.y0) * k;
   }
-  const dim = army.movesUsed >= moveCap(t) && army.player === state.human && state.phase === 'human';
+  const dim = army.movesUsed >= moveCap(t) && army.player === state.currentPlayerIndex &&
+    state.phase !== 'over' && currentPlayer().isHuman;
   ctx.save();
   ctx.globalAlpha = dim ? 0.55 : 1;
   x = Math.round(x); y = Math.round(y);
@@ -233,7 +234,8 @@ function drawArmy(t, now) {
 }
 
 function draw(now) {
-  if (!state) return;
+  if (!state || state.screen !== 'game') return;
+  const humanTurn = state.phase !== 'over' && currentPlayer().isHuman;
   ctx.fillStyle = '#0f0e08';
   ctx.fillRect(0, 0, BOARD_PX_W, BOARD_PX_H);
 
@@ -242,7 +244,7 @@ function draw(now) {
   drawBorders();
 
   // podświetlenia
-  if (state.selected && state.phase === 'human') {
+  if (state.selected && humanTurn) {
     const sel = state.selected;
     const { x, y } = hexCenter(sel.c, sel.r);
     hexPath(x, y, 0.92);
@@ -252,7 +254,7 @@ function draw(now) {
     for (const n of validMoves(sel)) {
       const c = hexCenter(n.c, n.r);
       hexPath(c.x, c.y, 0.86);
-      const hostile = n.army && n.army.player !== state.human;
+      const hostile = n.army && n.army.player !== state.currentPlayerIndex;
       ctx.fillStyle = hostile ? 'rgba(255,80,80,0.3)' : 'rgba(255,255,255,0.22)';
       ctx.fill();
       ctx.setLineDash([4, 4]);
@@ -262,7 +264,7 @@ function draw(now) {
       ctx.setLineDash([]);
     }
   }
-  if (hoverTile && state.phase === 'human') {
+  if (hoverTile && humanTurn) {
     const { x, y } = hexCenter(hoverTile.c, hoverTile.r);
     hexPath(x, y, 0.95);
     ctx.strokeStyle = 'rgba(255,255,255,0.45)';
@@ -308,6 +310,8 @@ function frame(now) {
   floaters = floaters.filter(f => f.t < 1.2);
   for (const e of effects) e.t += dt;
   effects = effects.filter(e => e.t < 0.48);
+  checkTurnTimer(now);
+  updateTimerDisplay(now);
   draw(now);
   requestAnimationFrame(frame);
 }

@@ -3,14 +3,17 @@
    WEJŚCIE GRACZA — kliknięcia na planszy, wybór imperium, tooltip
    ============================================================ */
 
-// przed pierwszym ruchem w grze można wybrać imperium, klikając jego stolicę
+// przed pierwszym ruchem gry single-player można wybrać imperium, klikając jego stolicę
+// (w hot-seat każdy gracz od startu prowadzi wyznaczone imperium, więc mechanika wyłączona)
 function canPickEmpire() {
-  return state.phase === 'human' && state.turn === 1 && state.movesLeft === MOVES_PER_TURN;
+  return state.mode === 'single' && currentPlayer().isHuman &&
+    state.turn === 1 && state.movesLeft === MOVES_PER_TURN;
 }
 
 function switchHuman(id) {
   state.human = id;
   state.players.forEach(p => { p.isHuman = p.id === id; });
+  state.currentPlayerIndex = id;
   state.selected = null;
   addLog(`Przejmujesz dowodzenie: <b>${state.players[id].name}</b>!`);
   showBanner(`Grasz jako ${state.players[id].name}!`);
@@ -18,23 +21,29 @@ function switchHuman(id) {
 }
 
 function onTileClick(t) {
-  if (!state || state.phase !== 'human') return;
+  if (!state || state.screen !== 'game' || state.phase === 'over') return;
+  const cp = currentPlayer();
+  if (!cp.isHuman) return;
   if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
     switchHuman(t.city.capitalOf);
     return;
   }
   const sel = state.selected;
   if (sel && sel !== t && validMoves(sel).includes(t)) {
-    state.selected = null;
     executeMove(sel, t);
     state.movesLeft--;
-    if (state.movesLeft <= 0 && state.phase === 'human') {
-      setTimeout(() => { if (state.phase === 'human') endHumanTurn(); }, 350);
+    // droga daje +1 do ruchu: jeśli jednostce zostały jeszcze ruchy, zostaje zaznaczona,
+    // żeby można było od razu wykonać kolejny krok bez ponownego klikania na nią
+    state.selected = (t.army && t.army.player === cp.id &&
+      t.army.movesUsed < moveCap(t) && state.movesLeft > 0) ? t : null;
+    if (state.movesLeft <= 0 && state.phase !== 'over') {
+      const gid = state.gameId;
+      setTimeout(() => { if (state.gameId === gid) requestEndTurn(); }, 350);
     }
     updateUI();
     return;
   }
-  if (t.army && t.army.player === state.human && t.army.movesUsed < moveCap(t) && state.movesLeft > 0) {
+  if (t.army && t.army.player === cp.id && t.army.movesUsed < moveCap(t) && state.movesLeft > 0) {
     state.selected = (sel === t) ? null : t;
   } else {
     state.selected = null;
@@ -120,11 +129,12 @@ function initInput() {
     hoverTile = null;
     document.getElementById('tooltip').hidden = true;
   });
-  document.getElementById('end-turn').addEventListener('click', endHumanTurn);
-  document.getElementById('new-game').addEventListener('click', newGame);
-  document.getElementById('overlay-btn').addEventListener('click', newGame);
+  document.getElementById('end-turn').addEventListener('click', requestEndTurn);
+  document.getElementById('new-game').addEventListener('click', () => newGame());
+  document.getElementById('overlay-btn').addEventListener('click', () => newGame());
   document.addEventListener('keydown', ev => {
-    if (ev.key === 'Enter') endHumanTurn();
+    if (!state || state.screen !== 'game') return;
+    if (ev.key === 'Enter') requestEndTurn();
     if (ev.key === 'Escape') { state.selected = null; updateUI(); }
   });
 }

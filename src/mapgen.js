@@ -3,7 +3,7 @@
    GENERATOR MAPY — kontynenty, stolice, miasta, złoża, wybrzeże
    ============================================================ */
 
-function generateMap() {
+function generateMap(playerCount = PLAYERS_DEF.length) {
   let land = [];
   for (let r = 0; r < MAP_H; r++) {
     land.push(Array.from({ length: MAP_W }, () => Math.random() < 0.58));
@@ -26,7 +26,7 @@ function generateMap() {
     land = next;
   }
   // wymuś ląd wokół stolic
-  for (const [cc, cr] of CAPITAL_SPOTS) {
+  for (const [cc, cr] of CAPITAL_SPOTS.slice(0, playerCount)) {
     for (let r = 0; r < MAP_H; r++) {
       for (let c = 0; c < MAP_W; c++) {
         if (hexDist(c, r, cc, cr) <= 2) land[r][c] = true;
@@ -54,7 +54,7 @@ function generateMap() {
 
   // stolice
   const names = shuffle(CITY_NAMES.slice());
-  PLAYERS_DEF.forEach((p, i) => {
+  PLAYERS_DEF.slice(0, playerCount).forEach((p, i) => {
     const [c, r] = CAPITAL_SPOTS[i];
     tiles[r][c].city = { name: p.name, capitalOf: i, port: false };
     tiles[r][c].owner = i;

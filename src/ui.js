@@ -4,12 +4,19 @@
    ============================================================ */
 
 function updateUI() {
-  if (typeof document === 'undefined' || !state) return;
+  if (typeof document === 'undefined' || !state || state.screen !== 'game') return;
+  const cp = currentPlayer();
   document.getElementById('turn-label').textContent = `Tura ${state.turn}`;
   document.getElementById('moves-label').textContent =
-    state.phase === 'human' ? `Ruchy: ${state.movesLeft}/${MOVES_PER_TURN}`
-    : state.phase === 'ai' ? 'Ruch przeciwników…' : 'Koniec gry';
-  document.getElementById('end-turn').disabled = state.phase !== 'human';
+    state.phase === 'over' ? 'Koniec gry'
+    : cp.isHuman ? `Ruchy: ${state.movesLeft}/${MOVES_PER_TURN}`
+    : 'Ruch przeciwników…';
+  document.getElementById('turn-player-label').textContent =
+    state.phase === 'over' ? ''
+    : state.mode === 'multi' ? `Gracz ${cp.id + 1}: ${cp.name}, twoja tura!`
+    : '';
+  document.getElementById('end-turn').disabled = state.phase === 'over' || !cp.isHuman;
+  updateTimerDisplay(performance.now());
 
   const box = document.getElementById('players');
   box.innerHTML = '';
@@ -23,13 +30,30 @@ function updateUI() {
     const div = document.createElement('div');
     div.className = 'player-row'
       + (!p.alive ? ' dead' : '')
-      + (p.alive && ((state.phase === 'human' && p.id === state.human)) ? ' active' : '');
+      + (p.alive && state.phase !== 'over' && p.id === state.currentPlayerIndex ? ' active' : '');
+    const label = state.mode === 'multi' ? '' : (p.isHuman ? ' (Ty)' : '');
     div.innerHTML =
       `<span class="player-dot" style="background:${p.color}"></span>` +
-      `<span class="player-name">${p.name}${p.isHuman ? ' (Ty)' : ''}</span>` +
+      `<span class="player-name">${p.name}${label}</span>` +
       `<span class="player-stats">🏛 ${cities} ⛏ ${res} ⚔ ${str}</span>`;
     box.appendChild(div);
   }
+}
+
+// timer tury — aktualizowany co klatkę (osobno od pełnego updateUI, żeby
+// nie przebudowywać listy graczy 60x/s)
+function updateTimerDisplay(now) {
+  if (typeof document === 'undefined' || !state || state.screen !== 'game') return;
+  const el = document.getElementById('turn-timer');
+  if (!el) return;
+  if (state.phase === 'over' || !isFinite(state.timeLimit) || !currentPlayer().isHuman) {
+    el.textContent = '';
+    el.classList.remove('low');
+    return;
+  }
+  const left = Math.max(0, Math.ceil(state.timeLimit - (now - state.turnStartTime) / 1000));
+  el.textContent = `⏱ ${left}s`;
+  el.classList.toggle('low', left <= 10);
 }
 
 let bannerTimer = null;

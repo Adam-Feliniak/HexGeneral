@@ -7,7 +7,38 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app">
+<div id="menu-main" class="menu-screen">
+  <div class="menu-box">
+    <h1>⬡ Hex Imperium</h1>
+    <button id="menu-single">Pojedynczy gracz</button>
+    <button id="menu-multi">Gra wieloosobowa</button>
+    <button id="menu-options">Opcje</button>
+    <button id="menu-exit">Wyjście</button>
+  </div>
+</div>
+<div id="menu-mp-setup" class="menu-screen" hidden>
+  <div class="menu-box">
+    <h2>Gra wieloosobowa</h2>
+    <div class="menu-field">
+      <span>Liczba graczy</span>
+      <div id="mp-count-group" class="choice-group"></div>
+    </div>
+    <div class="menu-field">
+      <span>Limit czasu na turę</span>
+      <div id="mp-time-group" class="choice-group"></div>
+    </div>
+    <button id="mp-start">Start grę</button>
+    <button id="mp-back">Wróć</button>
+  </div>
+</div>
+<div id="menu-options" class="menu-screen" hidden>
+  <div class="menu-box">
+    <h2>Opcje</h2>
+    <p>Wkrótce dostępne.</p>
+    <button id="options-back">Wróć</button>
+  </div>
+</div>
+<div id="app" hidden>
   <div id="board-wrap">
     <canvas id="board"></canvas>
     <div id="tooltip" hidden></div>
@@ -18,10 +49,13 @@
     <div id="turn-info">
       <div id="turn-label">Tura 1</div>
       <div id="moves-label">Ruchy: 5/5</div>
+      <div id="turn-timer"></div>
     </div>
+    <div id="turn-player-label"></div>
     <div id="players"></div>
     <button id="end-turn">Zakończ turę ⏎</button>
     <button id="new-game">Nowa mapa</button>
+    <button id="menu-btn">Menu główne</button>
     <div id="log"></div>
     <details id="help">
       <summary>Jak grać?</summary>
@@ -48,6 +82,7 @@
     <h2 id="overlay-title"></h2>
     <p id="overlay-text"></p>
     <button id="overlay-btn">Nowa gra</button>
+    <button id="overlay-menu-btn">Menu główne</button>
   </div>
 </div>
 <script src="src/config.js"></script>
@@ -64,6 +99,7 @@
 <script src="src/render.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/input.js"></script>
+<script src="src/menu.js"></script>
 <script src="src/main.js"></script>
 </body>
 </html>

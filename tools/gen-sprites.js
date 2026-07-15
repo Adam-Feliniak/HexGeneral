@@ -17,6 +17,8 @@ const PLAYERS = [
   { color: '#3f7fd6', dark: '#24518f' },
   { color: '#3fae62', dark: '#22703c' },
   { color: '#d6a53f', dark: '#8f6a1f' },
+  { color: '#8a4fd6', dark: '#5a2f8f' },
+  { color: '#3fc9c2', dark: '#1f7f7a' },
 ];
 
 function hexToRGB(hex) {

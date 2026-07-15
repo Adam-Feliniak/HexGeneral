@@ -102,5 +102,9 @@ function aiStep(playerId, movesLeft, done) {
   if (!mv) { done(); return; }
   executeMove(mv.from, mv.to);
   if (state.phase === 'over') return;
-  setTimeout(() => aiStep(playerId, movesLeft - 1, done), 160);
+  const gid = state.gameId;
+  setTimeout(() => {
+    if (state.gameId !== gid) return; // gra została zrestartowana w międzyczasie
+    aiStep(playerId, movesLeft - 1, done);
+  }, 160);
 }

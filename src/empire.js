@@ -41,13 +41,18 @@ function checkGameOver() {
   if (alive.length === 1) {
     state.phase = 'over';
     const win = alive[0];
-    showOverlay(
-      win.isHuman ? '★ MISSION COMPLETE! ★' : 'GAME OVER',
-      win.isHuman
-        ? `Zjednoczyłeś świat pod sztandarem imperium ${win.name} w turze ${state.turn}.`
-        : `Świat podbiło imperium ${win.name}. Spróbuj jeszcze raz!`
-    );
-  } else if (!state.players[state.human].alive && state.phase !== 'over') {
+    if (state.mode === 'multi') {
+      showOverlay('★ ZWYCIĘSTWO! ★',
+        `Gracz ${win.id + 1}: ${win.name} jednoczy świat w turze ${state.turn}.`);
+    } else {
+      showOverlay(
+        win.isHuman ? '★ MISSION COMPLETE! ★' : 'GAME OVER',
+        win.isHuman
+          ? `Zjednoczyłeś świat pod sztandarem imperium ${win.name} w turze ${state.turn}.`
+          : `Świat podbiło imperium ${win.name}. Spróbuj jeszcze raz!`
+      );
+    }
+  } else if (state.mode === 'single' && !state.players[state.human].alive && state.phase !== 'over') {
     state.phase = 'over';
     showOverlay('GAME OVER', 'Twoja stolica padła. Spróbuj jeszcze raz!');
   }
