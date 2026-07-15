@@ -17,7 +17,7 @@ const TURN_TIME_LIMIT_DEFAULT = 120;
 const TURN_TIME_LIMIT_OPTIONS = [60, 120, Infinity];
 const MP_PLAYER_COUNTS = [2, 3, 4, 5, 6];
 const BOT_COUNT_OPTIONS = [0, 1, 2, 3];
-const SP_BOT_COUNT_OPTIONS = [1, 2, 3];
+const SP_BOT_COUNT_OPTIONS = [1, 2, 3, 4, 5];
 
 // seed mapy — max 6 cyfr (pole "Własny" w lobby)
 const SEED_MAX_DIGITS = 6;
