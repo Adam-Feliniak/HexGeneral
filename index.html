@@ -126,7 +126,13 @@
 </div>
 <div id="app" hidden>
   <div id="board-wrap">
-    <canvas id="board"></canvas>
+    <div id="board-stack">
+      <canvas id="board"></canvas>
+      <div id="build-panel" class="build-panel-empty">
+        <div id="build-panel-title" data-i18n="build.panelTitle">Produkcja:</div>
+        <div id="build-panel-group" class="choice-group"></div>
+      </div>
+    </div>
     <div id="tooltip" hidden></div>
     <div id="banner" hidden></div>
   </div>
@@ -139,10 +145,6 @@
     </div>
     <div id="turn-player-label"></div>
     <div id="players"></div>
-    <div id="build-panel" hidden>
-      <div id="build-panel-title" data-i18n="build.panelTitle">Produkcja:</div>
-      <div id="build-panel-group" class="choice-group"></div>
-    </div>
     <button id="end-turn" data-i18n="game.endTurn">Zakończ turę ⏎</button>
     <button id="new-game" data-i18n="game.newMap">Nowa mapa</button>
     <button id="menu-btn" data-i18n="game.mainMenu">Menu główne</button>

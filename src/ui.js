@@ -57,8 +57,11 @@ function updateUI() {
 function updateBuildPanel(cp) {
   const panel = document.getElementById('build-panel');
   const t = state.selectedCity;
-  panel.hidden = !t || !cp.isHuman || state.phase === 'over';
-  if (panel.hidden) return;
+  // niewidoczny (visibility), nie display:none — panel ma zawsze rezerwować
+  // swoje miejsce pod mapą, żeby canvas nie zmieniał rozmiaru przy pokazywaniu/ukrywaniu
+  const empty = !t || !cp.isHuman || state.phase === 'over';
+  panel.classList.toggle('build-panel-empty', empty);
+  if (empty) return;
   const box = document.getElementById('build-panel-group');
   box.innerHTML = '';
   for (const key of UNIT_TYPE_ORDER) {
