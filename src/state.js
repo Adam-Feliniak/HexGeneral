@@ -56,6 +56,7 @@ function newGame(opts = {}) {
     timeLimit: mode === 'multi' ? timeLimit : Infinity,
     movesLeft: MOVES_PER_TURN,
     selected: null,      // wybrane pole z armią gracza
+    selectedCity: null,  // wybrane własne pole z miastem (panel budowy)
     players: PLAYERS_DEF.slice(0, playerCount).map((p, i) => ({
       ...p, id: i, alive: true, capital: CAPITAL_SPOTS[i],
       isHuman: i < actualHumanCount,
@@ -70,7 +71,7 @@ function newGame(opts = {}) {
   // armie startowe na stolicach
   state.players.forEach(p => {
     const [c, r] = p.capital;
-    tiles[r][c].army = { player: p.id, str: 5, vet: 0, movesUsed: 0 };
+    tiles[r][c].army = { player: p.id, str: 5, vet: 0, movesUsed: 0, type: DEFAULT_UNIT_TYPE };
   });
   if (mode === 'multi') {
     addLog(i18n.t('log.newGameMulti'));

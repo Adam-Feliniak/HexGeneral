@@ -29,6 +29,7 @@ function onTileClick(t) {
   if (!state || state.screen !== 'game' || state.phase === 'over') return;
   const cp = currentPlayer();
   if (!cp.isHuman) return;
+  state.selectedCity = (t.city && t.owner === cp.id) ? t : null;
   if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
     switchHuman(t.city.capitalOf);
     return;
@@ -99,7 +100,9 @@ function tileTooltip(t) {
   }
   if (t.army) {
     const m = Math.min(110, moraleAt(t.army.player, t) + t.army.vet);
-    lines.push(i18n.t('tooltip.army', { player: state.players[t.army.player].name, str: t.army.str, morale: m }));
+    lines.push(i18n.t('tooltip.army', {
+      type: i18n.t('unit.' + t.army.type), player: state.players[t.army.player].name, str: t.army.str, morale: m,
+    }));
   }
   if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
     lines.push(i18n.t('tooltip.pickEmpireHint'));
@@ -140,6 +143,6 @@ function initInput() {
   document.addEventListener('keydown', ev => {
     if (!state || state.screen !== 'game') return;
     if (ev.key === 'Enter') requestEndTurn();
-    if (ev.key === 'Escape') { state.selected = null; updateUI(); }
+    if (ev.key === 'Escape') { state.selected = null; state.selectedCity = null; updateUI(); }
   });
 }

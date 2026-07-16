@@ -42,12 +42,31 @@ function updateUI() {
     box.appendChild(div);
   }
 
+  updateBuildPanel(cp);
+
   const footer = document.getElementById('seed-footer');
   if (footer) {
     const hasBots = state.players.some(p => !p.isHuman);
     footer.textContent = hasBots
       ? i18n.t('game.seedFooterWithDifficulty', { seed: state.mapSeed, difficulty: resolveDifficulty(state.aiDifficulty).label })
       : i18n.t('game.seedFooter', { seed: state.mapSeed });
+  }
+}
+
+// panel wyboru typu jednostki budowanej w zaznaczonym własnym mieście
+function updateBuildPanel(cp) {
+  const panel = document.getElementById('build-panel');
+  const t = state.selectedCity;
+  panel.hidden = !t || !cp.isHuman || state.phase === 'over';
+  if (panel.hidden) return;
+  const box = document.getElementById('build-panel-group');
+  box.innerHTML = '';
+  for (const key of UNIT_TYPE_ORDER) {
+    const btn = document.createElement('button');
+    btn.textContent = i18n.t('unit.' + key);
+    btn.className = (t.city.buildType || DEFAULT_UNIT_TYPE) === key ? 'selected' : '';
+    btn.addEventListener('click', () => { t.city.buildType = key; updateBuildPanel(cp); });
+    box.appendChild(btn);
   }
 }
 

@@ -3,6 +3,7 @@
 
   "menu.singlePlayer": "Pojedynczy gracz",
   "menu.multiPlayer": "Gra wieloosobowa",
+  "menu.tutorial": "Samouczek",
   "menu.options": "Opcje",
   "menu.exit": "Wyjście",
 
@@ -17,6 +18,8 @@
 
   "lobby.sp.title": "Pojedynczy gracz",
   "lobby.sp.botCount": "Liczba botów",
+
+  "lobby.tutorial.title": "Jak grać?",
 
   "lobby.mp.title": "Gra wieloosobowa",
   "lobby.mp.playerCount": "Liczba graczy",
@@ -42,6 +45,11 @@
   "game.seedFooter": "Seed: {{seed}}",
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Trudność botów: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
+
+  "unit.infantry": "Piechota",
+  "unit.tank": "Czołg",
+  "unit.artillery": "Artyleria",
+  "build.panelTitle": "Produkcja:",
 
   "banner.missionStart": "MISSION START!",
   "banner.mpGameStart": "Gracz 1: {{name}} zaczyna!",
@@ -85,7 +93,7 @@
   "tooltip.supplying": "🚚 Zaopatruje: <b>{{city}}</b>",
   "tooltip.roadCut": "🚧 Droga przerwana przez wroga — brak dostaw",
   "tooltip.noRoad": "🚧 Brak drogi do miasta — brak dostaw",
-  "tooltip.army": "⚔ Armia {{player}}: siła <b>{{str}}</b>, morale <b>{{morale}}%</b>",
+  "tooltip.army": "⚔ {{player}} — {{type}}: siła <b>{{str}}</b>, morale <b>{{morale}}%</b>",
   "tooltip.pickEmpireHint": "👉 Kliknij, aby zagrać tym imperium",
 
   "help.summary": "Jak grać?",
@@ -93,8 +101,9 @@
   "help.pickEmpire": "Na starcie możesz kliknąć <b>dowolną stolicę</b>, by zagrać tym imperium (dopóki nie wykonasz ruchu).",
   "help.moves": "Masz <b>5 ruchów</b> na turę; każda armia może ruszyć się raz.",
   "help.clickArmy": "Kliknij swoją armię, potem podświetlone pole obok.",
-  "help.merge": "Wejście na pole z własną armią <b>łączy</b> armie (maks. 99).",
-  "help.unitTypes": "Armie poniżej 20 siły to <b>piechota</b>, od 20 wzwyż — <b>czołgi</b>.",
+  "help.merge": "Wejście na pole z własną armią <b>łączy</b> armie (maks. 99, tylko tego samego typu).",
+  "help.unitTypes": "3 typy jednostek: <b>piechota</b> (uniwersalna), <b>czołg</b> (mocny atak i mobilność, słabsza obrona) i <b>artyleria</b> (mocna obrona i wsparcie, słaby atak, wolna).",
+  "help.buildChoice": "Kliknij własne miasto, aby wybrać typ budowanej jednostki.",
   "help.production": "Miasta produkują <b>+1</b> siły na turę, stolica <b>+3</b>.",
   "help.resources": "<b>Złoża</b> (szyb naftowy, pole, kopalnia) dają <b>+1</b> produkcji, gdy mają drogę do miasta — drogę wytycza się raz, przy zajęciu złoża, i przerywa ją wróg wchodzący na trasę.",
   "help.morale": "<b>Morale</b> spada z odległością od najbliższego własnego miasta i na morzu — wpływa na siłę w walce.",

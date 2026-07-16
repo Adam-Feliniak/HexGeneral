@@ -21,30 +21,38 @@ function moraleAt(playerId, t) {
   return Math.max(25, Math.min(100, m));
 }
 
-function armyPowerAt(army, t) {
+function armyPowerAt(army, t, role) {
   const m = Math.min(110, moraleAt(army.player, t) + army.vet);
-  return army.str * m / 100;
+  const typeMult = UNIT_TYPES[army.type][role === 'attack' ? 'atk' : 'def'];
+  return army.str * m / 100 * typeMult;
 }
 
-function canStep(from, to, playerId) {
+// blokada wejścia na pole z własną armią: pełny stos (>=MAX_ARMY) albo inny typ —
+// różne typy nie łączą się, więc pole zajęte przez inny typ jest dla nas nieprzejezdne
+function blockedByFriendly(to, playerId, unitType) {
+  return !!(to.army && to.army.player === playerId &&
+    (to.army.str >= MAX_ARMY || to.army.type !== unitType));
+}
+
+function canStep(from, to, playerId, unitType) {
   if (!to) return false;
   if (hexDist(from.c, from.r, to.c, to.r) !== 1) return false;
   if (to.land) {
-    if (to.army && to.army.player === playerId && to.army.str >= MAX_ARMY) return false;
-    return true;
+    return !blockedByFriendly(to, playerId, unitType);
   }
   // wejście na morze: z morza albo z portu
   const fromSea = !from.land;
   const fromPort = !!(from.city && from.city.port && from.owner === playerId);
   if (!fromSea && !fromPort) return false;
-  if (to.army && to.army.player === playerId && to.army.str >= MAX_ARMY) return false;
-  return true;
+  return !blockedByFriendly(to, playerId, unitType);
 }
 
-// zasięg ruchu jednostki w tej turze (w polach) — 1, albo 2 gdy stoi na aktywnej drodze
+// zasięg ruchu jednostki w tej turze (w polach) — zależy od typu, dodatkowy
+// bonus z aktywnej drogi też jest typowo-zależny (patrz UNIT_TYPES w config.js)
 function moveCap(t) {
   if (!t.army) return 0;
-  return tileOnRoad(t, t.army.player) ? 2 : 1;
+  const ut = UNIT_TYPES[t.army.type];
+  return ut.moveBase + (tileOnRoad(t, t.army.player) ? ut.roadBonus : 0);
 }
 
 // pola osiągalne w tej turze wraz z trasą do nich (Map<pole, ścieżka[]>, bez pola startowego) —
@@ -60,7 +68,7 @@ function reachableMoves(t) {
     for (const cur of frontier) {
       if (cur !== t && cur.army) continue;
       for (const n of neighborsOf(cur)) {
-        if (seen.has(n) || !canStep(cur, n, t.army.player)) continue;
+        if (seen.has(n) || !canStep(cur, n, t.army.player, t.army.type)) continue;
         seen.set(n, [...seen.get(cur), n]);
         next.push(n);
       }
@@ -79,15 +87,15 @@ function supportFor(playerId, battleTile, excludeTile) {
   let s = 0;
   for (const n of neighborsOf(battleTile)) {
     if (n === excludeTile) continue;
-    if (n.army && n.army.player === playerId) s += n.army.str;
+    if (n.army && n.army.player === playerId) s += n.army.str * UNIT_TYPES[n.army.type].supportWeight;
   }
   return s;
 }
 
 function resolveBattle(from, to) {
   const att = from.army, def = to.army;
-  let aPow = armyPowerAt(att, to) + 0.12 * supportFor(att.player, to, from);
-  let dPow = armyPowerAt(def, to) + 0.12 * supportFor(def.player, to, null);
+  let aPow = armyPowerAt(att, to, 'attack') + 0.12 * supportFor(att.player, to, from);
+  let dPow = armyPowerAt(def, to, 'defense') + 0.12 * supportFor(def.player, to, null);
   if (to.city) dPow *= (to.city.capitalOf >= 0 ? 1.25 : 1.15);
   aPow *= rnd(0.92, 1.08);
   dPow *= rnd(0.92, 1.08);
@@ -128,7 +136,8 @@ function executeMove(from, to) {
     if (!won) { updateUI(); return path.length; } // armia atakująca zniszczona — ruch zużyty
   }
   if (to.army && to.army.player === army.player) {
-    // łączenie armii
+    // łączenie armii — zawsze tego samego typu, bo canStep blokuje wejście
+    // na pole z własną armią innego typu (nie ma tu więc czego sprawdzać)
     to.army.str = Math.min(MAX_ARMY, to.army.str + army.str);
     to.army.vet = Math.max(to.army.vet, army.vet);
     to.army.movesUsed = Infinity;

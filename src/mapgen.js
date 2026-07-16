@@ -42,7 +42,7 @@ function generateMap(playerCount = PLAYERS_DEF.length, seed = null) {
       row.push({
         c, r,
         land: land[r][c],
-        city: null,       // { name, capitalOf, port }
+        city: null,       // { name, capitalOf, port, buildType }
         resource: null,   // 'oil' | 'farm' | 'mine'
         road: null,       // { owner, city, path } — droga wytyczona przy zajęciu złoża
         owner: -1,
@@ -57,7 +57,7 @@ function generateMap(playerCount = PLAYERS_DEF.length, seed = null) {
   const names = shuffle(CITY_NAMES.slice(), rand);
   PLAYERS_DEF.slice(0, playerCount).forEach((p, i) => {
     const [c, r] = CAPITAL_SPOTS[i];
-    tiles[r][c].city = { name: p.name, capitalOf: i, port: false };
+    tiles[r][c].city = { name: p.name, capitalOf: i, port: false, buildType: DEFAULT_UNIT_TYPE };
     tiles[r][c].owner = i;
   });
 
@@ -71,7 +71,7 @@ function generateMap(playerCount = PLAYERS_DEF.length, seed = null) {
       if (o.city && hexDist(t.c, t.r, o.c, o.r) < 3) { ok = false; break; }
     }
     if (!ok) continue;
-    t.city = { name: names[placed % names.length], capitalOf: -1, port: false, variant: irnd(3, rand) };
+    t.city = { name: names[placed % names.length], capitalOf: -1, port: false, variant: irnd(3, rand), buildType: DEFAULT_UNIT_TYPE };
     placed++;
   }
 
@@ -251,7 +251,7 @@ function forcePortNear(tiles, landId, waterId, comp, waterComp, names, rand) {
   }
   const target = existingCity || anyCoast;
   if (!target) return;
-  if (!target.city) target.city = { name: names[irnd(names.length, rand)], capitalOf: -1, port: true, variant: irnd(3, rand) };
+  if (!target.city) target.city = { name: names[irnd(names.length, rand)], capitalOf: -1, port: true, variant: irnd(3, rand), buildType: DEFAULT_UNIT_TYPE };
   else target.city.port = true;
 }
 

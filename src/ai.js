@@ -3,6 +3,28 @@
    AI — wybór celów i ruchów dla imperiów sterowanych komputerowo
    ============================================================ */
 
+// AI: dopasowuje buildType garnizonu do stojącej tam armii (nigdy nie marnuje
+// własnej produkcji), a dla pustych miast dobiera typ wg odległości od
+// najbliższego wroga: blisko frontu -> artyleria (obrona+wsparcie), średnio ->
+// czołg (ofensywa), głębokie zaplecze -> piechota (baza)
+function aiAssignBuildType(t, playerId) {
+  if (t.army && t.army.player === playerId) { t.city.buildType = t.army.type; return; }
+  if (t.army) return; // pole chwilowo zajęte (np. w trakcie walki) — nic nie rób
+  const d = aiFrontDistance(playerId, t);
+  t.city.buildType = d <= 2 ? 'artillery' : d <= 5 ? 'tank' : 'infantry';
+}
+
+function aiFrontDistance(playerId, t) {
+  let d = Infinity;
+  for (const row of state.tiles) for (const o of row) {
+    if (o.owner >= 0 && o.owner !== playerId && state.players[o.owner].alive) {
+      const dd = hexDist(t.c, t.r, o.c, o.r);
+      if (dd < d) d = dd;
+    }
+  }
+  return d;
+}
+
 function aiTargets(playerId) {
   const targets = [];
   for (const row of state.tiles) for (const t of row) {
@@ -44,9 +66,9 @@ function aiPickMove(playerId, diff) {
     const moves = validMoves(from);
     for (const to of moves) {
       let score = -Infinity;
-      const myPow = armyPowerAt(from.army, to) + 0.12 * supportFor(playerId, to, from);
+      const myPow = armyPowerAt(from.army, to, 'attack') + 0.12 * supportFor(playerId, to, from);
       if (to.army && to.army.player !== playerId) {
-        let defPow = armyPowerAt(to.army, to) + 0.12 * supportFor(to.army.player, to, null);
+        let defPow = armyPowerAt(to.army, to, 'defense') + 0.12 * supportFor(to.army.player, to, null);
         if (to.city) defPow *= (to.city.capitalOf >= 0 ? 1.25 : 1.15);
         const ratio = myPow / Math.max(0.1, defPow);
         // AT: mnożnik progów ataku (trudność) — łatwe AI potrzebuje większej przewagi,

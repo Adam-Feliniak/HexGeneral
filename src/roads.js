@@ -60,12 +60,16 @@ function produce(playerId) {
   }
   for (const row of state.tiles) for (const t of row) {
     if (!t.city || t.owner !== playerId) continue;
+    if (!p.isHuman) aiAssignBuildType(t, playerId);
     const base = (t.city.capitalOf === playerId ? 3 : 1) + (bonus.get(t) || 0);
     const gain = Math.max(1, Math.round(base * mult));
+    const buildType = t.city.buildType || DEFAULT_UNIT_TYPE;
     if (t.army && t.army.player === playerId) {
-      t.army.str = Math.min(MAX_ARMY, t.army.str + gain);
+      // garnizon innego typu niż wybrany do budowy — produkcja tej tury przepada
+      // (jedno pole = jedna armia, bez kolejkowania; gracz/AI może zmienić buildType)
+      if (t.army.type === buildType) t.army.str = Math.min(MAX_ARMY, t.army.str + gain);
     } else if (!t.army) {
-      t.army = { player: playerId, str: gain, vet: 0, movesUsed: Infinity };
+      t.army = { player: playerId, str: gain, vet: 0, movesUsed: Infinity, type: buildType };
     }
   }
 }

@@ -3,6 +3,7 @@
 
   "menu.singlePlayer": "Einzelspieler",
   "menu.multiPlayer": "Mehrspieler",
+  "menu.tutorial": "Anleitung",
   "menu.options": "Optionen",
   "menu.exit": "Beenden",
 
@@ -17,6 +18,8 @@
 
   "lobby.sp.title": "Einzelspieler",
   "lobby.sp.botCount": "Anzahl Bots",
+
+  "lobby.tutorial.title": "Spielanleitung",
 
   "lobby.mp.title": "Mehrspieler",
   "lobby.mp.playerCount": "Anzahl Spieler",
@@ -42,6 +45,11 @@
   "game.seedFooter": "Seed: {{seed}}",
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Bot-Schwierigkeit: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
+
+  "unit.infantry": "Infanterie",
+  "unit.tank": "Panzer",
+  "unit.artillery": "Artillerie",
+  "build.panelTitle": "Produktion:",
 
   "banner.missionStart": "MISSION START!",
   "banner.mpGameStart": "Spieler 1: {{name}} beginnt!",
@@ -85,7 +93,7 @@
   "tooltip.supplying": "🚚 Versorgt: <b>{{city}}</b>",
   "tooltip.roadCut": "🚧 Straße vom Feind blockiert — keine Versorgung",
   "tooltip.noRoad": "🚧 Keine Straße zur Stadt — keine Versorgung",
-  "tooltip.army": "⚔ Armee von {{player}}: Stärke <b>{{str}}</b>, Moral <b>{{morale}}%</b>",
+  "tooltip.army": "⚔ {{player}} — {{type}}: Stärke <b>{{str}}</b>, Moral <b>{{morale}}%</b>",
   "tooltip.pickEmpireHint": "👉 Klicken, um dieses Reich zu spielen",
 
   "help.summary": "Wie spielt man?",
@@ -93,8 +101,9 @@
   "help.pickEmpire": "Zu Beginn kannst du auf <b>eine beliebige Hauptstadt</b> klicken, um dieses Reich zu spielen (solange du noch keinen Zug gemacht hast).",
   "help.moves": "Du hast <b>5 Züge</b> pro Runde; jede Armee kann sich einmal bewegen.",
   "help.clickArmy": "Klicke deine Armee an, dann ein hervorgehobenes Nachbarfeld.",
-  "help.merge": "Das Betreten eines Feldes mit eigener Armee <b>vereint</b> sie (max. 99).",
-  "help.unitTypes": "Armeen unter 20 Stärke sind <b>Infanterie</b>, ab 20 — <b>Panzer</b>.",
+  "help.merge": "Das Betreten eines Feldes mit eigener Armee <b>vereint</b> sie (max. 99, nur gleicher Typ).",
+  "help.unitTypes": "3 Einheitentypen: <b>Infanterie</b> (ausgeglichen), <b>Panzer</b> (starker Angriff und Beweglichkeit, schwächere Verteidigung) und <b>Artillerie</b> (starke Verteidigung und Unterstützung, schwacher Angriff, langsam).",
+  "help.buildChoice": "Klicke eine eigene Stadt an, um den zu bauenden Einheitstyp zu wählen.",
   "help.production": "Städte produzieren <b>+1</b> Stärke pro Runde, die Hauptstadt <b>+3</b>.",
   "help.resources": "<b>Ressourcen</b> (Ölquelle, Ackerland, Mine) geben <b>+1</b> Produktion bei Straßenanbindung an eine Stadt — die Straße wird einmal beim Erobern der Ressource angelegt und unterbrochen, wenn ein Feind sie betritt.",
   "help.morale": "<b>Moral</b> sinkt mit der Entfernung zur nächsten eigenen Stadt und auf See — sie beeinflusst die Kampfstärke.",

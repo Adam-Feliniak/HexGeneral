@@ -3,6 +3,7 @@
 
   "menu.singlePlayer": "Single Player",
   "menu.multiPlayer": "Multiplayer",
+  "menu.tutorial": "Tutorial",
   "menu.options": "Options",
   "menu.exit": "Exit",
 
@@ -17,6 +18,8 @@
 
   "lobby.sp.title": "Single Player",
   "lobby.sp.botCount": "Number of Bots",
+
+  "lobby.tutorial.title": "How to Play",
 
   "lobby.mp.title": "Multiplayer",
   "lobby.mp.playerCount": "Number of Players",
@@ -42,6 +45,11 @@
   "game.seedFooter": "Seed: {{seed}}",
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Bot Difficulty: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
+
+  "unit.infantry": "Infantry",
+  "unit.tank": "Tank",
+  "unit.artillery": "Artillery",
+  "build.panelTitle": "Production:",
 
   "banner.missionStart": "MISSION START!",
   "banner.mpGameStart": "Player 1: {{name}} starts!",
@@ -85,7 +93,7 @@
   "tooltip.supplying": "🚚 Supplies: <b>{{city}}</b>",
   "tooltip.roadCut": "🚧 Road cut by the enemy — no supplies",
   "tooltip.noRoad": "🚧 No road to a city — no supplies",
-  "tooltip.army": "⚔ {{player}}'s army: strength <b>{{str}}</b>, morale <b>{{morale}}%</b>",
+  "tooltip.army": "⚔ {{player}} — {{type}}: strength <b>{{str}}</b>, morale <b>{{morale}}%</b>",
   "tooltip.pickEmpireHint": "👉 Click to play as this empire",
 
   "help.summary": "How to play?",
@@ -93,8 +101,9 @@
   "help.pickEmpire": "At the start, you can click <b>any capital</b> to play as that empire (until you make your first move).",
   "help.moves": "You have <b>5 moves</b> per turn; each army can move once.",
   "help.clickArmy": "Click your army, then a highlighted adjacent tile.",
-  "help.merge": "Moving onto a tile with your own army <b>merges</b> them (max 99).",
-  "help.unitTypes": "Armies below 20 strength are <b>infantry</b>, 20 and above — <b>tanks</b>.",
+  "help.merge": "Moving onto a tile with your own army <b>merges</b> them (max 99, same type only).",
+  "help.unitTypes": "3 unit types: <b>infantry</b> (balanced), <b>tanks</b> (strong attack and mobility, weaker defense) and <b>artillery</b> (strong defense and support, weak attack, slow).",
+  "help.buildChoice": "Click your own city to choose which unit type it builds.",
   "help.production": "Cities produce <b>+1</b> strength per turn, the capital <b>+3</b>.",
   "help.resources": "<b>Resources</b> (oil well, farmland, mine) give <b>+1</b> production when connected to a city by road — the road is laid once, when the resource is captured, and is cut if an enemy enters its path.",
   "help.morale": "<b>Morale</b> drops with distance from your nearest city and at sea — it affects combat strength.",

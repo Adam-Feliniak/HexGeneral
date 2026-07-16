@@ -149,6 +149,49 @@ function tankGrid() {
   return toRows(g);
 }
 
+// ---------- armata polowa 44x26 (dwa koła, tarcza w kolorze gracza, ukośna lufa) ----------
+
+function artilleryGrid() {
+  const g = makeGrid(44, 26);
+
+  const wheel = (cx, cy, r) => {
+    ellipseFill(g, cx, cy, r, r, 'o');
+    ellipseFill(g, cx, cy, r - 1, r - 1, 'w');
+    ellipseFill(g, cx - r * 0.3, cy - r * 0.3, (r - 1) * 0.5, (r - 1) * 0.5, 'W');
+    ellipseFill(g, cx, cy, r * 0.3, r * 0.3, 'e');
+  };
+  wheel(9, 19, 4.5);
+  wheel(19, 19, 4.5);
+
+  // oś łącząca koła
+  rect(g, 9, 17, 11, 2, 'g');
+
+  // rozstawiona laweta z tyłu
+  rect(g, 19, 18, 20, 2, 'r');
+  rect(g, 22, 12, 2, 8, 'r');
+  rect(g, 34, 10, 2, 10, 'r');
+
+  // tarcza osłonowa (kolor gracza)
+  ellipseFill(g, 13, 10, 8, 7, 'b');
+  ellipseFill(g, 10, 7, 3.5, 2, 'h');
+  for (let y = 13; y <= 16; y++) {
+    for (let x = 0; x < 44; x++) if (g[y][x] === 'b') g[y][x] = 'B';
+  }
+
+  // zamek działa
+  rect(g, 16, 8, 5, 4, 'g');
+
+  // lufa uniesiona ukośnie do góry-w prawo (schodkowo)
+  let bx = 20, by = 9;
+  for (let i = 0; i < 9; i++) {
+    rect(g, bx, by, 3, 3, i % 3 === 0 ? 'G' : 'g');
+    bx += 2; if (i % 2 === 0) by -= 1;
+  }
+
+  outline(g);
+  return toRows(g);
+}
+
 // ---------- piechur 24x30, cztery klatki chodu (painter, jak czołg/miasta) ----------
 
 // głowa + tułów + karabin trzymany po przekątnej (kolba-komora-magazynek-lufa-wylot) —
@@ -985,6 +1028,7 @@ save('bg', bgTile());
 PLAYERS.forEach((p, i) => {
   const pal = { ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4) };
   save('tank_' + i, hq(gridToPixels(tankGrid(), pal)));
+  save('artillery_' + i, hq(gridToPixels(artilleryGrid(), pal)));
   const top = soldierTop();
   save('soldier_' + i, composeH(
     [0, 1, 2, 3].map(phase => hq(gridToPixels(top.concat(legsGrid(phase)), pal)))

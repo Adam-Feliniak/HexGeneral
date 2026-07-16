@@ -185,9 +185,8 @@ function drawArmy(t, now) {
   ctx.save();
   ctx.globalAlpha = dim ? 0.55 : 1;
   x = Math.round(x); y = Math.round(y);
-  // mała armia = piechur (animowany marsz), duża = czołg;
-  // na morzu armia płynie okrętem: barka / pancernik / lotniskowiec
-  const infantry = army.str < 20;
+  // typ jednostki lądowej wybierany w panelu budowy (army.type);
+  // na morzu armia płynie okrętem wg siły: barka / pancernik / lotniskowiec
   let selBox;
   if (!t.land) {
     const tier = army.str < 20 ? 0 : army.str < 70 ? 1 : 2;
@@ -196,19 +195,23 @@ function drawArmy(t, now) {
       : tier === 1 ? [x - 24, y - 13, 48, 24]
       : [x - 25, y - 12, 50, 22];
     if (sprOk(spr)) ctx.drawImage(spr, selBox[0], selBox[1], selBox[2], selBox[3]);
-  } else {
-    const spr = infantry ? SPR.soldiers[army.player] : SPR.tanks[army.player];
+  } else if (army.type === 'infantry') {
+    const spr = SPR.soldiers[army.player];
     if (sprOk(spr)) {
-      if (infantry) {
-        // animacja marszu (4 klatki) tylko dla jednostki aktualnie zaznaczonej przez
-        // gracza — reszta piechoty stoi (statyczna klatka 0), żeby plansza się nie "migotała"
-        const fr = state.selected === t ? Math.floor(now / 150) % 4 : 0;
-        ctx.drawImage(spr, fr * 24, 0, 24, 30, x - 12, y - 17, 24, 30);
-      } else {
-        ctx.drawImage(spr, x - 24, y - 15, 48, 28);
-      }
+      // animacja marszu (4 klatki) tylko dla jednostki aktualnie zaznaczonej przez
+      // gracza — reszta piechoty stoi (statyczna klatka 0), żeby plansza się nie "migotała"
+      const fr = state.selected === t ? Math.floor(now / 150) % 4 : 0;
+      ctx.drawImage(spr, fr * 24, 0, 24, 30, x - 12, y - 17, 24, 30);
     }
-    selBox = infantry ? [x - 13, y - 18, 26, 32] : [x - 25, y - 16, 50, 30];
+    selBox = [x - 13, y - 18, 26, 32];
+  } else if (army.type === 'tank') {
+    const spr = SPR.tanks[army.player];
+    if (sprOk(spr)) ctx.drawImage(spr, x - 24, y - 15, 48, 28);
+    selBox = [x - 25, y - 16, 50, 30];
+  } else { // artillery
+    const spr = SPR.artillery[army.player];
+    if (sprOk(spr)) ctx.drawImage(spr, x - 22, y - 14, 44, 26);
+    selBox = [x - 23, y - 15, 46, 28];
   }
   // puls zaznaczenia
   if (state.selected === t) {
@@ -232,7 +235,51 @@ function drawArmy(t, now) {
   ctx.fillRect(x - 17, y + 15, 16, 4);
   ctx.fillStyle = m > 0.75 ? '#7be05a' : m > 0.5 ? '#ffd91c' : '#e05a2a';
   ctx.fillRect(x - 16, y + 16, 14 * Math.min(1, m), 2);
+  // odznaka weterana: krokiewka co 4 pkt vet (4/8/12), gwiazdka na maksie (15)
+  drawVetBadge(ctx, x, y, army.vet);
   ctx.restore();
+}
+
+function drawVetBadge(ctx, x, y, vet) {
+  if (vet < 4) return;
+  const bx = x - 16, by = y - 20;
+  ctx.strokeStyle = '#16140c';
+  ctx.fillStyle = '#ffd91c';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  if (vet >= 15) {
+    drawStarPath(ctx, bx, by + 3, 5);
+    ctx.fill();
+    ctx.stroke();
+    return;
+  }
+  const chevrons = vet >= 12 ? 3 : vet >= 8 ? 2 : 1;
+  for (let i = 0; i < chevrons; i++) {
+    ctx.beginPath();
+    ctx.moveTo(bx - 4, by + i * 5 + 2.5);
+    ctx.lineTo(bx, by + i * 5 - 1.5);
+    ctx.lineTo(bx + 4, by + i * 5 + 2.5);
+    ctx.strokeStyle = '#16140c';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+    ctx.strokeStyle = '#ffd91c';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function drawStarPath(ctx, cx, cy, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a1 = -Math.PI / 2 + i * (2 * Math.PI / 5);
+    const a2 = a1 + Math.PI / 5;
+    const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * 0.45 * Math.cos(a2), y2 = cy + r * 0.45 * Math.sin(a2);
+    if (i === 0) ctx.moveTo(x1, y1); else ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2);
+  }
+  ctx.closePath();
 }
 
 function draw(now) {

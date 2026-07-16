@@ -10,6 +10,7 @@ function applyScreen() {
   document.getElementById('menu-main').hidden = s !== 'menu';
   document.getElementById('menu-sp-setup').hidden = s !== 'sp-setup';
   document.getElementById('menu-mp-setup').hidden = s !== 'mp-setup';
+  document.getElementById('menu-tutorial').hidden = s !== 'tutorial';
   document.getElementById('menu-options').hidden = s !== 'options';
 }
 
@@ -221,10 +222,12 @@ function initMenu() {
   renderLangPicker();
   document.getElementById('menu-single').addEventListener('click', () => goToScreen('sp-setup'));
   document.getElementById('menu-multi').addEventListener('click', () => goToScreen('mp-setup'));
+  document.getElementById('menu-tutorial-btn').addEventListener('click', () => goToScreen('tutorial'));
   document.getElementById('menu-options-btn').addEventListener('click', () => goToScreen('options'));
   document.getElementById('menu-exit').addEventListener('click', () => location.reload());
   document.getElementById('sp-back').addEventListener('click', () => goToScreen('menu'));
   document.getElementById('mp-back').addEventListener('click', () => goToScreen('menu'));
+  document.getElementById('tutorial-back').addEventListener('click', () => goToScreen('menu'));
   document.getElementById('options-back').addEventListener('click', () => goToScreen('menu'));
 
   document.getElementById('sp-start').addEventListener('click', () => {

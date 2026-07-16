@@ -14,7 +14,7 @@ function loadSprite(name) {
 
 function loadSprites() {
   SPR = {
-    tanks: [], soldiers: [], capitals: [],
+    tanks: [], soldiers: [], artillery: [], capitals: [],
     cities: [loadSprite('city_0'), loadSprite('city_1'), loadSprite('city_2')],
     cityPort: loadSprite('city_port'),
     crane: loadSprite('crane'),
@@ -30,6 +30,7 @@ function loadSprites() {
   SPR.ships = [];
   for (let i = 0; i < PLAYERS_DEF.length; i++) {
     SPR.tanks.push(loadSprite('tank_' + i));
+    SPR.artillery.push(loadSprite('artillery_' + i));
     SPR.soldiers.push(loadSprite('soldier_' + i)); // 4 klatki 24x30 obok siebie
     SPR.capitals.push(loadSprite('capital_' + i));
     // klasy okrętów: barka / pancernik / lotniskowiec

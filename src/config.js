@@ -37,6 +37,17 @@ const AI_DIFFICULTY_PRESETS = {
 };
 const AI_DIFFICULTY_ORDER = ['easy', 'normal', 'hard', 'nightmare'];
 
+// typy jednostek lądowych — atk/def: mnożniki armyPowerAt (siły w ataku/obronie),
+// moveBase/roadBonus: zasięg ruchu (moveCap) poza/na aktywnej drodze,
+// supportWeight: waga wkładu tej armii we wsparcie sąsiadów w bitwie (supportFor)
+const UNIT_TYPES = {
+  infantry:  { key: 'infantry',  atk: 1.00, def: 1.00, moveBase: 1, roadBonus: 1, supportWeight: 1.00 },
+  tank:      { key: 'tank',      atk: 1.25, def: 0.85, moveBase: 1, roadBonus: 2, supportWeight: 0.80 },
+  artillery: { key: 'artillery', atk: 0.75, def: 1.20, moveBase: 1, roadBonus: 0, supportWeight: 1.80 },
+};
+const UNIT_TYPE_ORDER = ['infantry', 'tank', 'artillery']; // kolejność w panelu budowy
+const DEFAULT_UNIT_TYPE = 'infantry';
+
 // diff: klucz presetu ('easy'..'nightmare') albo liczba 0-100 (suwak custom,
 // interpolowany między Easy i Nightmare)
 function resolveDifficulty(diff) {
