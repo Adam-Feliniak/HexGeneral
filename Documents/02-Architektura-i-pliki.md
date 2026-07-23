@@ -50,7 +50,7 @@ Pliki, które dotykają DOM-u, zaczynają odpowiednie funkcje od strażnika w st
 if (typeof document === 'undefined') return;
 ```
 
-Dzięki temu **cała logika gry (bez rysowania i bez DOM-u) daje się uruchomić w zwykłym Node.js**, bez przeglądarki — przydatne do automatycznych testów/symulacji bez configurowania headless-browsera (patrz [Przewodnik developera](09-Przewodnik-developera.md)). Repo nigdy nie miało formalnych testów jednostkowych ani eksportu CommonJS (`module.exports`) — pliki polegają wyłącznie na globalnym scope przeglądarki/Node.
+Dzięki temu **cała logika gry (bez rysowania i bez DOM-u) daje się uruchomić w zwykłym Node.js**, bez przeglądarki — przydatne do automatycznych testów/symulacji bez konfigurowania headless-browsera (patrz [Przewodnik developera](09-Przewodnik-developera.md)). Repo nigdy nie miało formalnych testów jednostkowych ani eksportu CommonJS (`module.exports`) — pliki polegają wyłącznie na globalnym scope przeglądarki/Node.
 
 ## Kształt danych
 

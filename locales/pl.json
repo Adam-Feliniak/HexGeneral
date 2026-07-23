@@ -13,7 +13,7 @@
   "lobby.common.custom": "Własny",
   "lobby.common.noneRandom": "Brak (losowy)",
   "lobby.common.seedPreview": "Seed: {{seed}}",
-  "lobby.common.start": "Start grę",
+  "lobby.common.start": "Start gry",
   "lobby.common.back": "Wróć",
 
   "lobby.sp.title": "Pojedynczy gracz",
