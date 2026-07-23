@@ -2,6 +2,12 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.1.1] - 2026-07-24
+
+- Tłumaczy poziomy trudności AI (Łatwy/Normalny/Trudny/Koszmar/Własny) na PL/EN/DE — wcześniej były zahardkodowane po angielsku
+- Naprawia niedobudowany `src/locales-data.js` (zmiana "Start grę" → "Start gry" w `pl.json` nie została wcześniej wygenerowana)
+- Dokumentuje w README zasadę uruchamiania `build-locales.js` po edycji `locales/*.json`
+
 ## [0.1.0] - 2026-07-24
 
 Punkt startowy wersjonowania — stan gry w momencie wprowadzenia numeracji:
