@@ -47,13 +47,13 @@ function renderDifficultyGroup(groupId, customWrapId, sliderId, sliderValId, set
   box.innerHTML = '';
   for (const key of AI_DIFFICULTY_ORDER) {
     const btn = document.createElement('button');
-    btn.textContent = AI_DIFFICULTY_PRESETS[key].label;
+    btn.textContent = difficultyLabel(AI_DIFFICULTY_PRESETS[key]);
     btn.className = setup.difficulty === key ? 'selected' : '';
     btn.addEventListener('click', () => { setup.difficulty = key; onChange(); });
     box.appendChild(btn);
   }
   const customBtn = document.createElement('button');
-  customBtn.textContent = 'Custom';
+  customBtn.textContent = i18n.t('lobby.common.custom');
   customBtn.className = setup.difficulty === 'custom' ? 'selected' : '';
   customBtn.addEventListener('click', () => { setup.difficulty = 'custom'; onChange(); });
   box.appendChild(customBtn);

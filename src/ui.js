@@ -34,7 +34,7 @@ function updateUI() {
       + (p.alive && state.phase !== 'over' && p.id === state.currentPlayerIndex ? ' active' : '');
     const icon = p.isHuman ? '👤' : '🤖';
     const tyTag = state.mode === 'single' && p.isHuman ? ' ' + i18n.t('game.youTag') : '';
-    const diffBadge = !p.isHuman ? `<span class="diff-badge">${resolveDifficulty(p.difficulty).label}</span>` : '';
+    const diffBadge = !p.isHuman ? `<span class="diff-badge">${difficultyLabel(resolveDifficulty(p.difficulty))}</span>` : '';
     div.innerHTML =
       `<span class="player-dot" style="background:${p.color}"></span>` +
       `<span class="player-name">${icon} ${p.name}${tyTag}${diffBadge}</span>` +
@@ -48,7 +48,7 @@ function updateUI() {
   if (footer) {
     const hasBots = state.players.some(p => !p.isHuman);
     footer.textContent = hasBots
-      ? i18n.t('game.seedFooterWithDifficulty', { seed: state.mapSeed, difficulty: resolveDifficulty(state.aiDifficulty).label })
+      ? i18n.t('game.seedFooterWithDifficulty', { seed: state.mapSeed, difficulty: difficultyLabel(resolveDifficulty(state.aiDifficulty)) })
       : i18n.t('game.seedFooter', { seed: state.mapSeed });
   }
 }

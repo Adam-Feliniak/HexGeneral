@@ -2,6 +2,16 @@
 
 Turowa strategia heksagonalna 2D — czysty JS + Canvas, bez zależności. Otwórz `index.html` bezpośrednio w przeglądarce.
 
+## Tłumaczenia
+
+Źródłem prawdy dla tekstów UI są `locales/pl.json`, `en.json`, `de.json` — ale gra faktycznie wczytuje wygenerowaną z nich kopię `src/locales-data.js`. Po **każdej** edycji plików w `locales/` trzeba ręcznie przebudować tę kopię:
+
+```
+node tools/build-locales.js
+```
+
+Bez tego kroku zmiana w `locales/*.json` nie pojawi się w grze. Nigdy nie edytuj `src/locales-data.js` ręcznie — zostanie nadpisany przy kolejnym uruchomieniu skryptu.
+
 ## Struktura kodu
 
 Logika gry jest podzielona na pliki w `src/`, każdy odpowiedzialny za jedną funkcję gry (wczytywane w tej kolejności w `index.html`):

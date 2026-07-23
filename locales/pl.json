@@ -32,6 +32,12 @@
   "lobby.options.defaultSeed": "Domyślny seed",
   "lobby.options.defaultDifficulty": "Domyślna trudność botów",
 
+  "difficulty.easy": "Łatwy",
+  "difficulty.normal": "Normalny",
+  "difficulty.hard": "Trudny",
+  "difficulty.nightmare": "Koszmar",
+  "difficulty.customPercent": "Własny {{pct}}%",
+
   "game.turn": "Tura {{n}}",
   "game.movesLeft": "Ruchy: {{moves}}/{{total}}",
   "game.enemyMoving": "Ruch przeciwników…",

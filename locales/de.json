@@ -32,6 +32,12 @@
   "lobby.options.defaultSeed": "Standard-Seed",
   "lobby.options.defaultDifficulty": "Standard-Bot-Schwierigkeit",
 
+  "difficulty.easy": "Leicht",
+  "difficulty.normal": "Normal",
+  "difficulty.hard": "Schwer",
+  "difficulty.nightmare": "Alptraum",
+  "difficulty.customPercent": "Eigene {{pct}}%",
+
   "game.turn": "Runde {{n}}",
   "game.movesLeft": "Züge: {{moves}}/{{total}}",
   "game.enemyMoving": "Gegner ziehen…",

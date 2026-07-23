@@ -32,6 +32,12 @@
   "lobby.options.defaultSeed": "Default Seed",
   "lobby.options.defaultDifficulty": "Default Bot Difficulty",
 
+  "difficulty.easy": "Easy",
+  "difficulty.normal": "Normal",
+  "difficulty.hard": "Hard",
+  "difficulty.nightmare": "Nightmare",
+  "difficulty.customPercent": "Custom {{pct}}%",
+
   "game.turn": "Turn {{n}}",
   "game.movesLeft": "Moves: {{moves}}/{{total}}",
   "game.enemyMoving": "Opponents moving…",

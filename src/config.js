@@ -32,10 +32,10 @@ const SEED_MAX_VALUE = 999999;
 // (Nightmare economy 1.725 = 1.5 bazowe * 1.15 dodatkowego handicapu ekonomicznego,
 // żeby był wyraźnie najtrudniejszy)
 const AI_DIFFICULTY_PRESETS = {
-  easy:      { key: 'easy',      label: 'Easy',      economy: 0.5,   aggression: 0.7, aggressionThreshold: 1.3,  thinkDelay: 260 },
-  normal:    { key: 'normal',    label: 'Normal',    economy: 1.0,   aggression: 1.0, aggressionThreshold: 1.0,  thinkDelay: 160 },
-  hard:      { key: 'hard',      label: 'Hard',      economy: 1.25,  aggression: 1.35, aggressionThreshold: 0.85, thinkDelay: 110 },
-  nightmare: { key: 'nightmare', label: 'Nightmare', economy: 1.725, aggression: 1.7, aggressionThreshold: 0.7,  thinkDelay: 70 },
+  easy:      { key: 'easy',      economy: 0.5,   aggression: 0.7, aggressionThreshold: 1.3,  thinkDelay: 260 },
+  normal:    { key: 'normal',    economy: 1.0,   aggression: 1.0, aggressionThreshold: 1.0,  thinkDelay: 160 },
+  hard:      { key: 'hard',      economy: 1.25,  aggression: 1.35, aggressionThreshold: 0.85, thinkDelay: 110 },
+  nightmare: { key: 'nightmare', economy: 1.725, aggression: 1.7, aggressionThreshold: 0.7,  thinkDelay: 70 },
 };
 const AI_DIFFICULTY_ORDER = ['easy', 'normal', 'hard', 'nightmare'];
 
@@ -59,10 +59,18 @@ function resolveDifficulty(diff) {
   const a = AI_DIFFICULTY_PRESETS.easy, b = AI_DIFFICULTY_PRESETS.nightmare;
   const lerp = k => a[k] + (b[k] - a[k]) * t;
   return {
-    key: 'custom', label: `Custom ${Math.round(diff)}%`,
+    key: 'custom', pct: Math.round(diff),
     economy: lerp('economy'), aggression: lerp('aggression'),
     aggressionThreshold: lerp('aggressionThreshold'), thinkDelay: Math.round(lerp('thinkDelay')),
   };
+}
+
+// etykieta presetu do wyświetlenia — woła i18n.t() zdefiniowane w i18n.js
+// (wczytywanym zaraz po config.js), ale wywoływane dopiero przy renderze UI,
+// więc kolejność <script>-ów tu nie ma znaczenia
+function difficultyLabel(preset) {
+  if (preset.key === 'custom') return i18n.t('difficulty.customPercent', { pct: preset.pct });
+  return i18n.t('difficulty.' + preset.key);
 }
 
 const PLAYERS_DEF = [
