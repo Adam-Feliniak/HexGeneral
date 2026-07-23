@@ -3,6 +3,8 @@
    KONFIGURACJA — stałe rozgrywki, gracze, nazwy miast
    ============================================================ */
 
+const GAME_VERSION = '0.1.0';
+
 const MAP_W = 23;
 const MAP_H = 14;
 const HEX = 28;                       // promień heksa (px)

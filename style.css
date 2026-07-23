@@ -464,6 +464,15 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
   letter-spacing: 0.5px;
 }
 
+#version-tag {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-size: 11px;
+  color: #6e6a52;
+  letter-spacing: 0.5px;
+}
+
 #turn-player-label {
   font-weight: 700;
   color: #ffd91c;

@@ -8,6 +8,8 @@ if (typeof document !== 'undefined' && canvas) {
   loadSprites();
   initInput();
   initMenu();
+  const vt = document.getElementById('version-tag');
+  if (vt) vt.textContent = 'v' + GAME_VERSION;
   state = {
     screen: 'menu',
     spSetup: defaultSpSetup(),
