@@ -7,16 +7,15 @@ function captureTile(t, playerId) {
   const prevOwner = t.owner;
   if (t.land) t.owner = playerId;
   const isCapitalFall = t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== playerId;
-  if (!isCapitalFall) {
-    // pojedyncze zajęcie pola (nie cała stolica) — nowy właściciel startuje bez
-    // przejętej infrastruktury, musi zbudować własną drogę od zera
-    if ((t.resource || t.city) && prevOwner !== playerId) t.road = null;
-    // zajęte miasto porzuca swój projekt drogi (i jej niedokończony odcinek,
-    // leżący na innym polu) — cancelRoadProject czyści oba
-    if (t.city && prevOwner !== playerId && t.city.roadProject) cancelRoadProject(t);
-    if (t.city && prevOwner !== playerId) t.city.buildType = DEFAULT_UNIT_TYPE;
-  } else if (t.road) {
-    t.road.owner = playerId; // stolica pada razem z całym imperium — jej infrastruktura też przechodzi
+  if (!isCapitalFall && prevOwner !== playerId) {
+    // pojedyncze zajęcie pola (nie cała stolica) — heks drogi wroga pęka (sieć się
+    // rozspójnia na tym polu); złoże traci przypisane miasto zaopatrywane
+    if (t.road) t.road = null;
+    if (t.resource) t.supplyCity = null;
+    // zajęte miasto porzuca swój projekt drogi (już położone heksy zostają w sieci)
+    if (t.city) { cancelRoadProject(t); t.city.buildType = DEFAULT_UNIT_TYPE; }
+  } else if (isCapitalFall && t.road) {
+    t.road.owner = playerId; // stolica pada razem z całym imperium — jej heks drogi też przechodzi
   }
   if (isCapitalFall) {
     conquerEmpire(t.city.capitalOf, playerId);
@@ -35,9 +34,10 @@ function conquerEmpire(loserId, winnerId) {
   for (const row of state.tiles) for (const t of row) {
     if (t.owner === loserId) {
       t.owner = winnerId;
-      // aneksja przenosi całą infrastrukturę pokonanego — jego drogi (nawet chwilowo
-      // przecięte) od razu liczą się jako własne i mogą "ożyć" pod nowym właścicielem
+      // aneksja przenosi całą infrastrukturę pokonanego — jego heksy drogi stają się
+      // własną siecią zwycięzcy; projekty budowy porzucamy (zwycięzca zbuduje od nowa)
       if (t.road) t.road.owner = winnerId;
+      if (t.city && t.city.roadProject) t.city.roadProject = null;
     }
     if (t.army && t.army.player === loserId) t.army = null;
   }

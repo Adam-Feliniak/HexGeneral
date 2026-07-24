@@ -28,8 +28,8 @@ function aiAssignCityProject(t, playerId) {
   aiAssignBuildType(t, playerId);
 }
 
-// najbliższe własne złoże bez drogi (nawet przeciętej — ta się sama goi, patrz
-// roads.js), pomijając złoża, do których inne własne miasto już buduje drogę
+// najbliższe własne złoże spoza sieci dróg (bez heksu drogi), pomijając złoża,
+// do których inne własne miasto już buduje drogę
 function aiFindRoadTarget(t, playerId) {
   const inProgress = new Set();
   for (const row of state.tiles) for (const c of row) {

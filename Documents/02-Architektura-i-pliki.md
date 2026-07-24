@@ -31,7 +31,7 @@ Poza tymi przypadkami, funkcje z dowolnego pliku mogą swobodnie wołać funkcje
 | `mapgen.js` | Proceduralne generowanie mapy: ląd, stolice, miasta, porty, złoża, gwarancja spójności | `generateMap()`, `ensureCapitalConnectivity()` |
 | `state.js` | Stan gry, tworzenie nowej gry, dostęp do pól planszy, log wydarzeń | `newGame()`, `tileAt()`, `neighborsOf()`, `addLog()` |
 | `combat.js` | Morale, siła bojowa, legalność ruchu, zasięg ruchu, rozstrzyganie bitew | `moraleAt()`, `armyPowerAt()`, `canStep()`, `moveCap()`, `reachableMoves()`, `resolveBattle()`, `executeMove()` |
-| `roads.js` | Drogi budowane przez gracza/AI (złoże→miasto, miasto→miasto), produkcja siły w miastach | `roadCost()`, `startRoadProject()`, `completeRoadProject()`, `isRoadActive()`, `tileOnRoad()`, `produce()` |
+| `roads.js` | Sieć dróg budowana przez gracza/AI (heksy `road`), zaopatrzenie i produkcja siły w miastach | `roadCost()`, `startRoadProject()`, `completeRoadProject()`, `connectedCities()`, `supplyCityFor()`, `tileOnRoad()`, `produce()` |
 | `empire.js` | Zajmowanie pól, aneksja całego imperium, warunek końca gry | `captureTile()`, `conquerEmpire()`, `checkGameOver()` |
 | `turns.js` | Kolejność tur (człowiek/AI), limit czasu | `startTurn()`, `endTurn()`, `requestEndTurn()`, `checkTurnTimer()` |
 | `ai.js` | Wybór ruchów i celów botów, dobór typu produkcji/budowy dróg | `aiTargets()`, `aiPickMove()`, `aiStep()`, `aiAssignBuildType()`, `aiAssignCityProject()` |
@@ -90,13 +90,10 @@ Poza `state` istnieją jeszcze osobne, niezależnie resetowane tablice modułowe
   c, r,                 // współrzędne kolumna/wiersz
   land: bool,
   city: null | { name, capitalOf, port, buildType, variant?, roadProject? },
-  resource: null | 'oil' | 'farm' | 'mine',
-  road: null | { owner, city, path, built },  // droga budowana przez gracza/AI (roads.js) — city = pole
-                                         // źródłowego miasta, path = trasa do niego (przez własne
-                                         // terytorium), built = ile heksów (od strony miasta) już
-                                         // położono; pełna gdy built === path.length. Może być na
-                                         // złożu (bonus produkcji po ukończeniu) albo na innym
-                                         // mieście (bonus ruchu, też dla częściowego odcinka)
+  resource: null | 'oil' | 'farm' | 'mine',   // + opcjonalne supplyCity: pole miasta zaopatrywanego (+1)
+  road: null | { owner },                // heks sieci dróg gracza (roads.js) — sieć to zbiór
+                                         // sąsiadujących heksów drogi tego samego właściciela;
+                                         // pole miasta źródłowego i trasa NIE są tu trzymane
   owner: -1 | playerId,
   army: null | { player, str, vet, movesUsed, type },
   shade: number (-1..1), // losowa wariacja koloru terenu, też steruje typem złoża i dekoracją
@@ -107,7 +104,7 @@ Poza `state` istnieją jeszcze osobne, niezależnie resetowane tablice modułowe
 
 `city.capitalOf` to `-1` dla zwykłego miasta albo id gracza, którego stolicą to miasto **było przy generacji mapy** — pole nie zmienia się nawet po zdobyciu stolicy przez wroga poza jednym wyjątkiem: `captureTile()` w `empire.js` ustawia `capitalOf = -1` w momencie faktycznego zdobycia stolicy (staje się wtedy zwykłym miastem).
 
-`city.roadProject` (opcjonalne, `null`/brak gdy nieaktywne) to `{ target, cost, progress }` — aktywny projekt budowy drogi z tego miasta; dopóki istnieje, produkcja miasta (`produce()` w `roads.js`) dolicza się do `progress` zamiast do jednostek (patrz [Gospodarka](05-Gospodarka.md)).
+`city.roadProject` (opcjonalne, `null`/brak gdy nieaktywne) to `{ target, segment, cost, progress, built }` — aktywny projekt budowy drogi z tego miasta; `segment` to lista nowych heksów do położenia, `built` ile z nich już położono. Dopóki istnieje, produkcja miasta (`produce()` w `roads.js`) idzie w `progress` (i przyrostowo odsłania heksy sieci) zamiast w jednostki (patrz [Gospodarka](05-Gospodarka.md)).
 
 `army.type` to jedna z trzech wartości opisanych w [Mechanice rozgrywki](04-Mechanika-rozgrywki.md): `'infantry'` | `'tank'` | `'artillery'`.
 

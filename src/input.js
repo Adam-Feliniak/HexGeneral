@@ -44,6 +44,10 @@ function onTileClick(t) {
     }
   }
   state.selectedCity = (t.city && t.owner === cp.id) ? t : null;
+  // własne, podłączone złoże bez armii → panel wyboru miasta zaopatrywanego (+1);
+  // gdy stoi tam armia, klik ma ją wybrać do ruchu, nie otwierać panelu
+  state.selectedResource = (t.resource && t.owner === cp.id && t.road && !t.army && connectedCities(t, cp.id).length)
+    ? t : null;
   if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
     switchHuman(t.city.capitalOf);
     return;
@@ -107,9 +111,9 @@ function tileTooltip(t) {
     const RES_NAMES = { oil: i18n.t('tooltip.resourceOil'), farm: i18n.t('tooltip.resourceFarm'), mine: i18n.t('tooltip.resourceMine') };
     lines.push(i18n.t('tooltip.resourceBonus', { resource: RES_NAMES[t.resource] }));
     if (t.owner >= 0) {
-      if (t.road && isRoadActive(t)) lines.push(i18n.t('tooltip.supplying', { city: t.road.city.city.name }));
-      else if (t.road && t.road.built < t.road.path.length) lines.push(i18n.t('tooltip.roadBuilding', { city: t.road.city.city.name }));
-      else if (t.road) lines.push(i18n.t('tooltip.roadCut'));
+      const supply = t.road ? supplyCityFor(t, t.owner) : null;
+      if (supply) lines.push(i18n.t('tooltip.supplying', { city: supply.city.name }));
+      else if (t.road) lines.push(i18n.t('tooltip.roadUnconnected'));
       else lines.push(i18n.t('tooltip.noRoad'));
     }
   }
@@ -135,6 +139,7 @@ function initInput() {
     ev.preventDefault();
     state.selected = null;
     state.roadPickFrom = null;
+    state.selectedResource = null;
     updateUI();
   });
   canvas.addEventListener('mousemove', ev => {
@@ -159,6 +164,6 @@ function initInput() {
   document.addEventListener('keydown', ev => {
     if (!state || state.screen !== 'game') return;
     if (ev.key === 'Enter') requestEndTurn();
-    if (ev.key === 'Escape') { state.selected = null; state.selectedCity = null; state.roadPickFrom = null; updateUI(); }
+    if (ev.key === 'Escape') { state.selected = null; state.selectedCity = null; state.roadPickFrom = null; state.selectedResource = null; updateUI(); }
   });
 }

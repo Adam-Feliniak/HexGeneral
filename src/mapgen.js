@@ -43,8 +43,8 @@ function generateMap(playerCount = PLAYERS_DEF.length, seed = null) {
         c, r,
         land: land[r][c],
         city: null,       // { name, capitalOf, port, buildType, roadProject? }
-        resource: null,   // 'oil' | 'farm' | 'mine'
-        road: null,       // { owner, city, path } — droga zbudowana przez gracza/AI (roads.js)
+        resource: null,   // 'oil' | 'farm' | 'mine' (+ opcjonalne supplyCity: pole miasta zaopatrywanego)
+        road: null,       // { owner } — heks sieci dróg (roads.js); miasto źródłowe/trasa nie są tu trzymane
         owner: -1,
         army: null,       // { player, str, vet, movesUsed }
         shade: rnd(-1, 1, rand), // drobna wariacja koloru terenu

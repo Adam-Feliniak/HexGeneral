@@ -87,53 +87,41 @@ function drawDecor(t) {
   }
 }
 
-// asfaltowe drogi zbudowane przez gracza/AI (złoże->miasto albo miasto->miasto,
-// patrz roads.js); tu tylko odczytujemy gotową trasę i rysujemy — bez ponownego
-// liczenia BFS. Przerwane drogi (wróg na trasie) rysują się przygaszone.
-function drawRoadPath(path, active) {
-  const pts = path.map(t => hexCenter(t.c, t.r));
-  const trace = () => {
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length - 1; i++) {
-      const mx = (pts[i].x + pts[i + 1].x) / 2, my = (pts[i].y + pts[i + 1].y) / 2;
-      ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
-    }
-    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  };
-  if (active) {
-    ctx.strokeStyle = '#23211a';   // ciemny brzeg nawierzchni
-    ctx.lineWidth = 8;
-    trace(); ctx.stroke();
-    ctx.strokeStyle = '#45423a';   // asfalt
-    ctx.lineWidth = 5;
-    trace(); ctx.stroke();
-    ctx.strokeStyle = '#cfc79a';   // przerywana linia środkowa
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 6]);
-    trace(); ctx.stroke();
-    ctx.setLineDash([]);
-  } else {
-    // droga przerwana przez wroga — widoczna, ale wygaszona i kreskowana na czerwono
-    ctx.strokeStyle = 'rgba(80,20,20,0.5)';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([3, 5]);
-    trace(); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-}
-
+// asfaltowa sieć dróg (patrz roads.js): każdy heks drogi łączymy odcinkiem z
+// sąsiednimi heksami drogi tego samego właściciela. Rysujemy warstwami przez całą
+// sieć (najpierw ciemny brzeg wszystkich odcinków, potem asfalt, potem oś), żeby
+// rozgałęzienia nakładały się gładko bez widocznych szwów na styku odcinków
 function drawRoads() {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  // zbierz krawędzie sieci: heks drogi ↔ sąsiedni heks drogi (każda para raz) oraz
+  // heks drogi → sąsiednie własne miasto (dojście do miasta — miasto nie jest heksem
+  // drogi, więc rysujemy je zawsze od strony drogi, bez ryzyka duplikatu)
+  const edges = [];
   for (const row of state.tiles) for (const t of row) {
     if (!t.road) continue;
-    // rysujemy tylko położony odcinek (droga w budowie rośnie od strony miasta);
-    // aktywny = przejezdny fragment (asfalt), przecięty przez wroga = przygaszony
-    const built = roadBuiltPath(t.road);
-    if (built.length < 2) continue;
-    drawRoadPath(built, segmentClear(built, t.road.owner));
+    for (const n of neighborsOf(t)) {
+      if (n.road && n.road.owner === t.road.owner) {
+        if (n.r < t.r || (n.r === t.r && n.c < t.c)) continue; // każda para raz
+        edges.push([hexCenter(t.c, t.r), hexCenter(n.c, n.r)]);
+      } else if (n.city && n.owner === t.road.owner) {
+        edges.push([hexCenter(t.c, t.r), hexCenter(n.c, n.r)]);
+      }
+    }
   }
+  if (!edges.length) return;
+  const strokeAll = (style, width, dash) => {
+    ctx.strokeStyle = style;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dash || []);
+    ctx.beginPath();
+    for (const [a, b] of edges) { ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+  strokeAll('#23211a', 8);            // ciemny brzeg nawierzchni
+  strokeAll('#45423a', 5);            // asfalt
+  strokeAll('#cfc79a', 1.5, [4, 6]);  // przerywana linia środkowa
 }
 
 function drawBorders() {

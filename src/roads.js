@@ -1,149 +1,173 @@
 'use strict';
 /* ============================================================
-   GOSPODARKA — drogi budowane przez gracza/AI i produkcja siły w miastach
+   GOSPODARKA — sieć dróg budowana przez gracza/AI i produkcja siły w miastach
+
+   Model: droga to zbiór sąsiadujących HEKSÓW (`tile.road = { owner }`), nie jeden
+   obiekt z pełną trasą. Dzięki temu drogi z różnych miast do wspólnych pól tworzą
+   naturalną sieć ze wspólnymi odcinkami (rozgałęzienia). Budowa dokłada tylko
+   brakujące heksy (`roadProject.segment`), a złoże w sieci daje +1 produkcji do
+   jednego, wybieranego przez gracza miasta (`resourceTile.supplyCity`).
    ============================================================ */
 
-// najkrótsza ścieżka (BFS) prowadząca WYŁĄCZNIE przez własne terytorium gracza —
-// droga nie może biec przez ziemię niczyją ani wroga, więc żeby połączyć odległe
-// pole, trzeba najpierw zdobyć teren po drodze
-function landPath(a, b, playerId) {
-  const prev = new Map([[a, null]]);
-  const queue = [a];
-  while (queue.length) {
-    const t = queue.shift();
-    if (t === b) {
-      const path = [];
-      for (let n = b; n; n = prev.get(n)) path.push(n);
-      return path.reverse();
-    }
+// najtańsze połączenie celu z miastem po WŁASNYM terytorium: wejście na istniejący
+// heks drogi kosztuje 0 (sieć się współdzieli), na zwykłe własne pole 1 (nowy heks).
+// BFS 0/1 (deque) — zwraca pełną ścieżkę [cel, ..., miasto] minimalizującą liczbę
+// nowych heksów, albo null jeśli nie da się połączyć przez własny teren
+function roadDijkstra(target, fromCityTile, playerId) {
+  const dist = new Map([[target, 0]]);
+  const prev = new Map([[target, null]]);
+  const deque = [target];
+  while (deque.length) {
+    const t = deque.shift();
+    if (t === fromCityTile) break;
     for (const n of neighborsOf(t)) {
-      if (!n.land || n.owner !== playerId || prev.has(n)) continue;
+      if (!n.land || n.owner !== playerId) continue;
+      const w = n.road ? 0 : 1;               // istniejący heks drogi jest darmowy
+      const nd = dist.get(t) + w;
+      if (dist.has(n) && nd >= dist.get(n)) continue;
+      dist.set(n, nd);
       prev.set(n, t);
-      queue.push(n);
+      if (w === 0) deque.unshift(n); else deque.push(n);
     }
   }
-  return null;
+  if (!prev.has(fromCityTile)) return null;
+  const path = [];
+  for (let n = fromCityTile; n; n = prev.get(n)) path.push(n);
+  return path.reverse(); // [cel, ..., miasto]
 }
 
-// koszt budowy drogi z miasta do celu (własne złoże albo własne miasto) —
-// null, jeśli nie da się wytyczyć trasy przez własne terytorium albo taka
-// droga już istnieje / już się buduje (przekierowanie z INNEGO miasta jest OK)
+// koszt i plan budowy drogi z miasta do celu (własne złoże/miasto) — zwraca
+// { path, segment, cost }, gdzie segment = tylko NOWE heksy do położenia (od strony
+// miasta ku celowi). null, gdy celu nie da się połączyć albo już jest w tej samej sieci
 function roadCost(fromCityTile, target) {
   if (target === fromCityTile || target.owner !== fromCityTile.owner) return null;
   if (!target.resource && !target.city) return null;
-  if (target.road && target.road.owner === fromCityTile.owner && target.road.city === fromCityTile) return null;
-  const proj = fromCityTile.city.roadProject;
-  if (proj && proj.target === target) return null;
-  const path = landPath(target, fromCityTile, fromCityTile.owner);
-  if (!path || path.length < 2) return null;
-  return { path, cost: ROAD_BASE_COST + ROAD_COST_PER_TILE * path.length };
+  const path = roadDijkstra(target, fromCityTile, fromCityTile.owner);
+  if (!path) return null;
+  // segment budujemy od strony miasta na zewnątrz (żeby rósł spójnie z siecią)
+  const segment = path.slice().reverse().filter(t => !t.road);
+  if (!segment.length) return null; // cel już połączony z siecią tego miasta
+  return { path, segment, cost: ROAD_BASE_COST + ROAD_COST_PER_TILE * segment.length };
 }
 
-// wszystkie legalne cele budowy drogi z danego miasta (do podświetlenia na mapie) —
-// jeden flood-fill po własnym terytorium zamiast BFS-a per pole; te same reguły
-// odrzucania co roadCost (własne złoże/miasto, jeszcze niepodłączone tą drogą)
-function roadTargets(fromCityTile) {
-  const owner = fromCityTile.owner;
-  const seen = new Set([fromCityTile]);
-  const queue = [fromCityTile];
+// zbiór heksów drogi osiągalnych z miast gracza (aktywna sieć) — flood-fill po
+// własnych heksach drogi startując z pól miast; służy do bonusu produkcji
+function roadNetwork(playerId) {
+  const net = new Set();
+  const queue = [];
+  for (const row of state.tiles) for (const t of row) {
+    if (t.city && t.owner === playerId) queue.push(t);
+  }
+  const seen = new Set(queue);
   while (queue.length) {
-    const cur = queue.shift();
-    for (const n of neighborsOf(cur)) {
-      if (!n.land || n.owner !== owner || seen.has(n)) continue;
-      seen.add(n);
-      queue.push(n);
+    const t = queue.shift();
+    for (const n of neighborsOf(t)) {
+      if (seen.has(n) || n.owner !== playerId || !n.road) continue;
+      seen.add(n); net.add(n); queue.push(n);
     }
   }
-  const proj = fromCityTile.city.roadProject;
+  return net;
+}
+
+// miasta gracza połączone siecią dróg z danym polem (np. złożem) — do wyboru
+// miasta zaopatrywanego; przechodzi po własnych heksach drogi, kończy na miastach
+function connectedCities(fromTile, playerId) {
+  const cities = [];
+  const seen = new Set([fromTile]);
+  const queue = [fromTile];
+  while (queue.length) {
+    const t = queue.shift();
+    for (const n of neighborsOf(t)) {
+      if (seen.has(n) || n.owner !== playerId) continue;
+      if (n.city) { seen.add(n); cities.push(n); continue; } // miasto = koniec gałęzi
+      if (!n.road) continue;
+      seen.add(n); queue.push(n);
+    }
+  }
+  return cities;
+}
+
+// miasto, do którego trafia +1 z danego złoża: wybór gracza jeśli nadal połączony,
+// inaczej najbliższe połączone miasto (domyślne, zero-klikowe)
+function supplyCityFor(resTile, playerId) {
+  const cities = connectedCities(resTile, playerId);
+  if (!cities.length) return null;
+  if (resTile.supplyCity && cities.includes(resTile.supplyCity)) return resTile.supplyCity;
+  let best = cities[0], bd = Infinity;
+  for (const c of cities) {
+    const d = hexDist(resTile.c, resTile.r, c.c, c.r);
+    if (d < bd) { bd = d; best = c; }
+  }
+  return best;
+}
+
+// wszystkie legalne cele budowy drogi z danego miasta (do podświetlenia na mapie):
+// własne złoże/miasto osiągalne po lądzie, którego jeszcze nie ma w sieci tego miasta
+// (czyli budowa dołożyłaby ≥1 heks). Dwa flood-fille zamiast BFS-a per pole
+function roadTargets(fromCityTile) {
+  const owner = fromCityTile.owner;
+  // 1) zasięg po własnym terytorium (kandydaci)
+  const reach = new Set([fromCityTile]);
+  let q = [fromCityTile];
+  while (q.length) {
+    const cur = q.shift();
+    for (const n of neighborsOf(cur)) {
+      if (!n.land || n.owner !== owner || reach.has(n)) continue;
+      reach.add(n); q.push(n);
+    }
+  }
+  // 2) komponent sieci tego miasta (cele już połączone — pomijamy)
+  const comp = new Set([fromCityTile]);
+  q = [fromCityTile];
+  while (q.length) {
+    const cur = q.shift();
+    for (const n of neighborsOf(cur)) {
+      if (comp.has(n) || n.owner !== owner || !n.road) continue;
+      comp.add(n); q.push(n);
+    }
+  }
   const targets = [];
-  for (const t of seen) {
-    if (t === fromCityTile || (!t.resource && !t.city)) continue;
-    if (t.road && t.road.owner === owner && t.road.city === fromCityTile) continue;
-    if (proj && proj.target === t) continue;
+  for (const t of reach) {
+    if (t === fromCityTile || (!t.resource && !t.city) || comp.has(t)) continue;
     targets.push(t);
   }
   return targets;
 }
 
-// rozpoczyna budowę drogi — od razu kładzie na polu celu drogę z licznikiem
-// `built = 0` (ile heksów, licząc od strony miasta, jest już położonych); punkty
-// produkcji miasta zaczną iść w ten projekt zamiast w jednostki i stopniowo
-// zwiększać `built`, aż droga dojdzie do celu (patrz produce/completeRoadProject)
+// rozpoczyna budowę drogi — projekt trzyma listę nowych heksów (segment) kładzionych
+// przyrostowo w produce(); heksy pojawiają się dopiero w miarę wydawania punktów
 function startRoadProject(fromCityTile, target, playerId) {
   const info = roadCost(fromCityTile, target);
   if (!info) return false;
-  target.road = { owner: playerId, city: fromCityTile, path: info.path, built: 0 };
-  fromCityTile.city.roadProject = { target, cost: info.cost, progress: 0 };
+  fromCityTile.city.roadProject = { target, segment: info.segment, cost: info.cost, progress: 0, built: 0 };
   return true;
 }
 
-// przerywa budowę drogi — niedokończony odcinek znika (wydane punkty przepadają),
-// ale tylko jeśli na polu celu wciąż stoi droga z TEGO projektu (nie ruszamy
-// ewentualnej wcześniejszej, ukończonej drogi z innego miasta)
+// przerywa budowę — już położone heksy ZOSTAJĄ jako część sieci (realna
+// infrastruktura), kasujemy tylko projekt
 function cancelRoadProject(fromCityTile) {
-  const proj = fromCityTile.city.roadProject;
-  if (proj && proj.target.road && proj.target.road.city === fromCityTile) proj.target.road = null;
   fromCityTile.city.roadProject = null;
 }
 
-// odcinek drogi już położony — liczony od strony miasta (koniec tablicy path,
-// bo landPath zwraca ją jako [cel, ..., miasto]); w budowie droga rośnie z miasta
-function roadBuiltPath(rd) {
-  return rd.path.slice(rd.path.length - rd.built);
-}
-
-// czy dany odcinek trasy jest przejezdny: każdy heks należy do właściciela albo
-// jest niczyj (owner < 0) — realne zajęcie przez wroga przerywa drogę
-function segmentClear(path, owner) {
-  return path.every(p => p.owner === owner || p.owner < 0);
-}
-
-// kończy projekt drogi: droga na polu celu jest już położona przyrostowo, więc tu
-// tylko domykamy `built` do pełnej długości. Jeśli cel został w międzyczasie
-// stracony (np. wróg zajął złoże), budowa przepada — punkty też, zgodnie z zasadą
-// "porzucony/nadwyżkowy projekt nie wraca"
-function completeRoadProject(fromCityTile, playerId) {
-  const target = fromCityTile.city.roadProject.target;
+// domyka projekt: ostatnie heksy segmentu są już położone, więc tylko sprzątamy
+function completeRoadProject(fromCityTile) {
   fromCityTile.city.roadProject = null;
   fromCityTile.city.buildType = DEFAULT_UNIT_TYPE;
-  const rd = target.road;
-  if (target.owner !== playerId || !rd || rd.city !== fromCityTile) {
-    addLog(i18n.t('log.roadFailed', { city: fromCityTile.city.name }));
-    return;
-  }
-  rd.built = rd.path.length;
   addLog(i18n.t('log.roadComplete', { city: fromCityTile.city.name }));
   showBanner(i18n.t('banner.roadComplete', { city: fromCityTile.city.name }));
 }
 
-// droga aktywna (dla bonusu produkcji złoża) = w PEŁNI zbudowana i żaden jej heks
-// nie należy do wroga — pola niczyje (owner < 0) NIE przerywają drogi
-function isRoadActive(t) {
-  const rd = t.road;
-  if (!rd || rd.owner !== t.owner || rd.built < rd.path.length) return false;
-  return segmentClear(rd.path, rd.owner);
+// budowa nie może być dokończona (wróg zajął pole na trasie) — położone heksy
+// zostają w sieci, projekt i wydane punkty przepadają
+function failRoadProject(fromCityTile) {
+  fromCityTile.city.roadProject = null;
+  fromCityTile.city.buildType = DEFAULT_UNIT_TYPE;
+  addLog(i18n.t('log.roadFailed', { city: fromCityTile.city.name }));
 }
 
-// czy pole leży na przejezdnym, JUŻ POŁOŻONYM odcinku drogi danego gracza — także
-// częściowo zbudowanej (bonus ruchu obejmuje ukończony fragment, patrz moveCap
-// w combat.js); przecięcie odcinka przez wroga odbiera bonus na całej drodze
+// czy pole daje bonus ruchu — dowolny własny heks drogi (patrz moveCap w combat.js)
 function tileOnRoad(t, playerId) {
-  for (const row of state.tiles) for (const cand of row) {
-    if (cand.owner !== playerId || !cand.road) continue;
-    const built = roadBuiltPath(cand.road);
-    if (built.includes(t) && segmentClear(built, playerId)) return true;
-  }
-  return false;
-}
-
-// własne złoża z AKTYWNĄ (niezerwaną) drogą do miasta — to ono dostaje +1 produkcji
-function resourceLinks(playerId) {
-  const links = [];
-  for (const row of state.tiles) for (const t of row) {
-    if (!t.resource || t.owner !== playerId || !isRoadActive(t)) continue;
-    links.push({ res: t, city: t.road.city });
-  }
-  return links;
+  return !!(t.road && t.road.owner === playerId && t.owner === playerId);
 }
 
 function produce(playerId) {
@@ -151,10 +175,15 @@ function produce(playerId) {
   const diff = p.isHuman ? null : resolveDifficulty(p.difficulty);
   const mult = diff ? diff.economy : 1;
 
+  // każde własne złoże połączone z siecią daje +1 do jednego (wybranego lub najbliższego)
+  // miasta; jedno złoże = jeden bonus, wiele dróg go nie zwielokrotnia
   const bonus = new Map();
-  for (const { city } of resourceLinks(playerId)) {
-    bonus.set(city, (bonus.get(city) || 0) + 1);
+  for (const row of state.tiles) for (const t of row) {
+    if (!t.resource || t.owner !== playerId || !t.road) continue;
+    const city = supplyCityFor(t, playerId);
+    if (city) bonus.set(city, (bonus.get(city) || 0) + 1);
   }
+
   for (const row of state.tiles) for (const t of row) {
     if (!t.city || t.owner !== playerId) continue;
     if (!p.isHuman) aiAssignCityProject(t, playerId);
@@ -163,11 +192,18 @@ function produce(playerId) {
     if (t.city.roadProject) {
       const proj = t.city.roadProject;
       proj.progress += gain;
-      // droga rośnie proporcjonalnie do wydanych punktów, zaokrąglając w dół liczbę
-      // położonych heksów; nadwyżka ponad koszt w turze ukończenia przepada
-      const rd = proj.target.road;
-      if (rd) rd.built = Math.min(rd.path.length, Math.floor(proj.progress / proj.cost * rd.path.length));
-      if (proj.progress >= proj.cost) completeRoadProject(t, playerId);
+      // droga rośnie proporcjonalnie do wydanych punktów, zaokrąglając w dół; nowo
+      // odsłonięte heksy segmentu stają się częścią sieci
+      const want = Math.min(proj.segment.length, Math.floor(proj.progress / proj.cost * proj.segment.length));
+      let lost = false;
+      for (; proj.built < want; proj.built++) {
+        const seg = proj.segment[proj.built];
+        // pole utracone na rzecz wroga w trakcie budowy — dalej się nie da
+        if (seg.owner !== playerId) { lost = true; break; }
+        seg.road = { owner: playerId };
+      }
+      if (lost) failRoadProject(t);
+      else if (proj.progress >= proj.cost) completeRoadProject(t);
       continue;
     }
     const buildType = t.city.buildType || DEFAULT_UNIT_TYPE;

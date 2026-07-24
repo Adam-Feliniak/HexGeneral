@@ -53,18 +53,27 @@ function updateUI() {
   }
 }
 
-// panel wyboru typu jednostki budowanej w zaznaczonym własnym mieście
+// panel pod mapą: produkcja w zaznaczonym mieście ALBO wybór miasta zaopatrywanego
+// przez zaznaczone złoże
 function updateBuildPanel(cp) {
   const panel = document.getElementById('build-panel');
-  const t = state.selectedCity;
+  const city = state.selectedCity;
+  const res = state.selectedResource;
   // niewidoczny (visibility), nie display:none — panel ma zawsze rezerwować
   // swoje miejsce pod mapą, żeby canvas nie zmieniał rozmiaru przy pokazywaniu/ukrywaniu
-  const empty = !t || !cp.isHuman || state.phase === 'over';
+  const empty = (!city && !res) || !cp.isHuman || state.phase === 'over';
   panel.classList.toggle('build-panel-empty', empty);
   if (empty) return;
+  const title = document.getElementById('build-panel-title');
   const box = document.getElementById('build-panel-group');
   box.innerHTML = '';
 
+  if (city) { updateCityPanel(cp, city, title, box); return; }
+  updateResourcePanel(cp, res, title, box);
+}
+
+function updateCityPanel(cp, t, title, box) {
+  title.textContent = i18n.t('build.panelTitle');
   if (state.roadPickFrom === t) {
     box.appendChild(buildHint(i18n.t('build.roadPickHint')));
     box.appendChild(buildButton(i18n.t('build.roadPickCancel'), () => {
@@ -73,7 +82,6 @@ function updateBuildPanel(cp) {
     }));
     return;
   }
-
   if (t.city.roadProject) {
     const proj = t.city.roadProject;
     box.appendChild(buildHint(i18n.t('build.roadProgress', { progress: proj.progress, cost: proj.cost })));
@@ -83,7 +91,6 @@ function updateBuildPanel(cp) {
     }));
     return;
   }
-
   for (const key of UNIT_TYPE_ORDER) {
     const btn = buildButton(i18n.t('unit.' + key), () => { t.city.buildType = key; updateBuildPanel(cp); });
     btn.className = (t.city.buildType || DEFAULT_UNIT_TYPE) === key ? 'selected' : '';
@@ -93,6 +100,18 @@ function updateBuildPanel(cp) {
     state.roadPickFrom = t;
     updateBuildPanel(cp);
   }));
+}
+
+// wybór miasta, które dostaje +1 z tego złoża — domyślnie najbliższe podłączone
+function updateResourcePanel(cp, t, title, box) {
+  title.textContent = i18n.t('build.supplyTitle');
+  const cities = connectedCities(t, cp.id);
+  const current = supplyCityFor(t, cp.id);
+  for (const c of cities) {
+    const btn = buildButton(c.city.name, () => { t.supplyCity = c; updateBuildPanel(cp); });
+    btn.className = c === current ? 'selected' : '';
+    box.appendChild(btn);
+  }
 }
 
 function buildButton(label, onClick) {

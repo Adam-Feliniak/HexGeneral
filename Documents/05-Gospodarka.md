@@ -62,42 +62,66 @@ Prosta heurystyka frontowa: bardzo blisko wroga (≤2 pola) AI stawia na artyler
 
 Drogi **nie powstają już automatycznie**. Gracz i AI budują je świadomie, wydając na nie punkty produkcji miasta zamiast na jednostki — patrz sekcja o panelu produkcji wyżej.
 
-### Budowa drogi (`roadCost`, `startRoadProject`, `completeRoadProject` w `roads.js`)
+### Sieć dróg — model (`roads.js`)
 
-Cel budowy to dowolne **własne** pole będące złożem albo miastem (`roadCost` odrzuca cudze/nieistniejące cele). Trasa liczona jest BFS-em (`landPath`) **wyłącznie przez pola należące do budującego gracza** — droga nie może biec przez ziemię niczyją ani wroga, więc żeby połączyć odległy cel, trzeba go najpierw otoczyć własnym terytorium. Brak takiej trasy = `roadCost` zwraca `null`, budowa się nie zaczyna.
+Droga to **nie** jeden obiekt z pełną trasą, tylko zbiór sąsiadujących **heksów**: pole
+w sieci ma `tile.road = { owner }`. Dzięki temu drogi z różnych miast do wspólnych pól
+łączą się w naturalną sieć ze wspólnymi odcinkami (rozgałęzienia), bez nadpisywania.
 
-Koszt: `ROAD_BASE_COST + ROAD_COST_PER_TILE * path.length` (stałe w `config.js`, wartości startowe do dostrojenia w testach balansu). `startRoadProject` od razu kładzie na polu celu drogę z licznikiem `road.built = 0` i zapisuje `t.city.roadProject = { target, cost, progress: 0 }` — od tej pory produkcja miasta (patrz wyżej) dolicza się do `progress` zamiast do jednostek.
+### Budowa drogi (`roadCost`, `startRoadProject`, `produce`, `completeRoadProject`)
 
-**Droga buduje się przyrostowo.** Co turę `produce()` przelicza, ile heksów jest już położonych, **proporcjonalnie do wydanych punktów, zaokrąglając w dół**: `built = floor(progress / cost * path.length)`. Odcinek rośnie **od strony miasta** w kierunku celu (bo `landPath` zwraca trasę jako `[cel, …, miasto]`, a `roadBuiltPath` bierze `built` heksów z jej końca). Gdy `progress >= cost`, `produce()` woła `completeRoadProject`, które domyka `built` do pełnej długości; jeśli w międzyczasie cel został stracony (np. wróg zajął złoże), budowa przepada bez efektu (log informuje gracza), a zainwestowane punkty giną. Po ukończeniu `buildType` miasta wraca do domyślnego (`DEFAULT_UNIT_TYPE`), żeby miasto nie "jałowieło".
+Cel to dowolne **własne** pole będące złożem albo miastem. `roadCost` liczy najtańsze
+połączenie celu z miastem przez **własne terytorium** (BFS 0/1, `roadDijkstra`): wejście na
+istniejący heks drogi kosztuje **0** (sieć się współdzieli), na zwykłe własne pole **1**
+(nowy heks). Zwraca `{ path, segment, cost }`, gdzie `segment` to tylko **nowe** heksy do
+położenia, a `cost = ROAD_BASE_COST + ROAD_COST_PER_TILE * segment.length`
+(startowo `0 + 3 * długość` — patrz `config.js`, do dostrojenia w testach). Jeśli cel jest
+już w tej samej sieci co miasto (`segment` puste) albo nie da się połączyć — `null`.
 
-Anulowanie (`cancelRoadProject`) w trakcie budowy usuwa niedokończony odcinek z pola celu — punkty przepadają. Ten sam helper czyści projekt przy pojedynczym zajęciu miasta przez wroga (`empire.js`).
+`startRoadProject` zapisuje `t.city.roadProject = { target, segment, cost, progress: 0, built: 0 }`.
+Co turę `produce()` dolicza produkcję miasta do `progress` i **przyrostowo** odsłania heksy:
+`built = floor(progress / cost * segment.length)`, a każdy nowo odsłonięty `segment[i]`
+dostaje `road = { owner }`. Sieć rośnie od strony miasta ku celowi. Jeśli wróg zajmie pole
+segmentu w trakcie budowy, dalej się nie da — `failRoadProject` przerywa (już położone heksy
+zostają w sieci, punkty przepadają). Po dojściu do celu `completeRoadProject` sprząta projekt
+i resetuje `buildType` na domyślny.
 
-### Dwa rodzaje dróg, ten sam mechanizm
+Anulowanie (`cancelRoadProject`) **zostawia** już położone heksy jako część sieci (realna
+infrastruktura) i tylko kasuje projekt.
 
-- **Złoże → miasto** — daje bonus produkcji (patrz niżej), ale dopiero po **pełnym** ukończeniu. Droga zapisana jest na polu złoża.
-- **Miasto → miasto** — czysto pod bonus ruchu (patrz niżej). Droga zapisana jest na polu miasta-celu. Ponieważ to dokładnie ten sam kształt danych (`{ owner, city, path, built }`), cała reszta mechaniki (aktywność, rysowanie, bonus ruchu) działa dla obu identycznie bez rozróżniania przypadków.
+### Zaopatrzenie: złoże → jedno wybrane miasto
 
-Jedno pole może być celem tylko **jednej** drogi naraz — zbudowanie nowej drogi do już podłączonego złoża/miasta nadpisuje poprzednią (to jest właśnie "przekierowanie" drogi na inne miasto źródłowe).
+Każde własne złoże będące heksem sieci i połączone z co najmniej jednym miastem daje
+**+1 produkcji do jednego miasta**. Domyślnie jest to **najbliższe** połączone miasto
+(`supplyCityFor`), ale gracz może kliknąć własne, podłączone złoże i w panelu pod mapą
+wybrać inne z listy połączonych (`connectedCities`) — wybór zapisuje `resourceTile.supplyCity`
+i można go zmieniać. Wiele dróg do jednego złoża **nie** zwielokrotnia bonusu (jedno złoże =
+jeden +1). AI nie rusza wyboru (zostaje domyślne najbliższe).
 
-### Aktywność drogi (`isRoadActive`, `tileOnRoad`)
+### Bonus ruchu i przecięcie
 
-Rozróżniamy dwa poziomy "gotowości" drogi:
-- **W pełni zbudowana i nieprzecięta** (`isRoadActive`) — `built` osiągnęło długość trasy i **żaden** jej heks nie należy do wroga. Tylko taka droga daje **bonus produkcji** złożu.
-- **Położony odcinek przejezdny** (`tileOnRoad` → `segmentClear` na `roadBuiltPath`) — **bonus ruchu** obejmuje już gotowy fragment, nawet gdy droga jest jeszcze w budowie.
+`tileOnRoad(t, playerId)` = pole jest własnym heksem drogi (`t.road.owner === playerId &&
+t.owner === playerId`). Jednostka na takim polu ma większy zasięg ruchu (`moveCap` dolicza
+`roadBonus` typu: piechota +1, czołg +2, artyleria +0 — patrz
+[Mechanika rozgrywki](04-Mechanika-rozgrywki.md)). Bonus obejmuje całą sieć, także odcinki
+jeszcze w budowie.
 
-W obu przypadkach pola **niczyje** (`owner < 0`) **nie przerywają** drogi — liczy się wyłącznie realne zajęcie trasy przez innego gracza; przecięcie odbiera bonus na całym odcinku. Przerwana droga rysuje się na planszy przygaszona i kreskowana na czerwono (`drawRoadPath` w `render.js`), zamiast normalnej asfaltowej nawierzchni. Odzyskanie trasy (bez ponownej budowy) wystarczy, żeby droga sama "ożyła". `render.js` rysuje wyłącznie położony odcinek (`roadBuiltPath`), więc droga w budowie widocznie rośnie z miasta.
+Przecięcie sieci = **wróg zajmuje heks drogi**: `captureTile` kasuje `t.road` na tym polu,
+więc sieć się rozspójnia (`connectedCities`/`supplyCityFor` liczą połączenia na bieżąco).
+Nie ma „samoleczenia" — po odbiciu pola brakujący heks trzeba dobudować (tanio, 3 pkt/heks).
 
-### Zajęcie terenu a istniejące drogi (`empire.js`)
+### Zajęcie terenu a sieć (`empire.js`)
 
-- **Pojedyncze zajęcie pola** (złoża albo miasta, nie cała stolica) — `t.road = null`, ewentualny `roadProject` też jest kasowany. Nowy właściciel zaczyna od zera, musi zbudować własną infrastrukturę.
-- **Upadek stolicy / aneksja całego imperium** (`conquerEmpire`) — zwycięzca **dziedziczy** istniejącą infrastrukturę pokonanego: każda droga na przejmowanym terenie dostaje `road.owner = winnerId` (nawet jeśli w danym momencie była przecięta — może "ożyć" pod nowym właścicielem, gdy trasa się oczyści). To jedyny sposób przejęcia cudzej, już zbudowanej drogi bez płacenia za nią.
+- **Pojedyncze zajęcie pola** — przejęty heks drogi znika (`t.road = null`), przejęte złoże
+  traci `supplyCity`, przejęte miasto porzuca swój projekt budowy (już położone heksy
+  zostają w sieci do czasu ich ewentualnego przejęcia).
+- **Aneksja całego imperium** (`conquerEmpire`) — wszystkie heksy drogi pokonanego stają się
+  siecią zwycięzcy (`road.owner = winnerId`); projekty budowy na przejętych miastach są
+  porzucane (zwycięzca może zbudować od nowa).
 
-### Efekty aktywnej drogi
-
-- **Bonus produkcji**: `resourceLinks(playerId)` zbiera wszystkie własne złoża z aktywną drogą, każde dokłada `+1` do bazy produkcji miasta, do którego prowadzi (sumuje się, jeśli kilka złóż zaopatruje to samo miasto). Dotyczy wyłącznie dróg złoże→miasto.
-- **Bonus ruchu**: `tileOnRoad(t, playerId)` sprawdza, czy dane pole leży na czyjejś aktywnej drodze tego gracza (złoże→miasto **albo** miasto→miasto) — jeśli tak, `moveCap` dolicza `roadBonus` typu jednostki (patrz [Mechanika rozgrywki](04-Mechanika-rozgrywki.md); piechota +1, czołg +2, artyleria +0).
-
-Wszystkie trzy typy złóż (`oil`/`farm`/`mine`, dobierane wg `t.shade` przy generacji mapy) dają dziś **identyczny** bonus — rozróżnienie jest czysto kosmetyczne (inny sprite, inna nazwa w tooltipie), bez mechanicznej różnicy.
+Wszystkie trzy typy złóż (`oil`/`farm`/`mine`, dobierane wg `t.shade` przy generacji mapy)
+dają **identyczny** bonus — rozróżnienie jest czysto kosmetyczne (inny sprite, inna nazwa
+w tooltipie), bez mechanicznej różnicy.
 
 ## Limit stosu
 

@@ -57,6 +57,7 @@ function newGame(opts = {}) {
     movesLeft: MOVES_PER_TURN,
     selected: null,      // wybrane pole z armią gracza
     selectedCity: null,  // wybrane własne pole z miastem (panel budowy)
+    selectedResource: null, // wybrane własne, podłączone złoże (panel wyboru miasta +1)
     roadPickFrom: null,  // miasto czekające na kliknięcie celu budowanej drogi
     players: PLAYERS_DEF.slice(0, playerCount).map((p, i) => ({
       ...p, id: i, alive: true, capital: CAPITAL_SPOTS[i],
