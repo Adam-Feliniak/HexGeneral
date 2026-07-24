@@ -27,8 +27,8 @@ const SEED_MAX_VALUE = 999999;
 
 // koszt budowy drogi = ROAD_BASE_COST + ROAD_COST_PER_TILE * długość trasy (w punktach
 // produkcji miasta) — wartości startowe, do dostrojenia w testach balansu
-const ROAD_BASE_COST = 5;
-const ROAD_COST_PER_TILE = 5;
+const ROAD_BASE_COST = 0;
+const ROAD_COST_PER_TILE = 3;
 // szansa na turę, że AI (miasto z dala od frontu, bez aktywnego projektu) zamiast
 // jednostki zacznie budować drogę do nieujętego drogą własnego złoża
 const AI_ROAD_BUILD_CHANCE = 0.2;
