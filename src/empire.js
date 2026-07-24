@@ -6,8 +6,16 @@
 function captureTile(t, playerId) {
   const prevOwner = t.owner;
   if (t.land) t.owner = playerId;
-  if (t.resource && prevOwner !== playerId) establishRoad(t, playerId);
-  if (t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== playerId) {
+  const isCapitalFall = t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== playerId;
+  if (!isCapitalFall) {
+    // pojedyncze zajęcie pola (nie cała stolica) — nowy właściciel startuje bez
+    // przejętej infrastruktury, musi zbudować własną drogę od zera
+    if ((t.resource || t.city) && prevOwner !== playerId) t.road = null;
+    if (t.city && prevOwner !== playerId) { t.city.roadProject = null; t.city.buildType = DEFAULT_UNIT_TYPE; }
+  } else if (t.road) {
+    t.road.owner = playerId; // stolica pada razem z całym imperium — jej infrastruktura też przechodzi
+  }
+  if (isCapitalFall) {
     conquerEmpire(t.city.capitalOf, playerId);
     t.city.capitalOf = -1; // zdobyta stolica staje się zwykłym miastem
   } else if (t.city && prevOwner !== playerId && prevOwner >= 0) {
@@ -21,16 +29,15 @@ function conquerEmpire(loserId, winnerId) {
   const loser = state.players[loserId];
   const winner = state.players[winnerId];
   loser.alive = false;
-  const transferredResources = [];
   for (const row of state.tiles) for (const t of row) {
     if (t.owner === loserId) {
       t.owner = winnerId;
-      if (t.resource) transferredResources.push(t);
+      // aneksja przenosi całą infrastrukturę pokonanego — jego drogi (nawet chwilowo
+      // przecięte) od razu liczą się jako własne i mogą "ożyć" pod nowym właścicielem
+      if (t.road) t.road.owner = winnerId;
     }
     if (t.army && t.army.player === loserId) t.army = null;
   }
-  // aneksja to też zmiana właściciela — złoża dostają świeżo wytyczone drogi
-  for (const t of transferredResources) establishRoad(t, winnerId);
   addLog(i18n.t('log.conquerEmpire', { winner: winner.name, loser: loser.name }));
   showBanner(i18n.t('banner.empireAnnexed', { loser: loser.name, winner: winner.name }));
   checkGameOver();

@@ -29,6 +29,20 @@ function onTileClick(t) {
   if (!state || state.screen !== 'game' || state.phase === 'over') return;
   const cp = currentPlayer();
   if (!cp.isHuman) return;
+  if (state.roadPickFrom) {
+    const from = state.roadPickFrom;
+    state.roadPickFrom = null;
+    if (t !== from) {
+      if (roadCost(from, t)) {
+        startRoadProject(from, t, cp.id);
+        state.selectedCity = from;
+        updateUI();
+        return;
+      }
+      // droga musi biec wyłącznie przez własne terytorium — brak trasy albo zły cel
+      showBanner(i18n.t('build.roadPickInvalid'));
+    }
+  }
   state.selectedCity = (t.city && t.owner === cp.id) ? t : null;
   if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
     switchHuman(t.city.capitalOf);
@@ -119,6 +133,7 @@ function initInput() {
   canvas.addEventListener('contextmenu', ev => {
     ev.preventDefault();
     state.selected = null;
+    state.roadPickFrom = null;
     updateUI();
   });
   canvas.addEventListener('mousemove', ev => {
@@ -143,6 +158,6 @@ function initInput() {
   document.addEventListener('keydown', ev => {
     if (!state || state.screen !== 'game') return;
     if (ev.key === 'Enter') requestEndTurn();
-    if (ev.key === 'Escape') { state.selected = null; state.selectedCity = null; updateUI(); }
+    if (ev.key === 'Escape') { state.selected = null; state.selectedCity = null; state.roadPickFrom = null; updateUI(); }
   });
 }

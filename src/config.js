@@ -25,6 +25,14 @@ const SP_BOT_COUNT_OPTIONS = [1, 2, 3, 4, 5];
 const SEED_MAX_DIGITS = 6;
 const SEED_MAX_VALUE = 999999;
 
+// koszt budowy drogi = ROAD_BASE_COST + ROAD_COST_PER_TILE * długość trasy (w punktach
+// produkcji miasta) — wartości startowe, do dostrojenia w testach balansu
+const ROAD_BASE_COST = 5;
+const ROAD_COST_PER_TILE = 5;
+// szansa na turę, że AI (miasto z dala od frontu, bez aktywnego projektu) zamiast
+// jednostki zacznie budować drogę do nieujętego drogą własnego złoża
+const AI_ROAD_BUILD_CHANCE = 0.2;
+
 // poziomy trudności AI — economy: mnożnik produkcji, aggression: waga ruchów
 // bojowych w ocenie AI, aggressionThreshold: mnożnik progów przewagi siły
 // wymaganych do ataku (niższy = atakuje przy gorszym stosunku sił),

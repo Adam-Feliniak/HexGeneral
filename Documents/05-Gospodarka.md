@@ -13,7 +13,7 @@ gain = max(1, round(base * mult))
 
 ### Gdzie trafia wyprodukowana siła
 
-Zależy od tego, co stoi na polu miasta i jaki typ jednostki miasto ma aktualnie wybrany do budowy (`city.buildType`, domyślnie `'infantry'`):
+Najpierw sprawdzane jest, czy miasto ma aktywny **projekt drogi** (`t.city.roadProject`, patrz niżej) — jeśli tak, `gain` z tej tury dolicza się do jego postępu zamiast do jednostek, i tyle (miasto nie buduje wtedy żadnej armii). W przeciwnym razie zależy od tego, co stoi na polu miasta i jaki typ jednostki miasto ma aktualnie wybrany do budowy (`city.buildType`, domyślnie `'infantry'`):
 
 - **Pole puste** → powstaje nowa armia typu `buildType`, z `vet: 0` i `movesUsed: Infinity` (nie może ruszyć się w tej samej turze, w której powstała).
 - **Stoi własna armia tego samego typu co `buildType`** → jej `str` rośnie o `gain` (ograniczone do `MAX_ARMY = 99`).
@@ -23,11 +23,29 @@ Zależy od tego, co stoi na polu miasta i jaki typ jednostki miasto ma aktualnie
 
 ### Człowiek — panel produkcji
 
-Kliknięcie we własne miasto (`state.selectedCity` ustawiane w `onTileClick`, `input.js`) pokazuje pod planszą **panel produkcji** — 3 przyciski (Piechota/Czołg/Artyleria), renderowane przez `updateBuildPanel()` w `ui.js`. Kliknięcie przycisku od razu zapisuje wybór w `t.city.buildType`. Panel zawsze rezerwuje swoje miejsce w layoucie (ukrywany przez `visibility`, nie `display:none`), żeby plansza nie zmieniała rozmiaru przy pokazywaniu/chowaniu panelu.
+Kliknięcie we własne miasto (`state.selectedCity` ustawiane w `onTileClick`, `input.js`) pokazuje pod planszą **panel produkcji**, renderowany przez `updateBuildPanel()` w `ui.js`. Panel zawsze rezerwuje swoje miejsce w layoucie (ukrywany przez `visibility`, nie `display:none`), żeby plansza nie zmieniała rozmiaru przy pokazywaniu/chowaniu.
 
-### AI — `aiAssignBuildType`
+Zawartość panelu zależy od stanu miasta:
+- **Bez aktywnego projektu** — 3 przyciski typu jednostki (Piechota/Czołg/Artyleria; klik zapisuje wybór w `t.city.buildType`) plus przycisk **"Zbuduj drogę"**.
+- **Po kliknięciu "Zbuduj drogę"** — panel pokazuje podpowiedź "Wybierz cel na mapie" i przycisk anulowania; `state.roadPickFrom` wskazuje miasto czekające na cel. Kolejne kliknięcie w `onTileClick` (`input.js`) na własne pole (złoże albo miasto) próbuje wywołać `startRoadProject` — jeśli trasa się nie uda wytyczyć (patrz niżej), pokazuje się baner z informacją, a wybór po prostu się anuluje.
+- **Z aktywnym projektem drogi** (`t.city.roadProject`) — panel pokazuje postęp `progress/cost` i przycisk "Anuluj" (przerywa projekt; zainwestowane punkty przepadają, nic nie jest zwracane).
 
-Boty **nie mają UI** — same decydują, co ich miasta produkują, na początku każdej pętli `produce()` (hak w `roads.js`, wołany tylko dla `!p.isHuman`):
+### AI — `aiAssignCityProject`
+
+Boty **nie mają UI** — same decydują, co ich miasta produkują, na początku każdej pętli `produce()` (hak w `roads.js`, wołany tylko dla `!p.isHuman`). `aiAssignCityProject(t, playerId)` jest pierwszym punktem decyzji:
+
+```js
+function aiAssignCityProject(t, playerId) {
+  if (miasto ma już aktywny projekt drogi) return; // nie przerywamy w trakcie
+  if (front jest dostatecznie daleko) {
+    cel = najbliższe własne złoże bez drogi;
+    if (cel istnieje, los < AI_ROAD_BUILD_CHANCE, i startRoadProject się uda) return;
+  }
+  aiAssignBuildType(t, playerId); // domyślna ścieżka — jak dawniej
+}
+```
+
+Jeśli AI nie zdecyduje się (albo nie może — patrz ograniczenie terytorium niżej) zbudować drogi, spada do starej, niezmienionej heurystyki `aiAssignBuildType`:
 
 ```js
 function aiAssignBuildType(t, playerId) {
@@ -38,15 +56,27 @@ function aiAssignBuildType(t, playerId) {
 }
 ```
 
-Prosta heurystyka frontowa: bardzo blisko wroga (≤2 pola) AI stawia na artylerię (obrona + wsparcie), średnio blisko (≤5) na czołgi (ofensywa), a głębokie zaplecze produkuje piechotę (baza). Jeśli na polu już stoi armia, AI zawsze dopasowuje `buildType` do niej — dzięki temu bot nigdy nie marnuje własnej produkcji przez niezgodność typu (w przeciwieństwie do człowieka, który może to sobie zrobić przez nieuwagę).
+Prosta heurystyka frontowa: bardzo blisko wroga (≤2 pola) AI stawia na artylerię (obrona + wsparcie), średnio blisko (≤5) na czołgi (ofensywa), a głębokie zaplecze produkuje piechotę (baza). `AI_ROAD_BUILD_CHANCE` (domyślnie 0.2, `config.js`) to szansa na turę, że odpowiednio spokojne miasto (front > 2 pola) zacznie budować drogę zamiast jednostki.
 
 ## Złoża surowców i drogi
 
-### Wytyczanie drogi (`establishRoad`)
+Drogi **nie powstają już automatycznie**. Gracz i AI budują je świadomie, wydając na nie punkty produkcji miasta zamiast na jednostki — patrz sekcja o panelu produkcji wyżej.
 
-Wołane **raz, w momencie zmiany właściciela złoża** (przy zajęciu pola albo przy aneksji całego imperium). Szuka najkrótszego **lądowego** miasta należącego do nowego właściciela (BFS po lądzie, `landPath`) i zapisuje trasę na stałe: `t.road = { owner, city, path }`.
+### Budowa drogi (`roadCost`, `startRoadProject`, `completeRoadProject` w `roads.js`)
 
-**Trasa się później nie przelicza** — nawet jeśli powstanie bliżej położone miasto tego samego gracza. Jedyna zmiana, jaka może się jej przydarzyć, to zerwanie (patrz niżej). Jeśli w chwili zajęcia złoża gracz nie ma żadnego miasta osiągalnego lądem — złoże zostaje **bez drogi na zawsze**, dopóki nie zmieni właściciela ponownie.
+Cel budowy to dowolne **własne** pole będące złożem albo miastem (`roadCost` odrzuca cudze/nieistniejące cele). Trasa liczona jest BFS-em (`landPath`) **wyłącznie przez pola należące do budującego gracza** — droga nie może biec przez ziemię niczyją ani wroga, więc żeby połączyć odległy cel, trzeba go najpierw otoczyć własnym terytorium. Brak takiej trasy = `roadCost` zwraca `null`, budowa się nie zaczyna.
+
+Koszt: `ROAD_BASE_COST + ROAD_COST_PER_TILE * path.length` (stałe w `config.js`, wartości startowe do dostrojenia w testach balansu). `startRoadProject` zapisuje `t.city.roadProject = { target, cost, progress: 0 }` — od tej pory produkcja miasta (patrz wyżej) dolicza się do `progress` zamiast do jednostek. Gdy `progress >= cost`, `produce()` woła `completeRoadProject`:
+- trasa jest liczona **na nowo** (na wypadek utraty terytorium w trakcie budowy) — jeśli już się nie da jej wytyczyć, budowa przepada bez efektu (log informuje gracza), zainwestowane punkty giną;
+- w przeciwnym razie pole docelowe dostaje `road = { owner, city: <miasto budujące>, path }` (ten sam kształt niezależnie, czy celem jest złoże, czy inne miasto — patrz niżej);
+- `buildType` miasta wraca do domyślnego (`DEFAULT_UNIT_TYPE`), więc miasto nie "jałowieje" — trzeba świadomie wybrać kolejny cel produkcji.
+
+### Dwa rodzaje dróg, ten sam mechanizm
+
+- **Złoże → miasto** — jak dawniej, daje bonus produkcji (patrz niżej). Droga zapisana jest na polu złoża.
+- **Miasto → miasto** — nowość, czysto pod bonus ruchu (patrz niżej). Droga zapisana jest na polu miasta-celu. Ponieważ to dokładnie ten sam kształt danych (`{ owner, city, path }`), cała reszta mechaniki (aktywność, rysowanie, bonus ruchu) działa dla obu identycznie bez rozróżniania przypadków.
+
+Jedno pole może być celem tylko **jednej** aktywnej drogi naraz — zbudowanie nowej drogi do już podłączonego złoża/miasta nadpisuje poprzednią (to jest właśnie "przekierowanie" drogi na inne miasto źródłowe).
 
 ### Aktywność drogi (`isRoadActive`)
 
@@ -56,12 +86,17 @@ Droga jest aktywna, jeśli istnieje i **żadne** pole na jej trasie nie należy 
 rd.path.every(p => p.owner === rd.owner || p.owner < 0)
 ```
 
-Pola **niczyje** (`owner < 0`) **nie przerywają** drogi — liczy się wyłącznie realne zajęcie trasy przez innego gracza. Przerwana droga rysuje się na planszy przygaszona i kreskowana na czerwono (`drawRoadPath` w `render.js`), zamiast normalnej asfaltowej nawierzchni.
+Pola **niczyje** (`owner < 0`) **nie przerywają** drogi — liczy się wyłącznie realne zajęcie trasy przez innego gracza. Przerwana droga rysuje się na planszy przygaszona i kreskowana na czerwono (`drawRoadPath` w `render.js`), zamiast normalnej asfaltowej nawierzchni. Odzyskanie trasy (bez ponownej budowy) wystarczy, żeby droga sama "ożyła".
+
+### Zajęcie terenu a istniejące drogi (`empire.js`)
+
+- **Pojedyncze zajęcie pola** (złoża albo miasta, nie cała stolica) — `t.road = null`, ewentualny `roadProject` też jest kasowany. Nowy właściciel zaczyna od zera, musi zbudować własną infrastrukturę.
+- **Upadek stolicy / aneksja całego imperium** (`conquerEmpire`) — zwycięzca **dziedziczy** istniejącą infrastrukturę pokonanego: każda droga na przejmowanym terenie dostaje `road.owner = winnerId` (nawet jeśli w danym momencie była przecięta — może "ożyć" pod nowym właścicielem, gdy trasa się oczyści). To jedyny sposób przejęcia cudzej, już zbudowanej drogi bez płacenia za nią.
 
 ### Efekty aktywnej drogi
 
-- **Bonus produkcji**: `resourceLinks(playerId)` zbiera wszystkie własne złoża z aktywną drogą, każde dokłada `+1` do bazy produkcji miasta, do którego prowadzi (sumuje się, jeśli kilka złóż zaopatruje to samo miasto).
-- **Bonus ruchu**: `tileOnRoad(t, playerId)` sprawdza, czy dane pole leży na czyjejś aktywnej drodze tego gracza — jeśli tak, `moveCap` dolicza `roadBonus` typu jednostki (patrz [Mechanika rozgrywki](04-Mechanika-rozgrywki.md); piechota +1, czołg +2, artyleria +0).
+- **Bonus produkcji**: `resourceLinks(playerId)` zbiera wszystkie własne złoża z aktywną drogą, każde dokłada `+1` do bazy produkcji miasta, do którego prowadzi (sumuje się, jeśli kilka złóż zaopatruje to samo miasto). Dotyczy wyłącznie dróg złoże→miasto.
+- **Bonus ruchu**: `tileOnRoad(t, playerId)` sprawdza, czy dane pole leży na czyjejś aktywnej drodze tego gracza (złoże→miasto **albo** miasto→miasto) — jeśli tak, `moveCap` dolicza `roadBonus` typu jednostki (patrz [Mechanika rozgrywki](04-Mechanika-rozgrywki.md); piechota +1, czołg +2, artyleria +0).
 
 Wszystkie trzy typy złóż (`oil`/`farm`/`mine`, dobierane wg `t.shade` przy generacji mapy) dają dziś **identyczny** bonus — rozróżnienie jest czysto kosmetyczne (inny sprite, inna nazwa w tooltipie), bez mechanicznej różnicy.
 

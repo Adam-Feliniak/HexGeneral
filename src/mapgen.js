@@ -42,9 +42,9 @@ function generateMap(playerCount = PLAYERS_DEF.length, seed = null) {
       row.push({
         c, r,
         land: land[r][c],
-        city: null,       // { name, capitalOf, port, buildType }
+        city: null,       // { name, capitalOf, port, buildType, roadProject? }
         resource: null,   // 'oil' | 'farm' | 'mine'
-        road: null,       // { owner, city, path } — droga wytyczona przy zajęciu złoża
+        road: null,       // { owner, city, path } — droga zbudowana przez gracza/AI (roads.js)
         owner: -1,
         army: null,       // { player, str, vet, movesUsed }
         shade: rnd(-1, 1, rand), // drobna wariacja koloru terenu

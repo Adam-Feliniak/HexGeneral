@@ -31,10 +31,10 @@ Poza tymi przypadkami, funkcje z dowolnego pliku mogą swobodnie wołać funkcje
 | `mapgen.js` | Proceduralne generowanie mapy: ląd, stolice, miasta, porty, złoża, gwarancja spójności | `generateMap()`, `ensureCapitalConnectivity()` |
 | `state.js` | Stan gry, tworzenie nowej gry, dostęp do pól planszy, log wydarzeń | `newGame()`, `tileAt()`, `neighborsOf()`, `addLog()` |
 | `combat.js` | Morale, siła bojowa, legalność ruchu, zasięg ruchu, rozstrzyganie bitew | `moraleAt()`, `armyPowerAt()`, `canStep()`, `moveCap()`, `reachableMoves()`, `resolveBattle()`, `executeMove()` |
-| `roads.js` | Drogi złoże→miasto, produkcja siły w miastach | `establishRoad()`, `isRoadActive()`, `tileOnRoad()`, `produce()` |
+| `roads.js` | Drogi budowane przez gracza/AI (złoże→miasto, miasto→miasto), produkcja siły w miastach | `roadCost()`, `startRoadProject()`, `completeRoadProject()`, `isRoadActive()`, `tileOnRoad()`, `produce()` |
 | `empire.js` | Zajmowanie pól, aneksja całego imperium, warunek końca gry | `captureTile()`, `conquerEmpire()`, `checkGameOver()` |
 | `turns.js` | Kolejność tur (człowiek/AI), limit czasu | `startTurn()`, `endTurn()`, `requestEndTurn()`, `checkTurnTimer()` |
-| `ai.js` | Wybór ruchów i celów botów, dobór typu produkcji | `aiTargets()`, `aiPickMove()`, `aiStep()`, `aiAssignBuildType()` |
+| `ai.js` | Wybór ruchów i celów botów, dobór typu produkcji/budowy dróg | `aiTargets()`, `aiPickMove()`, `aiStep()`, `aiAssignBuildType()`, `aiAssignCityProject()` |
 | `sprites.js` | Wczytywanie plików PNG z `assets/` do obiektu `SPR` | `loadSprites()`, `sprOk()` |
 | `render.js` | Całe rysowanie na `<canvas>` | `draw()`, `frame()`, `drawTile()`, `drawArmy()`, `drawCity()`, `drawRoads()` |
 | `ui.js` | Panel boczny, banery, ekran końca gry, panel produkcji | `updateUI()`, `updateBuildPanel()`, `showBanner()`, `showOverlay()` |
@@ -89,9 +89,12 @@ Poza `state` istnieją jeszcze osobne, niezależnie resetowane tablice modułowe
 {
   c, r,                 // współrzędne kolumna/wiersz
   land: bool,
-  city: null | { name, capitalOf, port, buildType, variant? },
+  city: null | { name, capitalOf, port, buildType, variant?, roadProject? },
   resource: null | 'oil' | 'farm' | 'mine',
-  road: null | { owner, city, path },   // path = tablica pól od złoża do miasta
+  road: null | { owner, city, path },   // droga zbudowana przez gracza/AI (roads.js) — city = pole
+                                         // źródłowego miasta, path = trasa do niego (przez własne
+                                         // terytorium); może być na złożu (bonus produkcji) albo
+                                         // na innym mieście (tylko bonus ruchu)
   owner: -1 | playerId,
   army: null | { player, str, vet, movesUsed, type },
   shade: number (-1..1), // losowa wariacja koloru terenu, też steruje typem złoża i dekoracją
@@ -101,6 +104,8 @@ Poza `state` istnieją jeszcze osobne, niezależnie resetowane tablice modułowe
 ```
 
 `city.capitalOf` to `-1` dla zwykłego miasta albo id gracza, którego stolicą to miasto **było przy generacji mapy** — pole nie zmienia się nawet po zdobyciu stolicy przez wroga poza jednym wyjątkiem: `captureTile()` w `empire.js` ustawia `capitalOf = -1` w momencie faktycznego zdobycia stolicy (staje się wtedy zwykłym miastem).
+
+`city.roadProject` (opcjonalne, `null`/brak gdy nieaktywne) to `{ target, cost, progress }` — aktywny projekt budowy drogi z tego miasta; dopóki istnieje, produkcja miasta (`produce()` w `roads.js`) dolicza się do `progress` zamiast do jednostek (patrz [Gospodarka](05-Gospodarka.md)).
 
 `army.type` to jedna z trzech wartości opisanych w [Mechanice rozgrywki](04-Mechanika-rozgrywki.md): `'infantry'` | `'tank'` | `'artillery'`.
 

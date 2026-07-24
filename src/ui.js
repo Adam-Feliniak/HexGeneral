@@ -64,13 +64,49 @@ function updateBuildPanel(cp) {
   if (empty) return;
   const box = document.getElementById('build-panel-group');
   box.innerHTML = '';
+
+  if (state.roadPickFrom === t) {
+    box.appendChild(buildHint(i18n.t('build.roadPickHint')));
+    box.appendChild(buildButton(i18n.t('build.roadPickCancel'), () => {
+      state.roadPickFrom = null;
+      updateBuildPanel(cp);
+    }));
+    return;
+  }
+
+  if (t.city.roadProject) {
+    const proj = t.city.roadProject;
+    box.appendChild(buildHint(i18n.t('build.roadProgress', { progress: proj.progress, cost: proj.cost })));
+    box.appendChild(buildButton(i18n.t('build.roadCancel'), () => {
+      t.city.roadProject = null;
+      updateBuildPanel(cp);
+    }));
+    return;
+  }
+
   for (const key of UNIT_TYPE_ORDER) {
-    const btn = document.createElement('button');
-    btn.textContent = i18n.t('unit.' + key);
+    const btn = buildButton(i18n.t('unit.' + key), () => { t.city.buildType = key; updateBuildPanel(cp); });
     btn.className = (t.city.buildType || DEFAULT_UNIT_TYPE) === key ? 'selected' : '';
-    btn.addEventListener('click', () => { t.city.buildType = key; updateBuildPanel(cp); });
     box.appendChild(btn);
   }
+  box.appendChild(buildButton(i18n.t('build.roadButton'), () => {
+    state.roadPickFrom = t;
+    updateBuildPanel(cp);
+  }));
+}
+
+function buildButton(label, onClick) {
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function buildHint(text) {
+  const el = document.createElement('div');
+  el.className = 'build-hint';
+  el.textContent = text;
+  return el;
 }
 
 // timer tury — aktualizowany co klatkę (osobno od pełnego updateUI, żeby

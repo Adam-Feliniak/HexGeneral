@@ -233,6 +233,12 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
   white-space: nowrap;
 }
 
+.build-hint {
+  color: #b0ac86;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 #overlay[hidden] { display: none; }
 
 #overlay {

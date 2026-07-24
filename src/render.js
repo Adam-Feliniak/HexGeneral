@@ -87,9 +87,9 @@ function drawDecor(t) {
   }
 }
 
-// asfaltowe drogi złoże -> zaopatrywane miasto; trasy są stałe (ustalone przy
-// zajęciu złoża, patrz establishRoad), więc tu tylko odczytujemy i rysujemy —
-// bez ponownego liczenia BFS. Przerwane drogi (wróg na trasie) rysują się przygaszone.
+// asfaltowe drogi zbudowane przez gracza/AI (złoże->miasto albo miasto->miasto,
+// patrz roads.js); tu tylko odczytujemy gotową trasę i rysujemy — bez ponownego
+// liczenia BFS. Przerwane drogi (wróg na trasie) rysują się przygaszone.
 function drawRoadPath(path, active) {
   const pts = path.map(t => hexCenter(t.c, t.r));
   const trace = () => {
@@ -127,7 +127,7 @@ function drawRoads() {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   for (const row of state.tiles) for (const t of row) {
-    if (!t.resource || !t.road) continue;
+    if (!t.road) continue;
     drawRoadPath(t.road.path, isRoadActive(t));
   }
 }

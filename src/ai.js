@@ -14,6 +14,31 @@ function aiAssignBuildType(t, playerId) {
   t.city.buildType = d <= 2 ? 'artillery' : d <= 5 ? 'tank' : 'infantry';
 }
 
+// decyduje, czy miasto AI w tej turze zaczyna budować drogę zamiast jednostki —
+// tylko z dala od frontu, tylko jeśli jest jeszcze jakieś własne złoże bez drogi,
+// i tylko z pewnym prawdopodobieństwem (żeby AI nie ignorowało budowy armii)
+function aiAssignCityProject(t, playerId) {
+  if (t.city.roadProject) return; // już buduje infrastrukturę — nie przerywamy w trakcie
+  if (aiFrontDistance(playerId, t) > 2) {
+    const target = aiFindRoadTarget(t, playerId);
+    // startRoadProject może się nie udać (brak trasy przez własne terytorium) —
+    // wtedy spadamy do zwykłego wyboru jednostki zamiast marnować turę
+    if (target && rnd(0, 1) < AI_ROAD_BUILD_CHANCE && startRoadProject(t, target, playerId)) return;
+  }
+  aiAssignBuildType(t, playerId);
+}
+
+// najbliższe własne złoże bez drogi (nawet przeciętej — ta się sama goi, patrz roads.js)
+function aiFindRoadTarget(t, playerId) {
+  let best = null, bd = Infinity;
+  for (const row of state.tiles) for (const cand of row) {
+    if (!cand.resource || cand.owner !== playerId || cand.road) continue;
+    const d = hexDist(t.c, t.r, cand.c, cand.r);
+    if (d < bd) { bd = d; best = cand; }
+  }
+  return best;
+}
+
 function aiFrontDistance(playerId, t) {
   let d = Infinity;
   for (const row of state.tiles) for (const o of row) {

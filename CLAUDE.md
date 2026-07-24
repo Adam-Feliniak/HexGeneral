@@ -84,7 +84,7 @@ Order only matters where a file executes code immediately at load time (not just
 | `mapgen.js` | Procedural map generation: land, capitals, cities, ports, resources, connectivity | `generateMap()`, `ensureCapitalConnectivity()` |
 | `state.js` | Game state, new-game setup, tile access, event log | `newGame()`, `tileAt()`, `neighborsOf()`, `addLog()` |
 | `combat.js` | Morale, army power, move legality/range, battle resolution | `moraleAt()`, `armyPowerAt()`, `canStep()`, `moveCap()`, `reachableMoves()`, `resolveBattle()`, `executeMove()` |
-| `roads.js` | Resource→city roads, production | `establishRoad()`, `isRoadActive()`, `tileOnRoad()`, `produce()` |
+| `roads.js` | Player/AI-built roads (resource→city or city→city), city production | `roadCost()`, `startRoadProject()`, `completeRoadProject()`, `isRoadActive()`, `tileOnRoad()`, `produce()` |
 | `empire.js` | Tile capture, whole-empire annexation, game-over check | `captureTile()`, `conquerEmpire()`, `checkGameOver()` |
 | `turns.js` | Turn order (human/AI), turn timer | `startTurn()`, `endTurn()`, `requestEndTurn()`, `checkTurnTimer()` |
 | `ai.js` | Bot move/target selection, production choice | `aiTargets()`, `aiPickMove()`, `aiStep()`, `aiAssignBuildType()` |
@@ -99,7 +99,7 @@ Order only matters where a file executes code immediately at load time (not just
 
 `state` (global, created by `newGame()`): `screen`, `gameId` (guards against stale AI/end-of-turn `setTimeout`s across game sessions), `mode` ('single'|'multi'), `tiles` (MAP_H × MAP_W grid), `mapSeed`, `turn`, `phase`, `human` (single-player only), `players[]`, `aiPlayers`, `movesLeft`, `selected`, `selectedCity`, `log`. Separate module-level arrays outside `state` (in `state.js`): `anims`, `floaters`, `effects`, `hoverTile`, `lastFrame`.
 
-Tile (`state.tiles[r][c]`): `{ c, r, land, city: null|{name, capitalOf, port, buildType, variant?}, resource: null|'oil'|'farm'|'mine', road: null|{owner, city, path}, owner: -1|playerId, army: null|{player, str, vet, movesUsed, type}, shade, coast[], shallow }`. `city.capitalOf` records the *original* capital owner from map generation and stays put even after conquest, except `captureTile()` sets it to `-1` at the moment a capital is actually captured (it becomes a regular city). `army.type` is `'infantry'|'tank'|'artillery'`.
+Tile (`state.tiles[r][c]`): `{ c, r, land, city: null|{name, capitalOf, port, buildType, variant?, roadProject?}, resource: null|'oil'|'farm'|'mine', road: null|{owner, city, path}, owner: -1|playerId, army: null|{player, str, vet, movesUsed, type}, shade, coast[], shallow }`. `city.capitalOf` records the *original* capital owner from map generation and stays put even after conquest, except `captureTile()` sets it to `-1` at the moment a capital is actually captured (it becomes a regular city). `army.type` is `'infantry'|'tank'|'artillery'`. Roads are player/AI-built (not automatic) — see [05-Gospodarka.md](Documents/05-Gospodarka.md) for the production-points/road-project economy; `road` can anchor on a resource tile (production bonus) or a city tile (movement bonus only), same shape either way; `city.roadProject = { target, cost, progress }` while a road is under construction.
 
 Hex grid: odd-r offset, pointy-top (`geometry.js`) — even/odd rows use different neighbor direction sets (`DIRS_EVEN`/`DIRS_ODD`); distance is computed via cube-coordinate conversion.
 
