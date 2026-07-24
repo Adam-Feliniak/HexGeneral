@@ -28,11 +28,16 @@ function aiAssignCityProject(t, playerId) {
   aiAssignBuildType(t, playerId);
 }
 
-// najbliższe własne złoże bez drogi (nawet przeciętej — ta się sama goi, patrz roads.js)
+// najbliższe własne złoże bez drogi (nawet przeciętej — ta się sama goi, patrz
+// roads.js), pomijając złoża, do których inne własne miasto już buduje drogę
 function aiFindRoadTarget(t, playerId) {
+  const inProgress = new Set();
+  for (const row of state.tiles) for (const c of row) {
+    if (c.city && c.owner === playerId && c.city.roadProject) inProgress.add(c.city.roadProject.target);
+  }
   let best = null, bd = Infinity;
   for (const row of state.tiles) for (const cand of row) {
-    if (!cand.resource || cand.owner !== playerId || cand.road) continue;
+    if (!cand.resource || cand.owner !== playerId || cand.road || inProgress.has(cand)) continue;
     const d = hexDist(t.c, t.r, cand.c, cand.r);
     if (d < bd) { bd = d; best = cand; }
   }

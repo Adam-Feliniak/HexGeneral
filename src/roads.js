@@ -26,10 +26,14 @@ function landPath(a, b, playerId) {
 }
 
 // koszt budowy drogi z miasta do celu (własne złoże albo własne miasto) —
-// null, jeśli nie da się wytyczyć trasy przez własne terytorium
+// null, jeśli nie da się wytyczyć trasy przez własne terytorium albo taka
+// droga już istnieje / już się buduje (przekierowanie z INNEGO miasta jest OK)
 function roadCost(fromCityTile, target) {
   if (target === fromCityTile || target.owner !== fromCityTile.owner) return null;
   if (!target.resource && !target.city) return null;
+  if (target.road && target.road.owner === fromCityTile.owner && target.road.city === fromCityTile) return null;
+  const proj = fromCityTile.city.roadProject;
+  if (proj && proj.target === target) return null;
   const path = landPath(target, fromCityTile, fromCityTile.owner);
   if (!path || path.length < 2) return null;
   return { path, cost: ROAD_BASE_COST + ROAD_COST_PER_TILE * path.length };
