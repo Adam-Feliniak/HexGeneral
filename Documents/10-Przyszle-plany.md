@@ -150,40 +150,59 @@ naturalnie eksponuje wartość zwiadu.
 - 🔴 **Multiplayer sieciowy** — jeśli obecny tryb multi to hotseat, gra online to osobny,
   duży kierunek (zależny od formatu zapisu stanu).
 
-## System modułów (customizacja rozgrywki)
+## Dwa tryby złożoności (prosty / złożony)
 
-Klamra spinająca całą tę listę: zamiast wciskać każdy nowy system na sztywno, wiele
-z nich (lotnictwo, technologie, pogoda, dyplomacja, zdarzenia losowe, rozwój morski…)
-byłoby **modułami**, które gracz włącza/wyłącza przy zakładaniu rozgrywki. Efekt:
-każdy dobiera złożoność pod siebie — od czystej wersji lądowej po pełną grę ze
-wszystkim.
+Zamiast pełnego systemu modułów z dowolnymi przełącznikami — **dwa gotowe tryby**
+wybierane przy zakładaniu gry:
 
-- 🔴 **Rejestr modułów** — każdy opcjonalny system deklaruje się jako moduł (np. flaga
-  w `config.js`), a kod odwołujący się do niego sprawdza, czy jest aktywny. Wymaga
-  dyscypliny: nowe systemy pisane od początku jako włączalne/wyłączalne, z sensownym
-  zachowaniem, gdy moduł jest OFF (np. brak lotnictwa = brak jednostek powietrznych
-  w `UNIT_TYPES`, w produkcji miast i w celach AI).
-- 🟡 **UI wyboru modułów w lobby** — lista przełączników na ekranie zakładania gry
-  (`menu.js`, `renderSpSetup`/`renderMpSetup`), zapisywana do stanu nowej rozgrywki.
-  Każdy moduł to nowe klucze i18n w `locales/*.json`.
-- 🟢 **Presety** — kilka gotowych zestawów (np. „Klasyczna", „Pełna", „Tylko ląd”),
-  żeby nie zmuszać gracza do klikania każdego przełącznika.
+- **Prosty** — obecny rdzeń rozgrywki (ląd, 3 typy jednostek, drogi, złoża). Wersja
+  kanoniczna, którą realnie się balansuje.
+- **Złożony** — rdzeń **plus** dodatkowe systemy: budynki, technologie, a docelowo
+  lotnictwo. Opcjonalny nadzbiór dla graczy chcących większej głębi.
 
-Uwaga architektoniczna: AI musi respektować aktywne moduły (nie planować lotnictwa,
-gdy wyłączone), a ewentualny przyszły format zapisu powinien zapisywać wybór modułów
+Dlaczego dwa tryby zamiast rejestru modułów:
+
+- **Tańsze.** Dowolne przełączniki to 2^N konfiguracji do przetestowania i ogrania
+  przez AI. Dwa tryby to dwie konfiguracje — zwykła flaga (np. `state.complex`)
+  bramkująca kilka systemów. To sprowadza koszt z 🔴 do 🟡.
+- **Prostsza decyzja dla gracza** — jeden wybór zamiast listy checkboxów.
+
+Zasady projektowe (ważne, żeby to się nie rozjechało):
+
+1. 🟡 **Złożony = nadzbiór prostego, nie drugi ruleset.** Rdzeń balansujesz raz;
+   w trybie złożonym tylko *doklejasz* systemy. Dwa rozjeżdżające się zestawy reguł
+   to dwie gry do utrzymania.
+2. **Prosty jest kanoniczny.** To wersja dla większości graczy i punkt odniesienia
+   balansu; złożony jest opt-in i nie dzieli uwagi po połowie.
+3. **Skład trybu złożonego rośnie etapami.** Najpierw budynki + technologie (spójna,
+   tańsza paczka „głębszej gospodarki”), lotnictwo dopiero potem — to najdroższy
+   pojedynczy system (nowa domena + obsługa w AI), więc nie powinno blokować startu
+   trybu złożonego.
+
+- 🟡 **UI wyboru trybu w lobby** — przełącznik prosty/złożony na ekranie zakładania gry
+  (`menu.js`, `renderSpSetup`/`renderMpSetup`), zapisywany do stanu nowej rozgrywki.
+  Nowe klucze i18n w `locales/*.json`.
+
+Uwaga architektoniczna: AI musi respektować wybrany tryb (nie planować lotnictwa
+w trybie prostym), a ewentualny przyszły format zapisu powinien zapisywać wybór trybu
 razem ze stanem gry — inaczej wczytana partia mogłaby zmienić reguły w locie.
 
 ---
 
 ## Rekomendowana kolejność
 
-1. **Nowy typ jednostki** lub **modyfikatory terenu w walce** — najtańsze względem
-   architektury (istnieją `combat.js`, `UNIT_TYPES`, generator sprite'ów), a dużo
-   zmieniają w odczuciu gry.
-2. **Mgła wojny** — najbardziej „gra robi się inna" pomysł, ale większy zakres
+1. **Wsadowy runner AI-vs-AI** — czysto narzędziowe (`tools/`, headless), bez dotykania
+   rozgrywki. Odblokowuje mierzalny balans dla wszystkiego dalej.
+2. **Linie zaopatrzenia / atrycja** — nadbudowa nad istniejącym `moraleAt()` (liczy już
+   dystans do najbliższego własnego miasta), więc relatywnie tanio zmienia decyzje
+   gracza (nagradza przecinanie szlaków wroga).
+3. **Modyfikatory terenu w walce** — uwaga: wymaga *najpierw* dodania typów terenu
+   w `mapgen.js` i renderze (dziś kafelek ma tylko `land`/`shade`), dopiero potem mnożnik
+   w `armyPowerAt()`. Większe niż się wydaje, ale domyka taktykę.
+4. **Mgła wojny** — najbardziej „gra robi się inna" pomysł, ale największy zakres
    (render + AI + input).
-3. Reszta wg tego, czy priorytetem jest głębsza taktyka na mapie, głębsza gospodarka,
-   czy nowe tryby rozgrywki.
+5. Duże kierunki (rozwój morski, tryb złożony z budynkami/technologiami, lotnictwo)
+   dopiero na fundamencie powyższych.
 
 Zasada przekrojowa: im więcej z powyższych systemów, tym większa wartość **systemu
 modułów** — warto wprowadzić go, zanim dołoży się drugi–trzeci opcjonalny system, żeby
