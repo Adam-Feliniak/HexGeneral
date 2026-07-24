@@ -3,7 +3,7 @@
    KONFIGURACJA — stałe rozgrywki, gracze, nazwy miast
    ============================================================ */
 
-const GAME_VERSION = '0.1.1';
+const GAME_VERSION = '0.2.0';
 
 const MAP_W = 23;
 const MAP_H = 14;
