@@ -15,6 +15,7 @@ Ten folder zawiera pełną, wyczerpującą dokumentację projektu, wygenerowaną
 7. [Grafika i sprite'y](07-Grafika-i-sprite-y.md) — proceduralny generator pixel-artu, pipeline renderowania na canvasie
 8. [UI, menu i tłumaczenia](08-UI-menu-i18n.md) — ekrany menu, panel boczny gry, system i18n (PL/EN/DE)
 9. [Przewodnik developera](09-Przewodnik-developera.md) — jak uruchamiać, rozszerzać i testować projekt; konwencje i pułapki
+10. [Przyszłe plany](10-Przyszle-plany.md) — lista pomysłów na rozwój gry z orientacyjnym kosztem (uwaga: propozycje, nie opis istniejącego kodu)
 
 ## Najważniejsze fakty w skrócie
 
