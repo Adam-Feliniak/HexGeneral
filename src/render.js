@@ -128,7 +128,11 @@ function drawRoads() {
   ctx.lineJoin = 'round';
   for (const row of state.tiles) for (const t of row) {
     if (!t.road) continue;
-    drawRoadPath(t.road.path, isRoadActive(t));
+    // rysujemy tylko położony odcinek (droga w budowie rośnie od strony miasta);
+    // aktywny = przejezdny fragment (asfalt), przecięty przez wroga = przygaszony
+    const built = roadBuiltPath(t.road);
+    if (built.length < 2) continue;
+    drawRoadPath(built, segmentClear(built, t.road.owner));
   }
 }
 

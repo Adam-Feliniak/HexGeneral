@@ -78,7 +78,7 @@ function updateBuildPanel(cp) {
     const proj = t.city.roadProject;
     box.appendChild(buildHint(i18n.t('build.roadProgress', { progress: proj.progress, cost: proj.cost })));
     box.appendChild(buildButton(i18n.t('build.roadCancel'), () => {
-      t.city.roadProject = null;
+      cancelRoadProject(t);
       updateBuildPanel(cp);
     }));
     return;

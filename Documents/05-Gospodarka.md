@@ -66,27 +66,26 @@ Drogi **nie powstają już automatycznie**. Gracz i AI budują je świadomie, wy
 
 Cel budowy to dowolne **własne** pole będące złożem albo miastem (`roadCost` odrzuca cudze/nieistniejące cele). Trasa liczona jest BFS-em (`landPath`) **wyłącznie przez pola należące do budującego gracza** — droga nie może biec przez ziemię niczyją ani wroga, więc żeby połączyć odległy cel, trzeba go najpierw otoczyć własnym terytorium. Brak takiej trasy = `roadCost` zwraca `null`, budowa się nie zaczyna.
 
-Koszt: `ROAD_BASE_COST + ROAD_COST_PER_TILE * path.length` (stałe w `config.js`, wartości startowe do dostrojenia w testach balansu). `startRoadProject` zapisuje `t.city.roadProject = { target, cost, progress: 0 }` — od tej pory produkcja miasta (patrz wyżej) dolicza się do `progress` zamiast do jednostek. Gdy `progress >= cost`, `produce()` woła `completeRoadProject`:
-- trasa jest liczona **na nowo** (na wypadek utraty terytorium w trakcie budowy) — jeśli już się nie da jej wytyczyć, budowa przepada bez efektu (log informuje gracza), zainwestowane punkty giną;
-- w przeciwnym razie pole docelowe dostaje `road = { owner, city: <miasto budujące>, path }` (ten sam kształt niezależnie, czy celem jest złoże, czy inne miasto — patrz niżej);
-- `buildType` miasta wraca do domyślnego (`DEFAULT_UNIT_TYPE`), więc miasto nie "jałowieje" — trzeba świadomie wybrać kolejny cel produkcji.
+Koszt: `ROAD_BASE_COST + ROAD_COST_PER_TILE * path.length` (stałe w `config.js`, wartości startowe do dostrojenia w testach balansu). `startRoadProject` od razu kładzie na polu celu drogę z licznikiem `road.built = 0` i zapisuje `t.city.roadProject = { target, cost, progress: 0 }` — od tej pory produkcja miasta (patrz wyżej) dolicza się do `progress` zamiast do jednostek.
+
+**Droga buduje się przyrostowo.** Co turę `produce()` przelicza, ile heksów jest już położonych, **proporcjonalnie do wydanych punktów, zaokrąglając w dół**: `built = floor(progress / cost * path.length)`. Odcinek rośnie **od strony miasta** w kierunku celu (bo `landPath` zwraca trasę jako `[cel, …, miasto]`, a `roadBuiltPath` bierze `built` heksów z jej końca). Gdy `progress >= cost`, `produce()` woła `completeRoadProject`, które domyka `built` do pełnej długości; jeśli w międzyczasie cel został stracony (np. wróg zajął złoże), budowa przepada bez efektu (log informuje gracza), a zainwestowane punkty giną. Po ukończeniu `buildType` miasta wraca do domyślnego (`DEFAULT_UNIT_TYPE`), żeby miasto nie "jałowieło".
+
+Anulowanie (`cancelRoadProject`) w trakcie budowy usuwa niedokończony odcinek z pola celu — punkty przepadają. Ten sam helper czyści projekt przy pojedynczym zajęciu miasta przez wroga (`empire.js`).
 
 ### Dwa rodzaje dróg, ten sam mechanizm
 
-- **Złoże → miasto** — jak dawniej, daje bonus produkcji (patrz niżej). Droga zapisana jest na polu złoża.
-- **Miasto → miasto** — nowość, czysto pod bonus ruchu (patrz niżej). Droga zapisana jest na polu miasta-celu. Ponieważ to dokładnie ten sam kształt danych (`{ owner, city, path }`), cała reszta mechaniki (aktywność, rysowanie, bonus ruchu) działa dla obu identycznie bez rozróżniania przypadków.
+- **Złoże → miasto** — daje bonus produkcji (patrz niżej), ale dopiero po **pełnym** ukończeniu. Droga zapisana jest na polu złoża.
+- **Miasto → miasto** — czysto pod bonus ruchu (patrz niżej). Droga zapisana jest na polu miasta-celu. Ponieważ to dokładnie ten sam kształt danych (`{ owner, city, path, built }`), cała reszta mechaniki (aktywność, rysowanie, bonus ruchu) działa dla obu identycznie bez rozróżniania przypadków.
 
-Jedno pole może być celem tylko **jednej** aktywnej drogi naraz — zbudowanie nowej drogi do już podłączonego złoża/miasta nadpisuje poprzednią (to jest właśnie "przekierowanie" drogi na inne miasto źródłowe).
+Jedno pole może być celem tylko **jednej** drogi naraz — zbudowanie nowej drogi do już podłączonego złoża/miasta nadpisuje poprzednią (to jest właśnie "przekierowanie" drogi na inne miasto źródłowe).
 
-### Aktywność drogi (`isRoadActive`)
+### Aktywność drogi (`isRoadActive`, `tileOnRoad`)
 
-Droga jest aktywna, jeśli istnieje i **żadne** pole na jej trasie nie należy aktualnie do wroga:
+Rozróżniamy dwa poziomy "gotowości" drogi:
+- **W pełni zbudowana i nieprzecięta** (`isRoadActive`) — `built` osiągnęło długość trasy i **żaden** jej heks nie należy do wroga. Tylko taka droga daje **bonus produkcji** złożu.
+- **Położony odcinek przejezdny** (`tileOnRoad` → `segmentClear` na `roadBuiltPath`) — **bonus ruchu** obejmuje już gotowy fragment, nawet gdy droga jest jeszcze w budowie.
 
-```js
-rd.path.every(p => p.owner === rd.owner || p.owner < 0)
-```
-
-Pola **niczyje** (`owner < 0`) **nie przerywają** drogi — liczy się wyłącznie realne zajęcie trasy przez innego gracza. Przerwana droga rysuje się na planszy przygaszona i kreskowana na czerwono (`drawRoadPath` w `render.js`), zamiast normalnej asfaltowej nawierzchni. Odzyskanie trasy (bez ponownej budowy) wystarczy, żeby droga sama "ożyła".
+W obu przypadkach pola **niczyje** (`owner < 0`) **nie przerywają** drogi — liczy się wyłącznie realne zajęcie trasy przez innego gracza; przecięcie odbiera bonus na całym odcinku. Przerwana droga rysuje się na planszy przygaszona i kreskowana na czerwono (`drawRoadPath` w `render.js`), zamiast normalnej asfaltowej nawierzchni. Odzyskanie trasy (bez ponownej budowy) wystarczy, żeby droga sama "ożyła". `render.js` rysuje wyłącznie położony odcinek (`roadBuiltPath`), więc droga w budowie widocznie rośnie z miasta.
 
 ### Zajęcie terenu a istniejące drogi (`empire.js`)
 

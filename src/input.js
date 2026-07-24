@@ -108,6 +108,7 @@ function tileTooltip(t) {
     lines.push(i18n.t('tooltip.resourceBonus', { resource: RES_NAMES[t.resource] }));
     if (t.owner >= 0) {
       if (t.road && isRoadActive(t)) lines.push(i18n.t('tooltip.supplying', { city: t.road.city.city.name }));
+      else if (t.road && t.road.built < t.road.path.length) lines.push(i18n.t('tooltip.roadBuilding', { city: t.road.city.city.name }));
       else if (t.road) lines.push(i18n.t('tooltip.roadCut'));
       else lines.push(i18n.t('tooltip.noRoad'));
     }

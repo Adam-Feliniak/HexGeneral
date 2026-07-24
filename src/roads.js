@@ -65,48 +65,73 @@ function roadTargets(fromCityTile) {
   return targets;
 }
 
-// rozpoczyna budowę drogi — punkty produkcji miasta zaczną iść w projekt
-// zamiast w jednostki, dopóki się nie ukończy albo nie zostanie zmieniony
+// rozpoczyna budowę drogi — od razu kładzie na polu celu drogę z licznikiem
+// `built = 0` (ile heksów, licząc od strony miasta, jest już położonych); punkty
+// produkcji miasta zaczną iść w ten projekt zamiast w jednostki i stopniowo
+// zwiększać `built`, aż droga dojdzie do celu (patrz produce/completeRoadProject)
 function startRoadProject(fromCityTile, target, playerId) {
   const info = roadCost(fromCityTile, target);
   if (!info) return false;
+  target.road = { owner: playerId, city: fromCityTile, path: info.path, built: 0 };
   fromCityTile.city.roadProject = { target, cost: info.cost, progress: 0 };
   return true;
 }
 
-// kończy projekt drogi: ustanawia (lub nadpisuje) drogę na polu docelowym —
-// trasa liczona na nowo na wypadek zmian własności terenu w trakcie budowy;
-// jeśli w międzyczasie gracz stracił kawałek terytorium na trasie, budowa
-// przepada (punkty też, zgodnie z zasadą "nadwyżka/porzucony projekt nie wraca")
-function completeRoadProject(fromCityTile, playerId) {
+// przerywa budowę drogi — niedokończony odcinek znika (wydane punkty przepadają),
+// ale tylko jeśli na polu celu wciąż stoi droga z TEGO projektu (nie ruszamy
+// ewentualnej wcześniejszej, ukończonej drogi z innego miasta)
+function cancelRoadProject(fromCityTile) {
   const proj = fromCityTile.city.roadProject;
-  const path = landPath(proj.target, fromCityTile, playerId);
+  if (proj && proj.target.road && proj.target.road.city === fromCityTile) proj.target.road = null;
+  fromCityTile.city.roadProject = null;
+}
+
+// odcinek drogi już położony — liczony od strony miasta (koniec tablicy path,
+// bo landPath zwraca ją jako [cel, ..., miasto]); w budowie droga rośnie z miasta
+function roadBuiltPath(rd) {
+  return rd.path.slice(rd.path.length - rd.built);
+}
+
+// czy dany odcinek trasy jest przejezdny: każdy heks należy do właściciela albo
+// jest niczyj (owner < 0) — realne zajęcie przez wroga przerywa drogę
+function segmentClear(path, owner) {
+  return path.every(p => p.owner === owner || p.owner < 0);
+}
+
+// kończy projekt drogi: droga na polu celu jest już położona przyrostowo, więc tu
+// tylko domykamy `built` do pełnej długości. Jeśli cel został w międzyczasie
+// stracony (np. wróg zajął złoże), budowa przepada — punkty też, zgodnie z zasadą
+// "porzucony/nadwyżkowy projekt nie wraca"
+function completeRoadProject(fromCityTile, playerId) {
+  const target = fromCityTile.city.roadProject.target;
   fromCityTile.city.roadProject = null;
   fromCityTile.city.buildType = DEFAULT_UNIT_TYPE;
-  if (!path || path.length < 2) {
+  const rd = target.road;
+  if (target.owner !== playerId || !rd || rd.city !== fromCityTile) {
     addLog(i18n.t('log.roadFailed', { city: fromCityTile.city.name }));
     return;
   }
-  proj.target.road = { owner: playerId, city: fromCityTile, path };
+  rd.built = rd.path.length;
   addLog(i18n.t('log.roadComplete', { city: fromCityTile.city.name }));
   showBanner(i18n.t('banner.roadComplete', { city: fromCityTile.city.name }));
 }
 
-// droga aktywna = istnieje I żaden jej heks nie należy do wroga — pola niczyje
-// (owner -1) NIE przerywają drogi, liczy się tylko realne zajęcie przez przeciwnika;
-// dotyczy zarówno dróg do złóż, jak i ogólnych dróg miasto-miasto (ten sam kształt)
+// droga aktywna (dla bonusu produkcji złoża) = w PEŁNI zbudowana i żaden jej heks
+// nie należy do wroga — pola niczyje (owner < 0) NIE przerywają drogi
 function isRoadActive(t) {
   const rd = t.road;
-  if (!rd || rd.owner !== t.owner) return false;
-  return rd.path.every(p => p.owner === rd.owner || p.owner < 0);
+  if (!rd || rd.owner !== t.owner || rd.built < rd.path.length) return false;
+  return segmentClear(rd.path, rd.owner);
 }
 
-// czy pole leży na aktywnej drodze danego gracza (złoże->miasto albo miasto->miasto)
-// — jednostka na takim polu ma większy zasięg ruchu w tej turze (patrz moveCap w combat.js)
+// czy pole leży na przejezdnym, JUŻ POŁOŻONYM odcinku drogi danego gracza — także
+// częściowo zbudowanej (bonus ruchu obejmuje ukończony fragment, patrz moveCap
+// w combat.js); przecięcie odcinka przez wroga odbiera bonus na całej drodze
 function tileOnRoad(t, playerId) {
   for (const row of state.tiles) for (const cand of row) {
     if (cand.owner !== playerId || !cand.road) continue;
-    if (isRoadActive(cand) && cand.road.path.includes(t)) return true;
+    const built = roadBuiltPath(cand.road);
+    if (built.includes(t) && segmentClear(built, playerId)) return true;
   }
   return false;
 }
@@ -136,9 +161,13 @@ function produce(playerId) {
     const base = (t.city.capitalOf === playerId ? 3 : 1) + (bonus.get(t) || 0);
     const gain = Math.max(1, Math.round(base * mult));
     if (t.city.roadProject) {
-      // nadwyżka punktów ponad koszt w turze ukończenia przepada (nie przechodzi dalej)
-      t.city.roadProject.progress += gain;
-      if (t.city.roadProject.progress >= t.city.roadProject.cost) completeRoadProject(t, playerId);
+      const proj = t.city.roadProject;
+      proj.progress += gain;
+      // droga rośnie proporcjonalnie do wydanych punktów, zaokrąglając w dół liczbę
+      // położonych heksów; nadwyżka ponad koszt w turze ukończenia przepada
+      const rd = proj.target.road;
+      if (rd) rd.built = Math.min(rd.path.length, Math.floor(proj.progress / proj.cost * rd.path.length));
+      if (proj.progress >= proj.cost) completeRoadProject(t, playerId);
       continue;
     }
     const buildType = t.city.buildType || DEFAULT_UNIT_TYPE;

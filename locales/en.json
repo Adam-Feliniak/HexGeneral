@@ -106,6 +106,7 @@
   "tooltip.resourceMine": "⛏ Mine",
   "tooltip.resourceBonus": "{{resource}} — <b>+1</b> production when connected to a city by road",
   "tooltip.supplying": "🚚 Supplies: <b>{{city}}</b>",
+  "tooltip.roadBuilding": "🚧 Road under construction to: <b>{{city}}</b>",
   "tooltip.roadCut": "🚧 Road cut by the enemy — no supplies",
   "tooltip.noRoad": "🚧 No road to a city — no supplies",
   "tooltip.army": "⚔ {{player}} — {{type}}: strength <b>{{str}}</b>, morale <b>{{morale}}%</b>",

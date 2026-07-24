@@ -91,10 +91,12 @@ Poza `state` istnieją jeszcze osobne, niezależnie resetowane tablice modułowe
   land: bool,
   city: null | { name, capitalOf, port, buildType, variant?, roadProject? },
   resource: null | 'oil' | 'farm' | 'mine',
-  road: null | { owner, city, path },   // droga zbudowana przez gracza/AI (roads.js) — city = pole
+  road: null | { owner, city, path, built },  // droga budowana przez gracza/AI (roads.js) — city = pole
                                          // źródłowego miasta, path = trasa do niego (przez własne
-                                         // terytorium); może być na złożu (bonus produkcji) albo
-                                         // na innym mieście (tylko bonus ruchu)
+                                         // terytorium), built = ile heksów (od strony miasta) już
+                                         // położono; pełna gdy built === path.length. Może być na
+                                         // złożu (bonus produkcji po ukończeniu) albo na innym
+                                         // mieście (bonus ruchu, też dla częściowego odcinka)
   owner: -1 | playerId,
   army: null | { player, str, vet, movesUsed, type },
   shade: number (-1..1), // losowa wariacja koloru terenu, też steruje typem złoża i dekoracją
