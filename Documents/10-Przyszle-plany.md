@@ -53,6 +53,26 @@ Legenda kosztu:
 
 ## Tryby i AI
 
+- 🟡 **AI słabo domyka wygrane pozycje (stalemate)** — priorytet, potwierdzony pomiarem.
+  W serii 300 gier `normal` vs `normal` (`tools/sim.js`, seedy 1–300, limit 500 rund)
+  **40% partii nie kończy się w limicie** — dobija do capa bez rozstrzygnięcia, mediana
+  długości ~348 rund. To nie wariancja: przy równych AI połowa gier grzęźnie, bo bot
+  nie potrafi przełamać ostatniej obrony i dobić stolicy wroga (turtling po obu
+  stronach). Bias pozycji przy tym n mieści się w szumie (~1,5σ), więc realny problem
+  to *domykanie*, nie asymetria stron.
+
+  Gdzie w kodzie: ocena ruchów w `aiPickMove` (`ai.js`) — progi ataku
+  (`aggressionThreshold`) i wagi w `aiTargets` sprawiają, że przy wyrównanych siłach
+  atak na miasto/stolicę rzadko przekracza próg opłacalności, a obrońca dostaje bonus
+  miejski (`resolveBattle`: ×1,15/×1,25) i wsparcie sąsiadów — więc front zastyga.
+
+  Kierunki do zbadania (przez runner, mierząc odsetek remisów jako metrykę):
+  koncentracja sił na jednym kierunku zamiast rozpraszania; premia za oblężenie
+  (skumulowany nacisk kilku armii na to samo miasto); mechanizm przełamujący pat
+  (rosnąca desperacja/agresja przy przeciągającej się grze albo przy przewadze
+  terytorialnej); rewizja bonusu obronnego miast, jeśli okaże się zbyt silny.
+  Walidacja: ta sama seria 300 gier powinna po zmianie pokazać wyraźnie niższy odsetek
+  remisów bez rozjechania balansu 50/50.
 - 🟡 **Scenariusze / mapy z celami** — inne warunki zwycięstwa niż eliminacja (utrzymaj
   X tur, zdobądź konkretne miasto). Nadbudowa nad istniejącym generatorem i seedem.
 - 🔴 **Dyplomacja (multi / AI)** — sojusze, zawieszenie broni, wspólny wróg.
