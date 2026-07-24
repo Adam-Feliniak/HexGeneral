@@ -39,6 +39,32 @@ function roadCost(fromCityTile, target) {
   return { path, cost: ROAD_BASE_COST + ROAD_COST_PER_TILE * path.length };
 }
 
+// wszystkie legalne cele budowy drogi z danego miasta (do podświetlenia na mapie) —
+// jeden flood-fill po własnym terytorium zamiast BFS-a per pole; te same reguły
+// odrzucania co roadCost (własne złoże/miasto, jeszcze niepodłączone tą drogą)
+function roadTargets(fromCityTile) {
+  const owner = fromCityTile.owner;
+  const seen = new Set([fromCityTile]);
+  const queue = [fromCityTile];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const n of neighborsOf(cur)) {
+      if (!n.land || n.owner !== owner || seen.has(n)) continue;
+      seen.add(n);
+      queue.push(n);
+    }
+  }
+  const proj = fromCityTile.city.roadProject;
+  const targets = [];
+  for (const t of seen) {
+    if (t === fromCityTile || (!t.resource && !t.city)) continue;
+    if (t.road && t.road.owner === owner && t.road.city === fromCityTile) continue;
+    if (proj && proj.target === t) continue;
+    targets.push(t);
+  }
+  return targets;
+}
+
 // rozpoczyna budowę drogi — punkty produkcji miasta zaczną iść w projekt
 // zamiast w jednostki, dopóki się nie ukończy albo nie zostanie zmieniony
 function startRoadProject(fromCityTile, target, playerId) {

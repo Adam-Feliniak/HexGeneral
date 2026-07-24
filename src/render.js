@@ -313,6 +313,27 @@ function draw(now) {
       ctx.setLineDash([]);
     }
   }
+  // wybór celu budowy drogi — podświetlenie legalnych celów w kolorze HUD-u
+  // (złoto), żeby odróżnić od białego zasięgu ruchu jednostek
+  if (state.roadPickFrom && humanTurn) {
+    const from = state.roadPickFrom;
+    const fc = hexCenter(from.c, from.r);
+    hexPath(fc.x, fc.y, 0.92);
+    ctx.strokeStyle = '#ffd91c';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    for (const tgt of roadTargets(from)) {
+      const c = hexCenter(tgt.c, tgt.r);
+      hexPath(c.x, c.y, 0.86);
+      ctx.fillStyle = 'rgba(255,217,28,0.25)';
+      ctx.fill();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(255,217,28,0.9)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
   if (hoverTile && humanTurn) {
     const { x, y } = hexCenter(hoverTile.c, hoverTile.r);
     hexPath(x, y, 0.95);
