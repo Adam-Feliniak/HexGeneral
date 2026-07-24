@@ -141,10 +141,10 @@ naturalnie eksponuje wartość zwiadu.
 
 ## Narzędzia i meta
 
-- 🟢 **Wsadowy runner AI-vs-AI** — narzędzie w `tools/` odpalające N gier headless
-  i zbierające win-rate. Zamienia „jeden dziwny wynik to pewnie wariancja" (patrz
-  [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md)) w twarde dane do balansu.
-  Najtańsza rzecz z realną wartością dla dalszego rozwoju.
+- ✅ **Wsadowy runner AI-vs-AI** — **zrealizowane** w `tools/sim.js` (równoległe,
+  deterministyczne, z trybem `--mirror` znoszącym bias pozycji). Zamienia „jeden dziwny
+  wynik to pewnie wariancja" (patrz [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md))
+  w twarde dane do balansu. Opis w [09-Przewodnik-developera.md](09-Przewodnik-developera.md).
 - 🟡 **Minimapa** — przy proceduralnych mapach szybko robi się przydatna, zwłaszcza
   z mgłą wojny.
 - 🔴 **Multiplayer sieciowy** — jeśli obecny tryb multi to hotseat, gra online to osobny,
@@ -191,8 +191,8 @@ razem ze stanem gry — inaczej wczytana partia mogłaby zmienić reguły w loci
 
 ## Rekomendowana kolejność
 
-1. **Wsadowy runner AI-vs-AI** — czysto narzędziowe (`tools/`, headless), bez dotykania
-   rozgrywki. Odblokowuje mierzalny balans dla wszystkiego dalej.
+1. ✅ **Wsadowy runner AI-vs-AI** — **zrobione** (`tools/sim.js`). Odblokowuje mierzalny
+   balans dla wszystkiego dalej.
 2. **Linie zaopatrzenia / atrycja** — nadbudowa nad istniejącym `moraleAt()` (liczy już
    dystans do najbliższego własnego miasta), więc relatywnie tanio zmienia decyzje
    gracza (nagradza przecinanie szlaków wroga).

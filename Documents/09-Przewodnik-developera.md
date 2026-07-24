@@ -78,6 +78,45 @@ run(`(() => {
 })()`);
 ```
 
+## Wsadowy runner balansu (`tools/sim.js`)
+
+Nadbudowa nad powyższym harnessem: `node tools/sim.js` rozgrywa **N pełnych partii
+AI-vs-AI** i zbiera statystyki, zamieniając „jeden dziwny wynik to pewnie wariancja"
+w twarde liczby. Zero zależności; gry biegną **równolegle** na wielu rdzeniach
+(`worker_threads`), każdy wątek w osobnym kontekście `vm`.
+
+```
+node tools/sim.js --games=200                       # 2 graczy, normal vs normal
+node tools/sim.js --games=200 --players=4 --diff=hard
+node tools/sim.js --games=100 --mirror --diffs=normal,hard
+node tools/sim.js --games=1 --seed=12345 --list     # powtórka jednej konkretnej partii
+node tools/sim.js --help
+```
+
+Najważniejsze cechy (i dlaczego tak):
+
+- **Determinizm.** Każda partia jest w pełni odtwarzalna z jej seeda, **niezależnie od
+  liczby wątków**. Mapę seeduje `generateMap()`, ale walka/AI wołają globalny
+  `Math.random` — więc runner podmienia `Math.random` w sandboxie na seedowany
+  strumień (mulberry32) per gra. Bez tego seed odtwarzałby tylko mapę, nie przebieg.
+- **Tryb `single` się nie nadaje.** `checkGameOver()` w trybie `single` kończy grę, gdy
+  padnie slot 0 (`state.human`), a nie gdy zostaje jedno imperium. Runner wymusza tryb
+  `multi` (`humanCount = liczba graczy`), a potem przełącza wszystkich na AI — dzięki
+  temu partia toczy się do ostatniego stojącego.
+- **Pętla ręczna, nie `startTurn`/`aiStep`.** Te używają `setTimeout`/bannerów; runner
+  replikuje przebieg wprost: `resetMoved` → do `MOVES_PER_TURN` hopów `aiPickMove`/
+  `executeMove` → `produce`.
+- **`--mirror` znosi bias pozycji.** Sloty startują na stałych stolicach i w stałej
+  kolejności tur, co samo w sobie przechyla win-rate. Bez `--mirror` raport pokazuje
+  zwycięstwa **wg slota** (przewaga trudności zmieszana z pozycją); z `--mirror` runner
+  gra każdą mapę we wszystkich rotacjach przypisania trudności do slotów i agreguje
+  wynik **wg trudności** — czysta przewaga trudności. (Przykład: `hard` vs `normal`
+  potrafi dać 77% „wg slota", ale 66% „wg trudności", bo reszta to była lepsza pozycja.)
+- **Remisy to metryka, nie błąd.** Równe AI często turtlują — przy limicie rund partia
+  bez rozstrzygnięcia liczy się jako remis, a wysoki odsetek remisów sam w sobie mówi
+  coś o balansie. Limit `--max-turns` domyślnie 500 (gry rozstrzygają się zwykle w
+  300–500 rundach).
+
 ## Weryfikacja UI/wizualna
 
 Projekt jest czystym HTML/CSS/JS otwieranym z `file://` — nie ma zainstalowanego narzędzia do automatycznego sterowania przeglądarką (typu Playwright/`chromium-cli`) w standardowym środowisku roboczym tego repo. Zmiany w layoucie/CSS/renderowaniu canvasu należy sprawdzać **ręcznie**, otwierając `index.html` w przeglądarce po każdej zmianie (i robiąc **hard refresh**, `Ctrl+F5`, jeśli zmiana w `style.css` pozornie "nie działa" — przeglądarki potrafią agresywnie cache'ować lokalne pliki).
