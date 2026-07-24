@@ -46,19 +46,9 @@ const SRC_FILES = [
   'ai.js', 'ui.js', 'menu.js',
 ];
 
-// mulberry32: seedowany strumień do podmiany Math.random w sandboxie
-function mulberry32(seed) {
-  let s = seed >>> 0;
-  return function () {
-    s |= 0; s = (s + 0x6D2B79F5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 // seed strumienia walki/AI dla danej (mapy, rotacji) — stały, więc każda gra
-// jest odtwarzalna niezależnie od tego, który wątek ją policzył
+// jest odtwarzalna niezależnie od tego, który wątek ją policzył. Sam reseed dzieje
+// się w sterowniku PO newGame (przez makeRng z utils.js, identyczny mulberry32).
 function rngSeedFor(mapSeed, rot) {
   return ((mapSeed * 0x9E3779B1) ^ (rot * 0x85EBCA77)) >>> 0;
 }
@@ -75,6 +65,11 @@ const DRIVER_SRC = `
       newGame({ humanCount: o.players, botCount: 0, aiDifficulty: 'normal',
                 seed: o.seed, timeLimit: Infinity });
       state.players.forEach(function (p, i) { p.isHuman = false; p.difficulty = o.diffs[i]; });
+      // reseed strumienia walki/AI PO newGame: newGame zużywa zmienną liczbę wywołań
+      // Math.random (default*Setup() tylko przy 1. grze w danym kontekście vm, potem
+      // reużywa ustawień), więc reseed PRZED nim rozjeżdżałby wyniki między grami w
+      // tym samym wątku i uzależniał je od podziału na wątki. makeRng == mulberry32.
+      Math.random = makeRng(o.rngSeed);
       var diffCache = state.players.map(function (p) { return resolveDifficulty(p.difficulty); });
       var prevAlive = state.players.length;
       var elimSum = 0;   // suma rund, w których padały imperia (do średniej długości podboju)
@@ -129,7 +124,7 @@ function loadGameContext() {
 // częściowe statystyki do scalenia w wątku głównym.
 function runRange(cfg, onProgress) {
   const { start, end, players, diffs, maxTurns, mirror, list } = cfg;
-  const { sandboxMath, runGame } = loadGameContext();
+  const { runGame } = loadGameContext();
   const rotations = mirror ? players : 1;
 
   const winsBySlot = Array(players).fill(0);
@@ -144,8 +139,7 @@ function runRange(cfg, onProgress) {
     for (let k = 0; k < rotations; k++) {
       // rotacja przypisania trudności do slotów: slot s dostaje diffs[(s+k) % players]
       const assign = diffs.map((_, s) => diffs[(s + k) % players]);
-      sandboxMath.random = mulberry32(rngSeedFor(mapSeed, k));
-      const res = runGame({ players, diffs: assign, seed: mapSeed, maxTurns });
+      const res = runGame({ players, diffs: assign, seed: mapSeed, maxTurns, rngSeed: rngSeedFor(mapSeed, k) });
 
       lengths.push(res.turns);
       if (res.draw) {
@@ -356,4 +350,4 @@ async function main() {
   console.log(`  Czas: ${elapsed.toFixed(1)} s  (${(totalRuns / elapsed).toFixed(1)} gier/s, ${jobs} wątków)`);
 }
 
-main().catch(err => { console.error(err); process.exit(1); });
+main().catch(err => { console.error('Błąd: ' + (err && err.message ? err.message : err)); process.exit(1); });
