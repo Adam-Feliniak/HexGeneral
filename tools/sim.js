@@ -120,10 +120,13 @@ function loadGameContext() {
   return { sandboxMath, runGame, PLAYERS_DEF };
 }
 
-// rozegranie zakresu gier [start, end) — używane przez każdy worker. Zwraca
+// pętla robocza jednego workera: pobiera kolejne indeksy gier z atomowego
+// dyspozytora we współdzielonym buforze (dynamiczny load-balancing — żaden wątek
+// nie stoi bezczynnie, dopóki są gry, i długie gry rozkładają się same). Zwraca
 // częściowe statystyki do scalenia w wątku głównym.
-function runRange(cfg, onProgress) {
-  const { start, end, players, diffs, maxTurns, mirror, list } = cfg;
+function runQueue(cfg) {
+  const { games, seedBase, players, diffs, maxTurns, mirror, list } = cfg;
+  const counter = new Int32Array(cfg.counterBuf); // [0]=dyspozytor gier, [1]=ukończone runy (postęp)
   const { runGame } = loadGameContext();
   const rotations = mirror ? players : 1;
 
@@ -134,8 +137,10 @@ function runRange(cfg, onProgress) {
   const lengths = [];
   const rows = [];
 
-  for (let i = start; i < end; i++) {
-    const mapSeed = cfg.seedBase + i;
+  for (;;) {
+    const i = Atomics.add(counter, 0, 1); // atomowo pobierz następny indeks gry
+    if (i >= games) break;
+    const mapSeed = seedBase + i;
     for (let k = 0; k < rotations; k++) {
       // rotacja przypisania trudności do slotów: slot s dostaje diffs[(s+k) % players]
       const assign = diffs.map((_, s) => diffs[(s + k) % players]);
@@ -150,7 +155,7 @@ function runRange(cfg, onProgress) {
         winsByDiff[wd] = (winsByDiff[wd] || 0) + 1;
       }
       if (list) rows.push({ seed: mapSeed, rot: k, winner: res.winner, turns: res.turns, draw: res.draw });
-      if (onProgress) onProgress();
+      Atomics.add(counter, 1, 1); // postęp — wątek główny odpytuje ten licznik
     }
   }
   return { winsBySlot, winsByDiff, draws, lengths, rows };
@@ -158,8 +163,7 @@ function runRange(cfg, onProgress) {
 
 /* ------------------------------ WORKER ------------------------------ */
 if (!isMainThread) {
-  const partial = runRange(workerData, () => parentPort.postMessage({ type: 'progress' }));
-  parentPort.postMessage({ type: 'result', partial });
+  parentPort.postMessage({ type: 'result', partial: runQueue(workerData) });
   return; // (moduł CommonJS jest owinięty w funkcję — return kończy wykonanie workera)
 }
 
@@ -216,13 +220,10 @@ function median(nums) {
 
 function pct(x, total) { return total ? (100 * x / total).toFixed(1) + '%' : '—'; }
 
-function runWorker(cfg, onTick) {
+function runWorker(cfg) {
   return new Promise((resolve, reject) => {
     const w = new Worker(__filename, { workerData: cfg });
-    w.on('message', (msg) => {
-      if (msg.type === 'progress') { if (onTick) onTick(); }
-      else if (msg.type === 'result') resolve(msg.partial);
-    });
+    w.on('message', (msg) => { if (msg.type === 'result') resolve(msg.partial); });
     w.on('error', reject);
     w.on('exit', (code) => { if (code !== 0) reject(new Error('worker zakończył się kodem ' + code)); });
   });
@@ -270,27 +271,31 @@ async function main() {
   console.log(`  tryb:          ${mirror ? 'mirror (agregacja po trudności, bias pozycji zniesiony)' : 'sloty (bias pozycji widoczny)'}`);
   console.log('');
 
-  // podział gier na wątki (spójne zakresy indeksów -> każdy wątek liczy całe gry)
+  // dynamiczna kolejka: wszystkie workery czerpią gry z jednego atomowego licznika
+  // (counter[0]), więc żaden rdzeń nie stoi bezczynnie i długie gry rozkładają się
+  // same; counter[1] to postęp (ukończone runy) odpytywany przez wątek główny
   const t0 = Date.now();
-  let done = 0;
-  const onTick = () => {
-    done++;
-    if (quiet) return;
-    if (done % Math.max(1, Math.floor(totalRuns / 100)) === 0 || done === totalRuns) {
-      process.stdout.write(`\r  postęp: ${Math.round(100 * done / totalRuns)}%  (${done}/${totalRuns})   `);
-    }
-  };
+  const counterBuf = new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT);
+  const counter = new Int32Array(counterBuf);
 
-  const per = Math.ceil(games / jobs);
+  let progressTimer = null;
+  if (!quiet) {
+    progressTimer = setInterval(() => {
+      const d = Atomics.load(counter, 1);
+      process.stdout.write(`\r  postęp: ${Math.round(100 * d / totalRuns)}%  (${d}/${totalRuns})   `);
+    }, 150);
+  }
+
+  const workerCount = Math.min(jobs, games);
   const tasks = [];
-  for (let start = 0; start < games; start += per) {
-    const end = Math.min(games, start + per);
-    tasks.push(runWorker({
-      start, end, seedBase, players, diffs, maxTurns, mirror, list,
-    }, onTick));
+  for (let w = 0; w < workerCount; w++) {
+    tasks.push(runWorker({ counterBuf, games, seedBase, players, diffs, maxTurns, mirror, list }));
   }
   const partials = await Promise.all(tasks);
-  if (!quiet) process.stdout.write('\n\n');
+  if (progressTimer) {
+    clearInterval(progressTimer);
+    process.stdout.write(`\r  postęp: 100%  (${totalRuns}/${totalRuns})   \n\n`);
+  }
 
   // scalanie
   const winsBySlot = Array(players).fill(0);
