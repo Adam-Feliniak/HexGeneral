@@ -37,7 +37,7 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 
 | Obszar | Teraz | Próg EA | Priorytet |
 |---|---|---|---|
-| Zamykalność rozgrywki | ~~40%~~ → **6,3%** remisów (v0.2.2 + v0.2.3) | Gra *niezawodnie* dobiega do końca | **P0 — gate #1, zasadniczo zamknięty** |
+| Zamykalność rozgrywki | ~~40%~~ → **~7%** remisów (v0.2.2 + v0.2.3) | Gra *niezawodnie* dobiega do końca | **P0 — gate #1, zasadniczo zamknięty** |
 | Zapis / wczytywanie | brak | Partia ~348 tur bez save'a to refund | **P0** |
 | Stabilność (pełne partie bez crasha/softlocka) | brak testów, nieznane | Zero zawiesów w długiej grze | **P0** |
 | Dystrybucja (wrapper + platforma) | brak | Musi *gdzieś* być (Steam/itch) | **P0 (launch)** |
@@ -67,8 +67,8 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 
 ## Gate #1: zamykanie gier (dlaczego to priorytet)
 
-**Status: zasadniczo zamknięty (v0.2.2 + v0.2.3)** — remisy 40,0% → **6,3%**, mediana
-długości ~348 → ~119 rund, drabinka trudności i balans nienaruszone. Mechanizm
+**Status: zasadniczo zamknięty (v0.2.2 + v0.2.3)** — remisy 40,0% → **~7%**, mediana
+długości ~348 → ~122 rund, drabinka trudności i balans nienaruszone. Mechanizm
 (eskalacja bramkowana przewagą + oblężenie falowe + ekonomia: zbieranie niczyich miast
 z podziałem ról wg siły) opisany w [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md);
 pozostałe ~6% przypadków i ewentualne kierunki — w pozycji ✅ w

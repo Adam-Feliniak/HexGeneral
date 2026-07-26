@@ -26,12 +26,12 @@ Dla każdego pola na mapie AI liczy wartość, jeśli warto by tam dotrzeć:
 |---|---|
 | Cudze/niczyje złoże | 7 |
 | Żywa stolica wroga | 30 |
-| Niczyje miasto | 20 |
+| Niczyje miasto | 23 |
 | Inne miasto wroga | 10 |
 
 Wartość niczyjego miasta była pierwotnie 14 — pomiar pokazał, że przegrywała wtedy
 scoring z odległą stolicą i AI zostawiało 3–4 wolne miasta na mapie przez całą grę
-(podniesienie do 20 + podział ról niżej zbija to do ~0,5 już przed rundą 60).
+(podniesienie do 23 + podział ról niżej zbija to do ~0,1 już przed rundą 60).
 
 To surowa lista wartości pól — nie uwzględnia jeszcze odległości ani obecnej pozycji armii (to dzieje się dopiero w scoringu ruchu, niżej).
 
@@ -110,10 +110,10 @@ i `AI_SIEGE_BONUS` w `config.js`.
   w strefie zbornej sztucznie pompowały `massedStr`, fałszując gotowość szturmu).
 
 Zmierzony efekt po obu iteracjach (seria 300 gier normal vs normal, seedy 1–300,
-limit 500 rund): remisy spadły z 40,0% do **6,3%** (iteracja 1: eskalacja+oblężenie
-→ 24,7%; iteracja 1.1: ekonomia+podział ról → 6,3%), mediana długości partii z ~348
-do ~119 rund, drabinka trudności bez zmian (Nightmare ~88% rozstrzygniętych w teście
-mirror), balans stron 50,5/49,5.
+limit 500 rund): remisy spadły z 40,0% do **7,0%** (iteracja 1: eskalacja+oblężenie
+→ 24,7%; iteracja 1.1: ekonomia+podział ról → ~7%), mediana długości partii z ~348
+do ~122 rund, drabinka trudności bez zmian (Nightmare ~91% rozstrzygniętych w teście
+mirror), balans stron 52/48 (szum).
 
 ## Pętla wykonania (`aiStep`)
 

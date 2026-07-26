@@ -6,14 +6,15 @@ Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemV
 
 - AI zbiera niczyje miasta (obserwacja z rozgrywek: bot zostawiał 3-4 wolne
   miasta na mapie przez całą grę): wartość niczyjego miasta w wycenie celów
-  14 -> 20 oraz podział ról wg siły — małe armie (< 25 str) nie są kanalizowane
-  na front, tylko zbierają wolne miasta i złoża
+  14 -> 23 oraz podział ról wg siły — małe armie (< 25 str) nie są kanalizowane
+  na front, tylko zbierają wolne miasta i złoża (efekt: ~0,1 wolnego miasta
+  na mapie już przed rundą 60)
 - Efekt uboczny okazał się większy niż cel: pełna ekspansja szybciej buduje
   przewagę i napędza domykanie gier — remisy w serii referencyjnej spadły
-  z 24,7% do 6,3%, mediana długości partii z ~274 do ~119 rund (ablacja:
+  z 24,7% do ~7%, mediana długości partii z ~274 do ~122 rund (ablacja:
   obie zmiany konieczne, sama waga bez podziału ról daje 26,7% remisów)
-- Drabinka trudności i balans stron bez zmian (mirror: nightmare ~88%
-  rozstrzygniętych; 2p: 50,5/49,5)
+- Drabinka trudności i balans stron bez zmian (mirror: nightmare ~91%
+  rozstrzygniętych; 2p: 52/48)
 
 ## [0.2.2] - 2026-07-27
 

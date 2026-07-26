@@ -55,9 +55,9 @@ Legenda kosztu:
 
 - ✅ **AI słabo domyka wygrane pozycje (stalemate)** — **zrealizowane w dwóch
   iteracjach** (v0.2.2 + v0.2.3): remisy w serii referencyjnej 300 gier `normal` vs
-  `normal` spadły z **40,0% do 6,3%** (iteracja 1: eskalacja+oblężenie → 24,7%;
-  iteracja 1.1: ekonomia — zbieranie niczyich miast i podział ról wg siły → 6,3%),
-  mediana długości z ~348 do ~119 rund, drabinka trudności i balans stron
+  `normal` spadły z **40,0% do ~7%** (iteracja 1: eskalacja+oblężenie → 24,7%;
+  iteracja 1.1: ekonomia — zbieranie niczyich miast i podział ról wg siły → ~7%),
+  mediana długości z ~348 do ~122 rund, drabinka trudności i balans stron
   nienaruszone. Mechanizm (bezstanowy, w `aiPickMove`,
   opisany w [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md)): eskalacja
   progów ataku bramkowana przewagą materialną + stolica-cel z polem BFS po lądzie +
@@ -65,7 +65,7 @@ Legenda kosztu:
   armiami) + premia szturmowa na obrońców blokujących dojście. Bonusy obronne miast
   celowo nietknięte (decyzja projektowa: trudno wykończyć gracza = feature).
 
-  Pozostałe ~6% remisów to głębsze przypadki (twierdze w ciasnych przesmykach,
+  Pozostałe ~7% remisów to głębsze przypadki (twierdze w ciasnych przesmykach,
   wzajemne rajdy na stolice) — ewentualna kolejna iteracja wymagałaby prawdopodobnie
   planu trzymanego między turami (`aiPlan`) albo desantów morskich (niżej); pomiar
   wykluczył korelację z udziałem wody na mapie jako główną przyczyną.

@@ -65,7 +65,7 @@ function aiTargets(playerId) {
     if (t.city.capitalOf >= 0 && state.players[t.city.capitalOf].alive) val = 30;
     // niczyje miasto to darmowa produkcja (zajęcie bez walki) — przy 14 przegrywało
     // scoring z odległą stolicą i AI zostawiało 3-4 wolne miasta na całą grę
-    else if (t.owner < 0) val = 20;
+    else if (t.owner < 0) val = 23;
     else val = 10;
     targets.push({ t, val });
   }
