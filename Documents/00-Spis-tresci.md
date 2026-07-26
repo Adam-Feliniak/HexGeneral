@@ -16,6 +16,7 @@ Ten folder zawiera pełną, wyczerpującą dokumentację projektu, wygenerowaną
 8. [UI, menu i tłumaczenia](08-UI-menu-i18n.md) — ekrany menu, panel boczny gry, system i18n (PL/EN/DE)
 9. [Przewodnik developera](09-Przewodnik-developera.md) — jak uruchamiać, rozszerzać i testować projekt; konwencje i pułapki
 10. [Przyszłe plany](10-Przyszle-plany.md) — lista pomysłów na rozwój gry z orientacyjnym kosztem (uwaga: propozycje, nie opis istniejącego kodu)
+11. [Gotowość na Early Access](11-Early-Access.md) — analiza luk „rdzeń vs roadmapa", ścieżka krytyczna do wypuszczenia i sekwencja dystrybucji (web-first → Steam)
 
 ## Najważniejsze fakty w skrócie
 
