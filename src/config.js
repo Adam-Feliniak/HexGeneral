@@ -3,7 +3,7 @@
    KONFIGURACJA — stałe rozgrywki, gracze, nazwy miast
    ============================================================ */
 
-const GAME_VERSION = '0.2.2';
+const GAME_VERSION = '0.2.3';
 // Nota o prawach autorskich w stopce menu (obok wersji); pełne warunki w pliku LICENSE
 const GAME_COPYRIGHT = '© 2026 Adam Feliniak';
 
@@ -71,6 +71,11 @@ const AI_ESC_FOCUS_VAL = 25;
 // korytarz i oblężenie tańczyło wokół obrońców, nigdy ich nie atakując
 const AI_ESC_ASSAULT = 25;
 const AI_ESC_ASSAULT_RANGE = 4;
+// podział ról wg siły: armie słabsze niż ten próg nie idą na wojnę (bez kanalizacji
+// na stolicę-cel i bez strefy zbornej — w oblężeniu byłyby mięsem), tylko zbierają
+// wolne miasta i złoża; bez tego progu eskalacja wysyłała na front nawet drobne
+// armijki i AI zostawiało po 3-4 niczyje miasta na mapie przez całą grę
+const AI_SIEGE_MIN_STR = 25;
 
 // typy jednostek lądowych — atk/def: mnożniki armyPowerAt (siły w ataku/obronie),
 // moveBase/roadBonus: zasięg ruchu (moveCap) poza/na aktywnej drodze,

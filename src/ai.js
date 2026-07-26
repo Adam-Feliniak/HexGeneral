@@ -63,7 +63,9 @@ function aiTargets(playerId) {
     if (t.owner === playerId) continue;
     let val;
     if (t.city.capitalOf >= 0 && state.players[t.city.capitalOf].alive) val = 30;
-    else if (t.owner < 0) val = 14;
+    // niczyje miasto to darmowa produkcja (zajęcie bez walki) — przy 14 przegrywało
+    // scoring z odległą stolicą i AI zostawiało 3-4 wolne miasta na całą grę
+    else if (t.owner < 0) val = 20;
     else val = 10;
     targets.push({ t, val });
   }
@@ -121,12 +123,10 @@ function aiPickMove(playerId, diff) {
   }
   // wraz z eskalacją stolica-cel staje się coraz cenniejsza — marsz i scalanie ku
   // niej wygrywają z lokalnymi potyczkami, więc pula ruchów (dowóz sił!) idzie na
-  // oblężenie; escProgress zawiera już bramkę przewagi
+  // oblężenie (podbicie wartości nakładane per armia w targetInfo — tylko armie
+  // bojowe, patrz AI_SIEGE_MIN_STR); escProgress zawiera już bramkę przewagi
   let focusDist = null;
   if (focus && escProgress > 0) {
-    for (const g of targets) {
-      if (g.t === focus) { g.val += AI_ESC_FOCUS_VAL * escProgress; break; }
-    }
     // pole odległości BFS po lądzie od stolicy-celu: marsz ku niej liczy dystans
     // ścieżkowy zamiast hexDist w linii prostej — bez tego armie zbijały się w
     // ślepe zaułki na linii brzegowej (najbliżej celu w linii prostej, za wodą)
@@ -173,10 +173,18 @@ function aiPickMove(playerId, diff) {
   let best = null; // { from, to, score }
   for (const from of armies) {
     const moves = validMoves(from);
+    // podział ról: tylko armie bojowe są kanalizowane na stolicę-cel; małe armie
+    // widzą bazowe wartości celów i zbierają wolne miasta/złoża (ekonomia)
+    const combatArmy = from.army.str >= AI_SIEGE_MIN_STR;
     // dystans armia->cel nie zależy od rozważanego pola docelowego — liczony raz
     // na armię zamiast przy każdym kandydacie ruchu
     const targetInfo = targets.map(({ t, val }) => {
-      const g = { tc: t.c, tr: t.r, val, bfs: focusDist && t === focus ? focusDist : null };
+      const isFocus = focusDist && t === focus;
+      const g = {
+        tc: t.c, tr: t.r,
+        val: isFocus && combatArmy ? val + AI_ESC_FOCUS_VAL * escProgress : val,
+        bfs: isFocus ? focusDist : null,
+      };
       g.dNow = targetDist(g, from);
       return g;
     });
@@ -233,7 +241,7 @@ function aiPickMove(playerId, diff) {
         // (dystans 1; wsparcie w bitwie liczy się z siły, nie z morale, więc
         // pierścień realnie przełamuje obronę stolicy). Artyleria — największy
         // supportWeight — obsadza pozycje preferencyjnie, czołgi zostają do szturmu
-        if (focusDist && escProgress > 0) {
+        if (focusDist && escProgress > 0 && combatArmy) {
           const fd = focusDist.get(to);
           if (fd !== undefined) {
             if (assaultReady ? fd <= 1 : (fd >= 2 && fd <= 3)) {

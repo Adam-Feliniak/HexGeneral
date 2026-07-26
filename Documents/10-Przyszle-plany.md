@@ -53,20 +53,22 @@ Legenda kosztu:
 
 ## Tryby i AI
 
-- ✅ **AI słabo domyka wygrane pozycje (stalemate)** — **zrealizowane w pierwszej
-  iteracji** (v0.2.2): remisy w serii referencyjnej 300 gier `normal` vs `normal`
-  spadły z **40,0% do 24,7%**, mediana długości z ~348 do ~274 rund, drabinka
-  trudności i balans stron nienaruszone. Mechanizm (bezstanowy, w `aiPickMove`,
+- ✅ **AI słabo domyka wygrane pozycje (stalemate)** — **zrealizowane w dwóch
+  iteracjach** (v0.2.2 + v0.2.3): remisy w serii referencyjnej 300 gier `normal` vs
+  `normal` spadły z **40,0% do 6,3%** (iteracja 1: eskalacja+oblężenie → 24,7%;
+  iteracja 1.1: ekonomia — zbieranie niczyich miast i podział ról wg siły → 6,3%),
+  mediana długości z ~348 do ~119 rund, drabinka trudności i balans stron
+  nienaruszone. Mechanizm (bezstanowy, w `aiPickMove`,
   opisany w [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md)): eskalacja
   progów ataku bramkowana przewagą materialną + stolica-cel z polem BFS po lądzie +
   szturm falowy ze strefą zborną (zamiast karmienia obrońców pojedynczo dowożonymi
   armiami) + premia szturmowa na obrońców blokujących dojście. Bonusy obronne miast
   celowo nietknięte (decyzja projektowa: trudno wykończyć gracza = feature).
 
-  Pozostałe ~25% remisów to głębsze przypadki (wzajemne rajdy na stolice, twierdze
-  w ciasnych przesmykach, oscylująca przewaga) — druga iteracja wymagałaby
-  prawdopodobnie planu trzymanego między turami (`aiPlan`) albo desantów morskich
-  (niżej); pomiar wykluczył korelację z udziałem wody na mapie jako główną przyczyną.
+  Pozostałe ~6% remisów to głębsze przypadki (twierdze w ciasnych przesmykach,
+  wzajemne rajdy na stolice) — ewentualna kolejna iteracja wymagałaby prawdopodobnie
+  planu trzymanego między turami (`aiPlan`) albo desantów morskich (niżej); pomiar
+  wykluczył korelację z udziałem wody na mapie jako główną przyczyną.
 - 🟡 **Scenariusze / mapy z celami** — inne warunki zwycięstwa niż eliminacja (utrzymaj
   X tur, zdobądź konkretne miasto). Nadbudowa nad istniejącym generatorem i seedem.
 - 🔴 **Dyplomacja (multi / AI)** — sojusze, zawieszenie broni, wspólny wróg.
