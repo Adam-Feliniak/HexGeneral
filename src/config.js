@@ -4,6 +4,8 @@
    ============================================================ */
 
 const GAME_VERSION = '0.2.0';
+// Nota o prawach autorskich w stopce menu (obok wersji); pełne warunki w pliku LICENSE
+const GAME_COPYRIGHT = '© 2026 Adam Feliniak';
 
 const MAP_W = 23;
 const MAP_H = 14;
