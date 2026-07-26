@@ -53,26 +53,20 @@ Legenda kosztu:
 
 ## Tryby i AI
 
-- 🟡 **AI słabo domyka wygrane pozycje (stalemate)** — priorytet, potwierdzony pomiarem.
-  W serii 300 gier `normal` vs `normal` (`tools/sim.js`, seedy 1–300, limit 500 rund)
-  **40% partii nie kończy się w limicie** — dobija do capa bez rozstrzygnięcia, mediana
-  długości ~348 rund. To nie wariancja: przy równych AI połowa gier grzęźnie, bo bot
-  nie potrafi przełamać ostatniej obrony i dobić stolicy wroga (turtling po obu
-  stronach). Bias pozycji przy tym n mieści się w szumie (~1,5σ), więc realny problem
-  to *domykanie*, nie asymetria stron.
+- ✅ **AI słabo domyka wygrane pozycje (stalemate)** — **zrealizowane w pierwszej
+  iteracji** (v0.2.2): remisy w serii referencyjnej 300 gier `normal` vs `normal`
+  spadły z **40,0% do 24,7%**, mediana długości z ~348 do ~274 rund, drabinka
+  trudności i balans stron nienaruszone. Mechanizm (bezstanowy, w `aiPickMove`,
+  opisany w [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md)): eskalacja
+  progów ataku bramkowana przewagą materialną + stolica-cel z polem BFS po lądzie +
+  szturm falowy ze strefą zborną (zamiast karmienia obrońców pojedynczo dowożonymi
+  armiami) + premia szturmowa na obrońców blokujących dojście. Bonusy obronne miast
+  celowo nietknięte (decyzja projektowa: trudno wykończyć gracza = feature).
 
-  Gdzie w kodzie: ocena ruchów w `aiPickMove` (`ai.js`) — progi ataku
-  (`aggressionThreshold`) i wagi w `aiTargets` sprawiają, że przy wyrównanych siłach
-  atak na miasto/stolicę rzadko przekracza próg opłacalności, a obrońca dostaje bonus
-  miejski (`resolveBattle`: ×1,15/×1,25) i wsparcie sąsiadów — więc front zastyga.
-
-  Kierunki do zbadania (przez runner, mierząc odsetek remisów jako metrykę):
-  koncentracja sił na jednym kierunku zamiast rozpraszania; premia za oblężenie
-  (skumulowany nacisk kilku armii na to samo miasto); mechanizm przełamujący pat
-  (rosnąca desperacja/agresja przy przeciągającej się grze albo przy przewadze
-  terytorialnej); rewizja bonusu obronnego miast, jeśli okaże się zbyt silny.
-  Walidacja: ta sama seria 300 gier powinna po zmianie pokazać wyraźnie niższy odsetek
-  remisów bez rozjechania balansu 50/50.
+  Pozostałe ~25% remisów to głębsze przypadki (wzajemne rajdy na stolice, twierdze
+  w ciasnych przesmykach, oscylująca przewaga) — druga iteracja wymagałaby
+  prawdopodobnie planu trzymanego między turami (`aiPlan`) albo desantów morskich
+  (niżej); pomiar wykluczył korelację z udziałem wody na mapie jako główną przyczyną.
 - 🟡 **Scenariusze / mapy z celami** — inne warunki zwycięstwa niż eliminacja (utrzymaj
   X tur, zdobądź konkretne miasto). Nadbudowa nad istniejącym generatorem i seedem.
 - 🔴 **Dyplomacja (multi / AI)** — sojusze, zawieszenie broni, wspólny wróg.
@@ -116,6 +110,21 @@ Legenda kosztu:
     Wpięcie w `produce()` (`roads.js`).
 - 🟡 **Osobowości AI** — agresywny / obronny / ekspansywny zamiast samego skalowania
   liczb w `AI_DIFFICULTY_PRESETS`.
+- 🟢 **AI realnie budujące drogi** — obserwacja z rozgrywek, potwierdzona w kodzie:
+  `aiAssignCityProject` (`ai.js`) buduje drogi tylko z miast daleko od frontu (>2 od
+  wrogiego terytorium — w miarę zbliżania się granic przestaje budować w ogóle),
+  z szansą ledwie 20%/turę (`AI_ROAD_BUILD_CHANCE`) i wyłącznie do złóż (max
+  `RESOURCE_COUNT` = 6 na mapie) — nigdy miasto–miasto. Bot nie ma więc sieci, którą
+  buduje człowiek: traci bonus ruchu (czołg +2 na drodze — szybszy dowóz sił, synergia
+  z domykaniem gier wyżej) i spójną gospodarkę. Kierunek: budowa dróg miasto–miasto,
+  wyższa/warunkowa szansa, priorytet dla połączeń zaplecze→front.
+- 🟡 **Desanty morskie AI** — obserwacja z rozgrywek: AI technicznie umie wchodzić na
+  wodę (`canStep` z portu), ale marsz karze morze i bot nie ma pojęcia „przeprawy do
+  celu za wodą" — nigdy nie robi desantu. Na mapach z długą linią brzegową odcina to
+  AI od naturalnych manewrów oskrzydlających (i od części twierdz — patrz pozycja
+  o domykaniu gier). Wymaga planowania wieloetapowego (port → morze → lądowanie),
+  więc dobrze łączy się z ewentualnym stanem `aiPlan` między turami i z rozwojem
+  morskim (sekcja niżej).
 
 ## Jakość życia i prezentacja
 

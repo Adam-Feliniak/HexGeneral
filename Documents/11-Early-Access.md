@@ -37,7 +37,7 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 
 | Obszar | Teraz | Próg EA | Priorytet |
 |---|---|---|---|
-| Zamykalność rozgrywki | 40% partii nie kończy się w limicie (stalemate) | Gra *niezawodnie* dobiega do końca | **P0 — gate #1** |
+| Zamykalność rozgrywki | ~~40%~~ → **24,7%** remisów po 1. iteracji (v0.2.2) | Gra *niezawodnie* dobiega do końca | **P0 — gate #1, w toku** |
 | Zapis / wczytywanie | brak | Partia ~348 tur bez save'a to refund | **P0** |
 | Stabilność (pełne partie bez crasha/softlocka) | brak testów, nieznane | Zero zawiesów w długiej grze | **P0** |
 | Dystrybucja (wrapper + platforma) | brak | Musi *gdzieś* być (Steam/itch) | **P0 (launch)** |
@@ -67,7 +67,14 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 
 ## Gate #1: zamykanie gier (dlaczego to priorytet)
 
-To najważniejsza pozycja i jednocześnie najgłębsza. Szczegóły mechanizmu i kierunki
+**Status: pierwsza iteracja zrealizowana (v0.2.2)** — remisy 40,0% → 24,7%, mediana
+długości ~348 → ~274 rund, drabinka trudności i balans nienaruszone. Mechanizm
+(eskalacja bramkowana przewagą + oblężenie falowe) opisany w
+[06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md); pozostałe ~25% remisów
+i kierunki drugiej iteracji — w pozycji ✅ w [10-Przyszle-plany.md](10-Przyszle-plany.md).
+Poniższa analiza przyczyn (aktualna dla stanu sprzed poprawki) zostaje jako kontekst.
+
+Szczegóły mechanizmu i kierunki
 naprawy — patrz też pozycja „AI słabo domyka wygrane pozycje" w
 [10-Przyszle-plany.md](10-Przyszle-plany.md) oraz [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md).
 

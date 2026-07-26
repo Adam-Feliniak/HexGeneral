@@ -43,7 +43,8 @@ defPow = armyPowerAt(broniący, 'defense') + 0.12 * wsparcie (+ bonus miasta/sto
 ratio  = myPow / defPow
 ```
 
-Bramki decyzyjne (AT = `aggressionThreshold` bieżącej trudności):
+Bramki decyzyjne (AT = `aggressionThreshold` bieżącej trudności, dodatkowo obniżany
+przez eskalację — patrz sekcja „Eskalacja i oblężenie" niżej):
 
 | Warunek | Wynik ataku |
 |---|---|
@@ -66,6 +67,42 @@ Wynik liczony z wartości najbliższego atrakcyjnego celu z `aiTargets`, skorygo
 ### Finalny wybór
 
 Do każdego nieujemnego wyniku dodawany jest mały losowy szum (`rnd(0,3)`), żeby AI nie było w 100% deterministyczne przy remisach. Wybierany jest ruch o najwyższym wyniku spośród **wszystkich** par (armia, pole docelowe) — jeśli najlepszy wynik jest `≤ 0`, AI w ogóle nic nie robi tą turą.
+
+## Eskalacja i oblężenie (domykanie wygranych pozycji)
+
+Warstwa nad podstawowym scoringiem, dodana po pomiarach `tools/sim.js`, które pokazały,
+że 40% partii AI-vs-AI kończyło się patem: strona z wyraźną przewagą materialną nie
+umiała zdobyć ostatniej stolicy wroga (rozpraszała siły na potyczki, a pojedynczo
+dowożone pod twierdzę armie były zjadane wycieczkami wysokomoralnych obrońców).
+Wszystko bezstanowe — liczone z planszy przy każdym wyborze ruchu; stałe `AI_ESC_*`
+i `AI_SIEGE_BONUS` w `config.js`.
+
+- **Bramka przewagi (`dominance`)** — mechanizmy odpalają się wyłącznie dla strony
+  z przewagą łącznej siły armii (0 przy równowadze, 1 od `AI_ESC_DOMINANCE_FULL` =
+  1.4× siły wroga). Słabszy gra dokładnie podstawowym scoringiem — bez bramki obie
+  strony wyrównanej partii zmieniały zachowanie naraz i psuły partie, które normalnie
+  by się rozstrzygnęły.
+- **Eskalacja progów** — `escProgress = min(1, tura/AI_ESC_TURNS) · dominance` obniża
+  `AT` aż o `AI_ESC_MAX` (50%): lider z czasem akceptuje ataki przy coraz gorszym
+  stosunku sił, zamiast wiecznie czekać na idealne okazje.
+- **Stolica-cel (focus)** — najsłabiej broniona i najbliższa żywa stolica wroga; jej
+  wartość w `aiTargets` rośnie o `AI_ESC_FOCUS_VAL · escProgress`, więc marsz i łączenie
+  armii kierują wspólną pulę ruchów na jeden punkt. Dystans do focusa liczony jest
+  **polem BFS po lądzie** (nie `hexDist`) — bez tego armie zbijały się w ślepe zaułki
+  na linii brzegowej.
+- **Szturm falowy** — armie gromadzą się w strefie zbornej (dystans ścieżkowy 2–3 od
+  focusa; premia `AI_SIEGE_BONUS` ważona `supportWeight` typu, więc pierścień obsadza
+  głównie artyleria), a na pierścień (dystans 1) front wchodzi dopiero, gdy zebrana
+  siła przewyższa lokalną obronę — wiele armii w jednej turze. Próg gotowości maleje
+  z długością partii („cierpliwość oblężnicza": od 1.2× do 0.55× lokalnej obrony), bo
+  na ciasnych mapach strefa zborna bywa za mała na pełną przewagę.
+- **Premia szturmowa** — ataki na wrogie armie blisko focusa (dystans ścieżkowy ≤ 4)
+  dostają bonus rosnący z bliskością; bez niego marsz z podbitą wartością celu wygrywał
+  ocenę i oblężenie „tańczyło" wokół obrońców, nigdy ich nie atakując.
+
+Zmierzony efekt (seria 300 gier normal vs normal, seedy 1–300, limit 500 rund): remisy
+spadły z 40,0% do 24,7%, mediana długości partii z ~348 do ~274 rund, drabinka trudności
+bez zmian (Nightmare ~89% rozstrzygniętych w teście mirror), balans stron w szumie.
 
 ## Pętla wykonania (`aiStep`)
 
