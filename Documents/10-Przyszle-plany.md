@@ -76,6 +76,44 @@ Legenda kosztu:
 - 🟡 **Scenariusze / mapy z celami** — inne warunki zwycięstwa niż eliminacja (utrzymaj
   X tur, zdobądź konkretne miasto). Nadbudowa nad istniejącym generatorem i seedem.
 - 🔴 **Dyplomacja (multi / AI)** — sojusze, zawieszenie broni, wspólny wróg.
+- 🟡 **Tryb kooperacyjny (drużyny)** — ludzie (i/lub boty) w stałym sojuszu grający
+  przeciw wspólnemu wrogowi. Prostszy, „zamrożony" wariant dyplomacji (powyżej) — zamiast
+  dynamicznych paktów po prostu przypisanie drużyny przy zakładaniu gry.
+
+  Uwaga projektowa: to, co początkowo wyglądało na „dwa tryby", to naprawdę **dwie
+  niezależne decyzje**, i lepiej trzymać je osobno:
+  1. **Kształt strony wroga** — jeden boss czy zwykła obsada osobnych przeciwników.
+  2. **Trudność** — suwak mnożnika produkcji wroga. To *parametr*, nie tryb: działa
+     niezależnie od kształtu strony wroga (i nadaje się jako ogólny handicap trudności
+     także poza co-opem). Suwak podnosi trudność, ale sam nie tworzy „wyjątkowego wroga" —
+     to dwie różne rzeczy.
+
+  **Fundament (wspólny dla wszystkiego): szkielet drużyn.** Pojęcie drużyny w stanie
+  gracza (`state.js`); brak friendly-fire i przechodzenie przez pola sojusznika
+  (`combat.js` / `empire.js` — walka i zajmowanie pól ignorują sojuszników); warunek
+  zwycięstwa liczony na drużyny, nie pojedynczych graczy (`checkGameOver` w `empire.js`
+  dziś kończy grę przy jednym żywym imperium — musiałby kończyć przy jednej żywej
+  drużynie); AI traktujące sojuszników jak swoich, a nie cele (`aiTargets` w `ai.js`);
+  przypisanie drużyn w lobby (`menu.js`, `renderSpSetup` / `renderMpSetup`) + nowe klucze
+  i18n. Ten szkielet od razu daje wariant **„osobne imperia w sojuszu, wspólne
+  zwycięstwo"** (gracze jako drużyna vs zwykła obsada botów, sojusz trwa do końca gry —
+  bez „ostatniego żywego z drużyny") praktycznie za darmo.
+
+  **Nadbudowa: super-wróg (ten „wyjątkowy wróg").** Pojedynczy bot w osobnym kolorze
+  (czarny) jako flagowy wariant co-opa. Tańszy niż sojusz wielu botów — jedno imperium,
+  więc AI nie musi koordynować sprzymierzeńców (koordynacja to już krok w stronę 🔴
+  dyplomacji). Wymaga dodatkowo: nowego koloru i sprite'ów super-bota (`PLAYERS_DEF`
+  w `config.js` + `PLAYERS` w `tools/gen-sprites.js`, regeneracja `assets/`) oraz suwaka
+  produkcji (patrz niżej). Dwa haczyki, których sam mnożnik nie załatwia:
+  - **Mnożnik daje wroga *bogatszego*, niekoniecznie *groźniejszego*.** Przy znanym
+    problemie domykania gier (pozycja „AI słabo domyka wygrane pozycje" wyżej — 40%
+    remisów) super-bot z produkcją ×3 może po prostu turtlować z gigantycznym stosem
+    i dalej nie dobijać. Żeby boss faktycznie napierał, mnożnik powinien iść **w parze
+    z agresją** — spina się to z „Osobowościami AI" (niżej) i z pozycją o stalemate.
+  - **Mnożnik zderza się z limitami.** Produkcja miasta i `MAX_ARMY` / cap garnizonu
+    sprawią, że nadmiar skumulowany w jednym mieście się zmarnuje — mnożnik trzeba
+    rozłożyć na miasta bossa (albo podnieść mu capy), inaczej ×3 daje realnie ×~1,3.
+    Wpięcie w `produce()` (`roads.js`).
 - 🟡 **Osobowości AI** — agresywny / obronny / ekspansywny zamiast samego skalowania
   liczb w `AI_DIFFICULTY_PRESETS`.
 
@@ -84,6 +122,15 @@ Legenda kosztu:
 - 🔴 **Zapis i wczytywanie gry** — obecnie brak formatu zapisu (patrz sekcja
   „Versioning" w `CLAUDE.md`). Fundament pod wiele innych rzeczy, ale wymaga formatu
   serializacji stanu i strategii migracji między wersjami.
+- 🟢 **Ręczne kończenie tury (bez auto-oddawania po wyczerpaniu ruchów)** — dziś po
+  wykorzystaniu wszystkich ruchów tura sama się kończy: `input.js` (okolice linii 63)
+  odpala `requestEndTurn()` przez `setTimeout(..., 350)`, gdy `state.movesLeft <= 0`.
+  Odbiera to graczowi okno na decyzje niezależne od puli ruchów — wybór produkcji miast,
+  rozpoczęcie / kierunek budowy drogi, przypisanie złoża (`supplyCity`) czy samo
+  obejrzenie planszy po ostatnim ruchu. Propozycja: usunąć auto-oddawanie (turę kończy
+  wyłącznie gracz przyciskiem / Enterem) albo wystawić to jako opcję w ustawieniach.
+  Zmiana lokalna w `input.js` — reszta pętli tur (`requestEndTurn` / `endTurn`
+  w `turns.js`) już obsługuje ręczne kończenie.
 - 🟡 **Cofnięcie ostatniego ruchu (undo)**, interaktywny samouczek, statystyki po partii.
 - 🟡 **Dźwięk / muzyka** — na `file://` audio trzeba zainline'ować (np. jako data-URI),
   ale jest to wykonalne.
