@@ -2,6 +2,18 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.3.0] - 2026-07-27
+
+- Zapis i wczytywanie gry: autozapis (początek tury gracza + wyjście do menu),
+  przycisk „Kontynuuj" w menu głównym wracający do przerwanej partii
+- Nowy ekran „Zapis gry": skopiowanie zapisu jako tekst (Ctrl+C) i wczytanie
+  wklejonego zapisu (Ctrl+V) — zapis można przenieść na inny komputer lub
+  dołączyć do zgłoszenia błędu
+- Zakończona partia usuwa autozapis; zapis z niezgodnej wersji gry dostaje
+  czytelny komunikat zamiast błędu
+- Format zapisu z polem `SAVE_FORMAT` — fundament pod przyszłe undo,
+  scenariusze i cloud save
+
 ## [0.2.3] - 2026-07-27
 
 - AI zbiera niczyje miasta (obserwacja z rozgrywek: bot zostawiał 3-4 wolne

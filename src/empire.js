@@ -50,6 +50,9 @@ function checkGameOver() {
   const alive = state.players.filter(p => p.alive);
   if (alive.length === 1) {
     state.phase = 'over';
+    // rozstrzygnięta partia znika z autozapisu („Kontynuuj" jej nie wskrzesza);
+    // osłona typeof — headless sim/harness ładuje empire.js bez save.js
+    if (typeof clearAutosave === 'function') clearAutosave();
     const win = alive[0];
     if (state.mode === 'multi') {
       showOverlay(i18n.t('overlay.victoryMultiTitle'),
@@ -64,6 +67,7 @@ function checkGameOver() {
     }
   } else if (state.mode === 'single' && !state.players[state.human].alive && state.phase !== 'over') {
     state.phase = 'over';
+    if (typeof clearAutosave === 'function') clearAutosave();
     showOverlay(i18n.t('overlay.gameOverTitle'), i18n.t('overlay.capitalFellText'));
   }
 }

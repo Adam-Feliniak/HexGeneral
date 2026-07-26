@@ -12,6 +12,8 @@ function applyScreen() {
   document.getElementById('menu-mp-setup').hidden = s !== 'mp-setup';
   document.getElementById('menu-tutorial').hidden = s !== 'tutorial';
   document.getElementById('menu-options').hidden = s !== 'options';
+  document.getElementById('menu-save').hidden = s !== 'save';
+  if (s === 'menu') refreshMainMenu();
 }
 
 function goToScreen(name) {
@@ -19,7 +21,22 @@ function goToScreen(name) {
   if (name === 'sp-setup') renderSpSetup();
   if (name === 'mp-setup') renderMpSetup();
   if (name === 'options') renderOptions();
+  if (name === 'save') renderSavePanel();
   applyScreen();
+}
+
+// widoczność i etykieta „Kontynuuj" w menu głównym (autozapis z save.js)
+function refreshMainMenu() {
+  const btn = document.getElementById('menu-continue');
+  if (!btn) return;
+  const meta = hasAutosave();
+  btn.hidden = !meta;
+  if (meta) btn.textContent = i18n.t('menu.continue', { turn: meta.turn });
+}
+
+function renderSavePanel() {
+  document.getElementById('save-textarea').value = '';
+  document.getElementById('save-status').textContent = '';
 }
 
 function timeLimitLabel(t) {
@@ -220,6 +237,31 @@ function renderLangPicker() {
 
 function initMenu() {
   renderLangPicker();
+  document.getElementById('menu-continue').addEventListener('click', () => { loadAutosave(); });
+  document.getElementById('menu-save-btn').addEventListener('click', () => goToScreen('save'));
+  document.getElementById('save-back').addEventListener('click', () => goToScreen('menu'));
+  document.getElementById('save-show').addEventListener('click', () => {
+    const ta = document.getElementById('save-textarea');
+    const status = document.getElementById('save-status');
+    const txt = exportSaveText();
+    if (txt) {
+      ta.value = txt;
+      ta.focus();
+      ta.select(); // zaznaczone — wystarczy Ctrl+C (navigator.clipboard bywa niedostępny na file://)
+      status.textContent = i18n.t('save.selected');
+    } else {
+      status.textContent = i18n.t('save.empty');
+    }
+  });
+  document.getElementById('save-load').addEventListener('click', () => {
+    const ta = document.getElementById('save-textarea');
+    const status = document.getElementById('save-status');
+    const text = ta.value.trim();
+    if (!text) { status.textContent = i18n.t('save.corrupt'); return; }
+    const res = importSaveText(text);
+    // 'ok' sam przełącza ekran na grę (resumeLoadedGame -> applyScreen)
+    if (res !== 'ok') status.textContent = i18n.t(res === 'incompatible' ? 'save.incompatible' : 'save.corrupt');
+  });
   document.getElementById('menu-single').addEventListener('click', () => goToScreen('sp-setup'));
   document.getElementById('menu-multi').addEventListener('click', () => goToScreen('mp-setup'));
   document.getElementById('menu-tutorial-btn').addEventListener('click', () => goToScreen('tutorial'));
@@ -242,7 +284,12 @@ function initMenu() {
     });
   });
 
-  document.getElementById('menu-btn').addEventListener('click', () => goToScreen('menu'));
+  // wyjście do menu w trakcie gry — zapisz partię (także w trakcie tury AI:
+  // wczytanie wznowi wtedy turę AI od nowa, patrz resumeLoadedGame w save.js)
+  document.getElementById('menu-btn').addEventListener('click', () => {
+    autosave();
+    goToScreen('menu');
+  });
   document.getElementById('overlay-menu-btn').addEventListener('click', () => {
     hideOverlay();
     goToScreen('menu');

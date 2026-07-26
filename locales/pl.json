@@ -6,6 +6,17 @@
   "menu.tutorial": "Samouczek",
   "menu.options": "Opcje",
   "menu.exit": "Wyjście",
+  "menu.continue": "▶ Kontynuuj (tura {{turn}})",
+  "menu.savePanel": "Zapis gry",
+
+  "save.title": "Zapis gry",
+  "save.hint": "Gra zapisuje się sama — do partii wracasz przyciskiem <b>Kontynuuj</b> w menu. Tutaj możesz dodatkowo skopiować zapis jako tekst (<b>Pokaż zapis</b>, potem Ctrl+C) albo wkleić wcześniej skopiowany zapis (Ctrl+V) i kliknąć <b>Wczytaj</b>.",
+  "save.show": "Pokaż zapis (do skopiowania)",
+  "save.load": "Wczytaj wklejony zapis",
+  "save.selected": "Zapis zaznaczony — naciśnij Ctrl+C, aby skopiować.",
+  "save.empty": "Brak zapisu do pokazania — zagraj najpierw partię.",
+  "save.incompatible": "Ten zapis pochodzi z niezgodnej wersji gry.",
+  "save.corrupt": "To nie wygląda na poprawny zapis gry.",
 
   "lobby.common.difficulty": "Trudność botów",
   "lobby.common.seed": "Seed mapy",
@@ -72,6 +83,7 @@
   "banner.empireSwitch": "Grasz jako {{name}}!",
   "banner.empireAnnexed": "{{loser}} zostaje zaanektowana przez {{winner}}!",
   "banner.roadComplete": "Droga ukończona: {{city}}",
+  "banner.gameLoaded": "Wczytano grę — tura {{turn}}",
 
   "log.newGameMulti": "Nowa gra wieloosobowa! Zdobądź stolice pozostałych graczy.",
   "log.newGameSingle": "Nowa gra! Zdobądź stolice wrogów.",

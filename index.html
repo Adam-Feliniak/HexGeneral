@@ -10,9 +10,11 @@
 <div id="menu-main" class="menu-screen">
   <div class="menu-box">
     <h1>⬡ Hex General</h1>
+    <button id="menu-continue" hidden></button>
     <button id="menu-single" data-i18n="menu.singlePlayer">Pojedynczy gracz</button>
     <button id="menu-multi" data-i18n="menu.multiPlayer">Gra wieloosobowa</button>
     <button id="menu-tutorial-btn" data-i18n="menu.tutorial">Samouczek</button>
+    <button id="menu-save-btn" data-i18n="menu.savePanel">Zapis gry</button>
     <button id="menu-options-btn" data-i18n="menu.options">Opcje</button>
     <button id="menu-exit" data-i18n="menu.exit">Wyjście</button>
     <div id="lang-picker" class="choice-group lang-picker"></div>
@@ -104,6 +106,17 @@
     <button id="tutorial-back" data-i18n="lobby.common.back">Wróć</button>
   </div>
 </div>
+<div id="menu-save" class="menu-screen" hidden>
+  <div class="menu-box wide">
+    <h2 data-i18n="save.title">Zapis gry</h2>
+    <p class="save-hint" data-i18n-html="save.hint">Gra zapisuje się sama. Tu możesz skopiować zapis jako tekst (<b>Pokaż zapis</b> → Ctrl+C) albo wkleić zapis (Ctrl+V) i go wczytać.</p>
+    <textarea id="save-textarea" spellcheck="false" autocomplete="off"></textarea>
+    <div id="save-status"></div>
+    <button id="save-show" data-i18n="save.show">Pokaż zapis (do skopiowania)</button>
+    <button id="save-load" data-i18n="save.load">Wczytaj wklejony zapis</button>
+    <button id="save-back" data-i18n="lobby.common.back">Wróć</button>
+  </div>
+</div>
 <div id="menu-options" class="menu-screen" hidden>
   <div class="menu-box">
     <h2 data-i18n="lobby.options.title">Opcje</h2>
@@ -193,6 +206,7 @@
 <script src="src/empire.js"></script>
 <script src="src/turns.js"></script>
 <script src="src/ai.js"></script>
+<script src="src/save.js"></script>
 <script src="src/sprites.js"></script>
 <script src="src/render.js"></script>
 <script src="src/ui.js"></script>

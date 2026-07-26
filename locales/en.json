@@ -6,6 +6,17 @@
   "menu.tutorial": "Tutorial",
   "menu.options": "Options",
   "menu.exit": "Exit",
+  "menu.continue": "▶ Continue (turn {{turn}})",
+  "menu.savePanel": "Save Game",
+
+  "save.title": "Save Game",
+  "save.hint": "The game saves itself — return to your match with the <b>Continue</b> button in the menu. Here you can additionally copy the save as text (<b>Show save</b>, then Ctrl+C) or paste a previously copied save (Ctrl+V) and click <b>Load</b>.",
+  "save.show": "Show save (to copy)",
+  "save.load": "Load pasted save",
+  "save.selected": "Save selected — press Ctrl+C to copy.",
+  "save.empty": "No save to show — play a match first.",
+  "save.incompatible": "This save comes from an incompatible game version.",
+  "save.corrupt": "This does not look like a valid game save.",
 
   "lobby.common.difficulty": "Bot Difficulty",
   "lobby.common.seed": "Map Seed",
@@ -72,6 +83,7 @@
   "banner.empireSwitch": "You are now playing as {{name}}!",
   "banner.empireAnnexed": "{{loser}} is annexed by {{winner}}!",
   "banner.roadComplete": "Road complete: {{city}}",
+  "banner.gameLoaded": "Game loaded — turn {{turn}}",
 
   "log.newGameMulti": "New multiplayer game! Capture the capitals of the other players.",
   "log.newGameSingle": "New game! Capture the enemy capitals.",

@@ -58,6 +58,7 @@ function applyI18n() {
   if (state.screen === 'sp-setup' && typeof renderSpSetup === 'function') renderSpSetup();
   else if (state.screen === 'mp-setup' && typeof renderMpSetup === 'function') renderMpSetup();
   else if (state.screen === 'options' && typeof renderOptions === 'function') renderOptions();
+  else if (state.screen === 'menu' && typeof refreshMainMenu === 'function') refreshMainMenu(); // etykieta „Kontynuuj" (dynamiczna, bez data-i18n)
   else if (state.screen === 'game' && typeof updateUI === 'function') updateUI();
 }
 

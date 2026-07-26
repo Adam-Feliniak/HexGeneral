@@ -6,6 +6,17 @@
   "menu.tutorial": "Anleitung",
   "menu.options": "Optionen",
   "menu.exit": "Beenden",
+  "menu.continue": "▶ Fortsetzen (Runde {{turn}})",
+  "menu.savePanel": "Spielstand",
+
+  "save.title": "Spielstand",
+  "save.hint": "Das Spiel speichert automatisch — mit <b>Fortsetzen</b> im Menü kehrst du zur Partie zurück. Hier kannst du den Spielstand zusätzlich als Text kopieren (<b>Spielstand anzeigen</b>, dann Strg+C) oder einen zuvor kopierten Spielstand einfügen (Strg+V) und auf <b>Laden</b> klicken.",
+  "save.show": "Spielstand anzeigen (zum Kopieren)",
+  "save.load": "Eingefügten Spielstand laden",
+  "save.selected": "Spielstand markiert — Strg+C zum Kopieren drücken.",
+  "save.empty": "Kein Spielstand vorhanden — spiele zuerst eine Partie.",
+  "save.incompatible": "Dieser Spielstand stammt aus einer inkompatiblen Spielversion.",
+  "save.corrupt": "Das sieht nicht nach einem gültigen Spielstand aus.",
 
   "lobby.common.difficulty": "Bot-Schwierigkeit",
   "lobby.common.seed": "Karten-Seed",
@@ -72,6 +83,7 @@
   "banner.empireSwitch": "Du spielst jetzt als {{name}}!",
   "banner.empireAnnexed": "{{loser}} wird von {{winner}} annektiert!",
   "banner.roadComplete": "Straße fertiggestellt: {{city}}",
+  "banner.gameLoaded": "Spiel geladen — Runde {{turn}}",
 
   "log.newGameMulti": "Neues Mehrspielerspiel! Erobere die Hauptstädte der anderen Spieler.",
   "log.newGameSingle": "Neues Spiel! Erobere die feindlichen Hauptstädte.",

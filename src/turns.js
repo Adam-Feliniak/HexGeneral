@@ -36,6 +36,9 @@ function startTurn() {
     showBanner(i18n.t('banner.yourTurnSingle', { turn: state.turn }));
   }
   updateUI();
+  // autozapis na początku tury człowieka — spójny punkt wznowienia (osłona typeof,
+  // bo headless harness/sim ładuje turns.js bez save.js)
+  if (p.isHuman && typeof autosave === 'function') autosave();
   if (!p.isHuman) aiStep(p.id, MOVES_PER_TURN, endTurn);
 }
 
