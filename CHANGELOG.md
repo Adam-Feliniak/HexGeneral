@@ -2,6 +2,21 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.2.2] - 2026-07-27
+
+- AI domyka wygrane pozycje: remisy w referencyjnej serii 300 gier AI-vs-AI spadły
+  z 40,0% do 24,7%, a mediana długości partii z ~348 do ~274 rund
+- Nowe mechanizmy AI (tylko dla strony z przewagą materialną — słabszy gra jak
+  dotąd): eskalacja progów ataku z czasem partii, koncentracja sił na najsłabszej
+  stolicy wroga (z omijaniem barier wodnych), szturm falowy ze strefą zborną
+  zamiast pojedynczo dowożonych armii, premia za bicie obrońców blokujących
+  dojście do oblężonej stolicy
+- Artyleria preferencyjnie obsadza pierścień oblężniczy (wsparcie), czołgi
+  zostają do szturmu — pierwsze użycie cech typów jednostek w taktyce ruchu
+- Drabinka trudności i balans stron bez zmian (zweryfikowane testem mirror)
+- Bonusy obronne miast celowo nietknięte — obrona pozostaje silna, zmieniło się
+  tylko zachowanie atakującego AI
+
 ## [0.2.1] - 2026-07-26
 
 - Przyspiesza AI ~2,2× bez żadnej zmiany jego decyzji (zweryfikowane bitową

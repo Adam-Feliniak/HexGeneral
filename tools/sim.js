@@ -76,6 +76,8 @@ const DRIVER_SRC = `
       var round = 0;
       while (round < o.maxTurns && state.phase !== 'over') {
         round++;
+        state.turn = round; // wierność realnej pętli: endTurn() inkrementuje state.turn
+                            // co pełny obrót, a AI może od niego zależeć (eskalacja)
         for (var idx = 0; idx < state.players.length; idx++) {
           var p = state.players[idx];
           if (!p.alive) continue;

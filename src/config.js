@@ -3,7 +3,7 @@
    KONFIGURACJA — stałe rozgrywki, gracze, nazwy miast
    ============================================================ */
 
-const GAME_VERSION = '0.2.1';
+const GAME_VERSION = '0.2.2';
 // Nota o prawach autorskich w stopce menu (obok wersji); pełne warunki w pliku LICENSE
 const GAME_COPYRIGHT = '© 2026 Adam Feliniak';
 
@@ -48,6 +48,29 @@ const AI_DIFFICULTY_PRESETS = {
   nightmare: { key: 'nightmare', economy: 1.725, aggression: 1.7, aggressionThreshold: 0.7,  thinkDelay: 70 },
 };
 const AI_DIFFICULTY_ORDER = ['easy', 'normal', 'hard', 'nightmare'];
+
+// eskalacja przełamująca pat: progi opłacalności ataku AI maleją liniowo z długością
+// partii — po AI_ESC_TURNS rundach próg jest niższy o AI_ESC_MAX (ułamek). Bez tego
+// przy wyrównanych siłach front zastyga na setki rund (obie strony się okopują i nikt
+// nie szturmuje stolicy) — zmierzone 40% remisów w 300 grach normal vs normal
+const AI_ESC_TURNS = 100;
+const AI_ESC_MAX = 0.5;
+// pełna moc eskalacji już przy tej przewadze siły (mnożnik; 1.6 = 160% siły wroga) —
+// „wygrana pozycja" ma się domykać, zanim partia dobije do limitu rund
+const AI_ESC_DOMINANCE_FULL = 1.4;
+// premia oceny za zajęcie pola sąsiadującego ze stolicą-celem oblężenia (pierścień
+// wsparcia pod przyszły szturm), skalowana postępem eskalacji i supportWeight typu
+const AI_SIEGE_BONUS = 18;
+// wzrost wartości stolicy-celu wraz z eskalacją — kieruje wspólną pulę ruchów na
+// dowóz sił pod oblężenie zamiast na lokalne potyczki (sekcja zwłok patów pokazała,
+// że zwycięzca z przewagą 2:1 przepala ruchy na skórmisze i nigdy nie dowozi armii)
+const AI_ESC_FOCUS_VAL = 25;
+// premia szturmowa: przy eskalacji atak na wrogą armię w pobliżu stolicy-celu
+// (dystans ścieżkowy <= AI_ESC_ASSAULT_RANGE) dostaje bonus rosnący z bliskością —
+// bez niej marsz „bądź blisko celu" scorował wyżej niż bicie armii-tarczy blokującej
+// korytarz i oblężenie tańczyło wokół obrońców, nigdy ich nie atakując
+const AI_ESC_ASSAULT = 25;
+const AI_ESC_ASSAULT_RANGE = 4;
 
 // typy jednostek lądowych — atk/def: mnożniki armyPowerAt (siły w ataku/obronie),
 // moveBase/roadBonus: zasięg ruchu (moveCap) poza/na aktywnej drodze,
