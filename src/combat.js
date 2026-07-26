@@ -3,14 +3,40 @@
    RUCH I WALKA — morale, siła bojowa, rozstrzyganie bitew
    ============================================================ */
 
+// cache list własnych miast per gracz (Map<playerId, pola[]>), aktywny wyłącznie
+// na czas oceny ruchów w aiPickMove (która niczego nie mutuje, więc lista jest
+// stała) — moraleAt jest tam wołane setki razy na turę i pełny skan planszy przy
+// każdym wywołaniu dominował koszt AI. Poza AI (render, tooltipy, resolveBattle)
+// cache jest nieaktywny (null) i moraleAt skanuje planszę jak dotąd.
+let moraleCityCache = null;
+
+function moraleCityList(playerId) {
+  let list = moraleCityCache.get(playerId);
+  if (!list) {
+    list = [];
+    for (const row of state.tiles) for (const o of row) {
+      if (o.city && o.owner === playerId) list.push(o);
+    }
+    moraleCityCache.set(playerId, list);
+  }
+  return list;
+}
+
 function moraleAt(playerId, t) {
   // morale zależy od odległości do najbliższego własnego miasta —
   // podbijanie miast przesuwa front morale do przodu
   let d = Infinity;
-  for (const row of state.tiles) for (const o of row) {
-    if (o.city && o.owner === playerId) {
+  if (moraleCityCache) {
+    for (const o of moraleCityList(playerId)) {
       const dd = hexDist(t.c, t.r, o.c, o.r);
       if (dd < d) d = dd;
+    }
+  } else {
+    for (const row of state.tiles) for (const o of row) {
+      if (o.city && o.owner === playerId) {
+        const dd = hexDist(t.c, t.r, o.c, o.r);
+        if (dd < d) d = dd;
+      }
     }
   }
   if (!isFinite(d)) d = 8;
@@ -55,13 +81,16 @@ function moveCap(t) {
   return ut.moveBase + (tileOnRoad(t, t.army.player) ? ut.roadBonus : 0);
 }
 
-// pola osiągalne w tej turze wraz z trasą do nich (Map<pole, ścieżka[]>, bez pola startowego) —
-// pole pośrednie musi być puste (starcie albo połączenie armii zawsze kończy ruch,
-// więc nie da się "przeskoczyć" przez zajęty hex) — jedynie ostatnie pole na trasie
-// może mieć armię: wroga (walka) albo własną (połączenie)
+// pola osiągalne w tej turze (Map<pole, poprzednie pole na trasie>, bez pola
+// startowego) — wartością jest wskaźnik na poprzednika (trasa odtwarzana wstecz
+// tylko dla faktycznie wykonywanego ruchu w executeMove, zamiast kopiowania tablicy
+// ścieżki dla każdego osiągalnego pola). Pole pośrednie musi być puste (starcie albo
+// połączenie armii zawsze kończy ruch, więc nie da się "przeskoczyć" przez zajęty
+// hex) — jedynie ostatnie pole na trasie może mieć armię: wroga (walka) albo
+// własną (połączenie)
 function reachableMoves(t) {
   if (!t.army) return new Map();
-  const seen = new Map([[t, []]]);
+  const seen = new Map([[t, null]]);
   let frontier = [t];
   for (let step = 0; step < moveCap(t); step++) {
     const next = [];
@@ -69,7 +98,7 @@ function reachableMoves(t) {
       if (cur !== t && cur.army) continue;
       for (const n of neighborsOf(cur)) {
         if (seen.has(n) || !canStep(cur, n, t.army.player, t.army.type)) continue;
-        seen.set(n, [...seen.get(cur), n]);
+        seen.set(n, cur);
         next.push(n);
       }
     }
@@ -125,7 +154,13 @@ function resolveBattle(from, to) {
 // zwraca liczbę pól faktycznie pokonanych (1 albo 2 przy skoku po drodze) —
 // tyle kosztuje to w puli ruchów tury (state.movesLeft)
 function executeMove(from, to) {
-  const path = reachableMoves(from).get(to) || [to];
+  // odtworzenie trasy ze wskaźników poprzedników (patrz reachableMoves); dla pola
+  // spoza zasięgu pętla urywa się od razu i zostaje [to] — jak dawny fallback
+  const seen = reachableMoves(from);
+  const path = [];
+  for (let cur = to; cur && cur !== from; cur = seen.get(cur)) path.push(cur);
+  path.reverse();
+  if (!path.length) path.push(to);
   const army = from.army;
   // pola pośrednie na trasie są zawsze puste (patrz reachableMoves) — armia
   // przechodząca przez nie zajmuje je tak samo jak dawny ruch krok-po-kroku

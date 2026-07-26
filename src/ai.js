@@ -77,6 +77,9 @@ function aiPickMove(playerId, diff) {
   }
   if (!armies.length) return null;
   armies.sort((a, b) => b.army.str - a.army.str);
+  // ocena ruchów niczego nie mutuje, więc na jej czas włączamy cache miast dla
+  // moraleAt (patrz combat.js) — bez niego każda ocena kandydata skanuje planszę
+  moraleCityCache = new Map();
   const targets = aiTargets(playerId);
   const me = state.players[playerId];
   const [capC, capR] = me.capital;
@@ -94,10 +97,17 @@ function aiPickMove(playerId, diff) {
   let best = null; // { from, to, score }
   for (const from of armies) {
     const moves = validMoves(from);
+    // dystans armia->cel nie zależy od rozważanego pola docelowego — liczony raz
+    // na armię zamiast przy każdym kandydacie ruchu
+    const targetInfo = targets.map(({ t, val }) => ({
+      tc: t.c, tr: t.r, val, dNow: hexDist(from.c, from.r, t.c, t.r),
+    }));
     for (const to of moves) {
       let score = -Infinity;
-      const myPow = armyPowerAt(from.army, to, 'attack') + 0.12 * supportFor(playerId, to, from);
       if (to.army && to.army.player !== playerId) {
+        // siła własna liczona tylko dla kandydatów bitewnych — gałęzie marszu
+        // i łączenia jej nie używają, a to najdroższa część oceny ruchu
+        const myPow = armyPowerAt(from.army, to, 'attack') + 0.12 * supportFor(playerId, to, from);
         let defPow = armyPowerAt(to.army, to, 'defense') + 0.12 * supportFor(to.army.player, to, null);
         if (to.city) defPow *= (to.city.capitalOf >= 0 ? 1.25 : 1.15);
         const ratio = myPow / Math.max(0.1, defPow);
@@ -114,21 +124,19 @@ function aiPickMove(playerId, diff) {
         if (threat && hexDist(to.c, to.r, capC, capR) <= 2) {
           score = 30;
         } else if (from.army.str + to.army.str <= MAX_ARMY) {
-          for (const { t, val } of targets) {
-            const dNow = hexDist(from.c, from.r, t.c, t.r);
-            const dNew = hexDist(to.c, to.r, t.c, t.r);
-            const s = val * 2 - dNew * 2 +
-                      (dNew < dNow ? 8 : dNew === dNow ? 0 : -10) - 3;
+          for (const g of targetInfo) {
+            const dNew = hexDist(to.c, to.r, g.tc, g.tr);
+            const s = g.val * 2 - dNew * 2 +
+                      (dNew < g.dNow ? 8 : dNew === g.dNow ? 0 : -10) - 3;
             if (s > score) score = s;
           }
         }
       } else {
         // ruch w kierunku najlepszego celu (dopuszcza obejścia, karze cofanie)
-        for (const { t, val } of targets) {
-          const dNow = hexDist(from.c, from.r, t.c, t.r);
-          const dNew = hexDist(to.c, to.r, t.c, t.r);
-          const s = val * 2 - dNew * 2 +
-                    (dNew < dNow ? 8 : dNew === dNow ? 0 : -10) +
+        for (const g of targetInfo) {
+          const dNew = hexDist(to.c, to.r, g.tc, g.tr);
+          const s = g.val * 2 - dNew * 2 +
+                    (dNew < g.dNow ? 8 : dNew === g.dNow ? 0 : -10) +
                     (to.city && to.owner !== playerId ? 25 : 0) +
                     (to.land && to.owner !== playerId ? 3 : 0) -
                     (!to.land ? 2 : 0);
@@ -146,6 +154,7 @@ function aiPickMove(playerId, diff) {
       if (!best || score > best.score) best = { from, to, score };
     }
   }
+  moraleCityCache = null; // koniec oceny — dalej mogą być mutacje (executeMove)
   if (!best || best.score <= 0) return null;
   return best;
 }

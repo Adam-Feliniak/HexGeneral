@@ -3,7 +3,7 @@
    KONFIGURACJA — stałe rozgrywki, gracze, nazwy miast
    ============================================================ */
 
-const GAME_VERSION = '0.2.0';
+const GAME_VERSION = '0.2.1';
 // Nota o prawach autorskich w stopce menu (obok wersji); pełne warunki w pliku LICENSE
 const GAME_COPYRIGHT = '© 2026 Adam Feliniak';
 

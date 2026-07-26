@@ -212,13 +212,14 @@ naturalnie eksponuje wartość zwiadu.
   deterministyczne, z trybem `--mirror` znoszącym bias pozycji). Zamienia „jeden dziwny
   wynik to pewnie wariancja" (patrz [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md))
   w twarde dane do balansu. Opis w [09-Przewodnik-developera.md](09-Przewodnik-developera.md).
-- 🟡 **Optymalizacja `aiPickMove` (wydajność)** — to główny koszt obliczeniowy AI:
-  robi BFS zasięgu ruchu na każdą armię przy każdym ruchu i skanuje całą planszę po
-  cele. Dominuje czas zarówno realnej rozgrywki (płynność przy wielu armiach), jak i
-  wsadowego runnera (`tools/sim.js`) — po zrównolegleniu runnera to właśnie `aiPickMove`
-  jest wąskim gardłem dużych przebiegów balansowych. Kierunki: cache'owanie/inkrementalne
-  liczenie zasięgu, wcześniejsze odcinanie beznadziejnych celów, ograniczenie skanu do
-  okolic frontu. Zmiana w kodzie gry (`ai.js`/`combat.js`), nie w narzędziu.
+- ✅ **Optymalizacja `aiPickMove` (wydajność)** — **zrealizowane** (v0.2.1, ~2,2×
+  szybciej): cache miast dla `moraleAt` na czas oceny ruchów, siła własna liczona tylko
+  dla kandydatów bitewnych, hoisting dystansów do celów, `reachableMoves` na wskaźnikach
+  poprzedników. Metoda: wyłącznie zmiany behavior-preserving — zachowana sekwencja
+  wywołań RNG, zweryfikowane bitową identycznością wyników 540 gier `sim.js` przed/po.
+  Pozostały kierunek na przyszłość (świadomie pominięty, bo zmienia decyzje AI):
+  ograniczenie skanu celów do okolic frontu — do rozważenia razem z pracą nad
+  zachowaniem AI (stalemate wyżej).
 - 🟡 **Minimapa** — przy proceduralnych mapach szybko robi się przydatna, zwłaszcza
   z mgłą wojny.
 - 🔴 **Multiplayer sieciowy** — jeśli obecny tryb multi to hotseat, gra online to osobny,

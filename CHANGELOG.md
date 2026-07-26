@@ -2,6 +2,15 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.2.1] - 2026-07-26
+
+- Przyspiesza AI ~2,2× bez żadnej zmiany jego decyzji (zweryfikowane bitową
+  zgodnością wyników 540 gier symulacyjnych przed/po): cache miast dla morale
+  na czas oceny ruchów, siła bojowa liczona tylko dla kandydatów ataku,
+  dystanse do celów liczone raz na armię, trasy ruchu bez kopiowania ścieżek
+- Szybsze AI = płynniejsza rozgrywka przy wielu armiach i ponad dwukrotnie
+  szybsze przebiegi balansowe `tools/sim.js`
+
 ## [0.2.0] - 2026-07-24
 
 - Punkty produkcji miast: produkcja idzie w jednostki albo w budowę infrastruktury
