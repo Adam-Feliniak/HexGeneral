@@ -38,7 +38,7 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 | Obszar | Teraz | Próg EA | Priorytet |
 |---|---|---|---|
 | Zamykalność rozgrywki | ~~40%~~ → **~7%** remisów (v0.2.2 + v0.2.3) | Gra *niezawodnie* dobiega do końca | **P0 — gate #1, zasadniczo zamknięty** |
-| Zapis / wczytywanie | brak | Partia ~348 tur bez save'a to refund | **P0** |
+| Zapis / wczytywanie | ✅ **zrobione** (v0.3.0: autozapis + Kontynuuj + eksport/import tekstowy) | Partia bez save'a to refund | **P0 — zamknięte** |
 | Stabilność (pełne partie bez crasha/softlocka) | brak testów, nieznane | Zero zawiesów w długiej grze | **P0** |
 | Dystrybucja (wrapper + platforma) | brak | Musi *gdzieś* być (Steam/itch) | **P0 (launch)** |
 | Strona sklepu + opis EA + roadmapa | brak | Steam wymaga „czemu EA / jak długo / co dojdzie" | **P0 (Steam)** |
@@ -55,8 +55,8 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 ## Ścieżka krytyczna (P0)
 
 1. **Zamykanie gier** (gate #1, patrz niżej) — bez tego rdzeń jest zepsuty na poziomie pętli.
-2. **Zapis / wczytywanie** — odblokowuje też quit-and-resume i późniejsze cloud save na
-   Steam. Wiąże się z notką o wersjonowaniu w `CLAUDE.md` (format + migracje).
+2. ✅ **Zapis / wczytywanie** — **zrobione** (v0.3.0): autozapis + „Kontynuuj" +
+   eksport/import tekstowy; format z bramką `SAVE_FORMAT` (migracje po 1.0).
 3. **Przebieg stabilnościowy** — rozegrać wiele *pełnych* partii (headless + ręcznie),
    łapać softlocki/wyjątki/perf. Zamiennik testów, których nie ma.
 4. **Dystrybucja + strona sklepu** — Electron/NW.js wrapper, kapsułki, screeny, opis EA,

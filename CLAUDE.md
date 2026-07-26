@@ -70,7 +70,7 @@ For UI/CSS/canvas rendering changes, verify manually by opening `index.html` in 
 ```
 config.js → locales-data.js → i18n.js → geometry.js → utils.js → mapgen.js
 → state.js → combat.js → roads.js → empire.js → turns.js → ai.js
-→ sprites.js → render.js → ui.js → input.js → menu.js → main.js
+→ save.js → sprites.js → render.js → ui.js → input.js → menu.js → main.js
 ```
 Order only matters where a file executes code immediately at load time (not just defining functions): `i18n.js` calls `i18nInit()` at the end (needs `I18N_DATA` from `locales-data.js`); `main.js` (last) actually starts the game — `setupCanvas()`, `loadSprites()`, `initInput()`, `initMenu()`, initial menu-screen state, `applyScreen()`, `applyI18n()`, `requestAnimationFrame(frame)`. Otherwise, functions in any file may freely call functions in any other file — there's no enforced dependency hierarchy, just topical grouping.
 
@@ -88,6 +88,7 @@ Order only matters where a file executes code immediately at load time (not just
 | `empire.js` | Tile capture, whole-empire annexation, game-over check | `captureTile()`, `conquerEmpire()`, `checkGameOver()` |
 | `turns.js` | Turn order (human/AI), turn timer | `startTurn()`, `endTurn()`, `requestEndTurn()`, `checkTurnTimer()` |
 | `ai.js` | Bot move/target selection, production choice | `aiTargets()`, `aiPickMove()`, `aiStep()`, `aiAssignBuildType()` |
+| `save.js` | Save/load: explicit state codec (JSON), autosave to `localStorage` (`hexgeneral.save`), continue, text export/import | `serializeGame()`, `deserializeGame()`, `autosave()`, `loadAutosave()`, `exportSaveText()`, `importSaveText()` |
 | `sprites.js` | Loads PNGs from `assets/` into `SPR` | `loadSprites()`, `sprOk()` |
 | `render.js` | All canvas drawing | `draw()`, `frame()`, `drawTile()`, `drawArmy()`, `drawCity()`, `drawRoads()` |
 | `ui.js` | Sidebar, banners, game-over screen, production panel | `updateUI()`, `updateBuildPanel()`, `showBanner()`, `showOverlay()` |
@@ -117,7 +118,9 @@ Deliberate: the repo has never had tests, so faking exports across files for a m
 - **MINOR** — new player-facing functionality (unit type, game mode, mechanic).
 - **PATCH** — fixes, balance tweaks, small changes.
 
-When bumping: update `GAME_VERSION` and add an entry to `CHANGELOG.md` in the same commit, then tag `git tag vX.Y.Z` locally (push only when explicitly asked). The version is purely informational — the game has no save format for it to gate compatibility on (yet).
+When bumping: update `GAME_VERSION` and add an entry to `CHANGELOG.md` in the same commit, then tag `git tag vX.Y.Z` locally (push only when explicitly asked).
+
+Since 0.3.0 the game has a save format (`SAVE_FORMAT` in `src/save.js`, autosave in `localStorage`). **Any change to the shape of game state** (new tile/state field that affects gameplay) requires adding the field to the explicit codec in `save.js` AND bumping `SAVE_FORMAT` — old saves then get a clear incompatibility message (no migrations before 1.0; post-1.0 breaking save changes are MAJOR).
 
 ## Conventions
 

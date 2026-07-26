@@ -9,7 +9,7 @@ Kolejność wczytywania w `index.html`:
 ```
 config.js → locales-data.js → i18n.js → geometry.js → utils.js → mapgen.js
 → state.js → combat.js → roads.js → empire.js → turns.js → ai.js
-→ sprites.js → render.js → ui.js → input.js → menu.js → main.js
+→ save.js → sprites.js → render.js → ui.js → input.js → menu.js → main.js
 ```
 
 Kolejność ma znaczenie tylko tam, gdzie kod **wykonuje się natychmiast przy wczytaniu** pliku (nie tylko definiuje funkcje):
@@ -35,12 +35,30 @@ Poza tymi przypadkami, funkcje z dowolnego pliku mogą swobodnie wołać funkcje
 | `empire.js` | Zajmowanie pól, aneksja całego imperium, warunek końca gry | `captureTile()`, `conquerEmpire()`, `checkGameOver()` |
 | `turns.js` | Kolejność tur (człowiek/AI), limit czasu | `startTurn()`, `endTurn()`, `requestEndTurn()`, `checkTurnTimer()` |
 | `ai.js` | Wybór ruchów i celów botów, dobór typu produkcji/budowy dróg | `aiTargets()`, `aiPickMove()`, `aiStep()`, `aiAssignBuildType()`, `aiAssignCityProject()` |
+| `save.js` | Zapis gry: jawny kodek stanu (JSON), autozapis w `localStorage` (klucz `hexgeneral.save`), „Kontynuuj", eksport/import tekstowy | `serializeGame()`, `deserializeGame()`, `autosave()`, `loadAutosave()`, `exportSaveText()`, `importSaveText()` |
 | `sprites.js` | Wczytywanie plików PNG z `assets/` do obiektu `SPR` | `loadSprites()`, `sprOk()` |
 | `render.js` | Całe rysowanie na `<canvas>` | `draw()`, `frame()`, `drawTile()`, `drawArmy()`, `drawCity()`, `drawRoads()` |
 | `ui.js` | Panel boczny, banery, ekran końca gry, panel produkcji | `updateUI()`, `updateBuildPanel()`, `showBanner()`, `showOverlay()` |
 | `input.js` | Obsługa kliknięć/najechania myszą, tooltipy, skróty klawiszowe | `onTileClick()`, `tileTooltip()`, `initInput()` |
 | `menu.js` | Ekrany menu głównego, lobby (single/multi), opcje, nawigacja między ekranami | `applyScreen()`, `goToScreen()`, `renderSpSetup()`, `renderMpSetup()`, `initMenu()` |
 | `main.js` | Uruchomienie gry po wczytaniu wszystkich modułów | (kod na najwyższym poziomie pliku) |
+
+## Format zapisu gry (`save.js`)
+
+Zapis to JSON `{ format, version, savedAt, game }`, gdzie `game` zawiera pełny stan
+rozgrywki (w tym pełną siatkę kafelków — celowo NIE „seed + nakładka zmian", żeby
+przyszłe korekty `mapgen.js` nie psuły cicho starych zapisów). Kodek jest jawny:
+
+- referencje do kafelków (`roadProject.target`/`.segment[]`, `supplyCity`) są
+  zapisywane jako współrzędne `[c, r]` i odtwarzane po wczytaniu przez nową siatkę,
+- `Infinity` (`timeLimit`, `movesUsed`) jest kodowane stringiem `'inf'`
+  (JSON zamieniłby je na `null`),
+- transienty (selekcje, `turnStartTime`, `gameId`, `anims`/`floaters`/`effects`)
+  nie są zapisywane — odtwarzane na świeżo przy wczytaniu.
+
+**Dyscyplina formatu:** każda zmiana kształtu stanu gry (nowe pole wpływające na
+rozgrywkę) wymaga dopisania pola do kodeka w `save.js` i podbicia `SAVE_FORMAT` —
+zapis o innym formacie dostaje komunikat o niezgodności (bez migracji przed 1.0).
 
 ## Osłony headless-Node
 

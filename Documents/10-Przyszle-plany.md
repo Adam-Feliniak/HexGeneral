@@ -130,9 +130,14 @@ Legenda kosztu:
 
 ## Jakość życia i prezentacja
 
-- 🔴 **Zapis i wczytywanie gry** — obecnie brak formatu zapisu (patrz sekcja
-  „Versioning" w `CLAUDE.md`). Fundament pod wiele innych rzeczy, ale wymaga formatu
-  serializacji stanu i strategii migracji między wersjami.
+- ✅ **Zapis i wczytywanie gry** — **zrealizowane** (v0.3.0, `src/save.js`): autozapis
+  do `localStorage` na początku tury człowieka i przy wyjściu do menu, „Kontynuuj"
+  w menu głównym, eksport/import zapisu jako tekst JSON (ekran „Zapis gry",
+  kopiuj/wklej). Jawny kodek z polem `SAVE_FORMAT` (bramka kompatybilności; migracje
+  świadomie odłożone do po 1.0) — opis w
+  [02-Architektura-i-pliki.md](02-Architektura-i-pliki.md). Otwiera drogę pod undo,
+  scenariusze i cloud save. Nie ma ręcznych slotów (do rozważenia przy realnej
+  potrzebie).
 - 🟢 **Ręczne kończenie tury (bez auto-oddawania po wyczerpaniu ruchów)** — dziś po
   wykorzystaniu wszystkich ruchów tura sama się kończy: `input.js` (okolice linii 63)
   odpala `requestEndTurn()` przez `setTimeout(..., 350)`, gdy `state.movesLeft <= 0`.

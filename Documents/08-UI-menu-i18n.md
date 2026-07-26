@@ -6,12 +6,20 @@ Cała nawigacja steruje się jednym polem `state.screen`, a `applyScreen()` (`me
 
 | `state.screen` | Kontener HTML | Opis |
 |---|---|---|
-| `'menu'` | `#menu-main` | Ekran startowy: Pojedynczy gracz / Gra wieloosobowa / Samouczek / Opcje / Wyjście + wybór języka |
+| `'menu'` | `#menu-main` | Ekran startowy: Kontynuuj (gdy istnieje autozapis; dynamiczna etykieta z numerem tury przez `refreshMainMenu`) / Pojedynczy gracz / Gra wieloosobowa / Samouczek / Zapis gry / Opcje / Wyjście + wybór języka |
 | `'sp-setup'` | `#menu-sp-setup` | Lobby single-player: liczba botów, trudność, seed mapy |
 | `'mp-setup'` | `#menu-mp-setup` | Lobby multiplayer: liczba graczy, liczba botów, trudność, seed, limit czasu na turę |
 | `'tutorial'` | `#menu-tutorial` | Statyczny ekran "Jak grać?" — pełna lista zasad (ta sama treść co zwijana pomoc w grze, patrz niżej) |
+| `'save'` | `#menu-save` | Ekran „Zapis gry": pole tekstowe do skopiowania zapisu (Pokaż zapis → Ctrl+C) lub wklejenia i wczytania (Ctrl+V → Wczytaj); logika w `save.js`, obsługa w `menu.js` |
 | `'options'` | `#menu-options` | Domyślny seed i domyślna trudność botów dla przyszłych gier |
 | `'game'` | `#app` | Właściwa plansza gry (canvas + sidebar) |
+
+Autozapis: gra zapisuje się do `localStorage` na początku każdej tury człowieka
+(`startTurn` w `turns.js`) i przy wyjściu do menu przyciskiem „Menu główne";
+rozstrzygnięcie partii kasuje autozapis (`checkGameOver` w `empire.js`). Uwaga na
+`#menu-continue`: etykieta jest dynamiczna (numer tury), więc przycisk celowo NIE
+ma atrybutu `data-i18n` — po zmianie języka odświeża go `applyI18n` przez
+`refreshMainMenu`.
 
 Ekran końca gry (`#overlay`) nie jest osobnym `state.screen` — to nakładka sterowana niezależnie przez `showOverlay()`/`hideOverlay()` (`ui.js`), pokazywana nad aktualnym ekranem gry, gdy `checkGameOver()` stwierdzi koniec rozgrywki.
 
