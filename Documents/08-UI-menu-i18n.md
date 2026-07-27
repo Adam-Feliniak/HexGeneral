@@ -7,7 +7,7 @@ Cała nawigacja steruje się jednym polem `state.screen`, a `applyScreen()` (`me
 | `state.screen` | Kontener HTML | Opis |
 |---|---|---|
 | `'menu'` | `#menu-main` | Ekran startowy: Kontynuuj (gdy istnieje autozapis; dynamiczna etykieta z numerem tury przez `refreshMainMenu`) / Pojedynczy gracz / Gra wieloosobowa / Samouczek / Zapis gry / Opcje / Wyjście + wybór języka |
-| `'sp-setup'` | `#menu-sp-setup` | Lobby single-player: liczba botów, trudność, seed mapy |
+| `'sp-setup'` | `#menu-sp-setup` | Lobby single-player: **tryb Gram/Oglądam** (`setup.spectate`), liczba botów, trudność, seed mapy. „Oglądam" startuje `newGame({ humanCount: 0, ... })` — sami botowie; `kickOffAiGame()` (menu.js) odpala pierwszą turę AI, bo nie ma tury człowieka, która by ją napędziła |
 | `'mp-setup'` | `#menu-mp-setup` | Lobby multiplayer: liczba graczy, liczba botów, trudność, seed, limit czasu na turę |
 | `'tutorial'` | `#menu-tutorial` | Statyczny ekran "Jak grać?" — pełna lista zasad (ta sama treść co zwijana pomoc w grze, patrz niżej) |
 | `'save'` | `#menu-save` | Ekran „Zapis gry": pole tekstowe do skopiowania zapisu (Pokaż zapis → Ctrl+C) lub wklejenia i wczytania (Ctrl+V → Wczytaj); logika w `save.js`, obsługa w `menu.js` |
@@ -36,6 +36,7 @@ Ograniczenia liczby graczy: multiplayer 2–6 graczy (`MP_PLAYER_COUNTS`), + do 
 ## Sidebar gry (`#sidebar`, aktualizowany przez `updateUI()`)
 
 - **`#turn-info`** — numer tury, licznik pozostałych ruchów (`5/5`), timer (tylko multi z limitem czasu, kolor `.low` gdy ≤10s).
+- **`#ai-speed-field`** — przełącznik tempa ruchów AI (1×/4×/16×, `state.aiSpeed` dzieli `thinkDelay` w `aiStep`); widoczny tylko gdy w grze są boty. `aiSpeed` to preferencja sesji — przeżywa „Nową mapę" i wczytanie zapisu, ale nie jest częścią samego zapisu.
 - **`#players`** — lista wszystkich imperiów: kropka w kolorze gracza, ikona 👤/🤖, nazwa (+ znacznik "(Ty)" w single, + odznaka trudności dla botów), statystyki `🏛 miasta ⛏ złoża ⚔ łączna siła`. Wiersz aktywnego gracza podświetlony (`.active`), martwi gracze przekreśleni i przygaszeni (`.dead`).
 - **`#log`** — ostatnie 10 komunikatów (`state.log`, max 40 trzymanych w pamięci), np. zdobycia miast, wyniki bitew, aneksje.
 - **`<details id="help">`** — zwijana lista zasad gry (identyczna treść co ekran samouczka w menu głównym — **treść jest zduplikowana w dwóch miejscach `index.html`**, każda zmiana kopii tekstu pomocy musi być wprowadzona w obu).

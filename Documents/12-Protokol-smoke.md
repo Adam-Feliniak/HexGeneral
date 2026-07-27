@@ -19,6 +19,9 @@ zostaje czysty (wzorzec, nie log konkretnego przebiegu).
   stolicy przełącza imperium (baner + log); po pierwszym ruchu już nie.
 - [ ] **4. Multi hot-seat 2 graczy z limitem czasu** — timer odlicza (czerwieni się
   ≤10 s), po upływie tura przechodzi dalej z wpisem w logu.
+- [ ] **4b. Tryb obserwatora** (single → „Oglądam") — partia samych botów startuje
+  sama; przełącznik tempa AI 1×/4×/16× przyspiesza ruchy; panel tempa znika w grze
+  bez botów (czysty hot-seat).
 
 ## Gospodarka i panel miasta
 

@@ -152,9 +152,42 @@ bramka przed wydaniem (obok `sim.js --games=300` dla metryk balansu).
 checklistę z **[12-Protokol-smoke.md](12-Protokol-smoke.md)** (osobny plik
 z checkboxami; jedno źródło prawdy, tu tylko odnośnik).
 
+## Serwer deweloperski i regresja wizualna (`tools/serve.js` + `visual-test.html`)
+
+Sama gra działa z `file://`, ale narzędzia, które **czytają piksele canvasa**
+(`getImageData`), tego nie mogą — na `file://` canvas jest „skażony" przez sprite'y
+ładowane z dysku i przeglądarka blokuje odczyt. Stąd `tools/serve.js`: statyczny
+serwer (czysty Node `http`, zero zależności), który serwuje repo przez
+`http://localhost` (same-origin znosi ograniczenie).
+
+```
+node tools/serve.js                 # http://localhost:8080
+node tools/serve.js --port=9000
+```
+
+**`visual-test.html`** (otwierać **przez serwer**, nie z `file://`) to dashboard
+regresji wizualnej: renderuje wiele partii AI-vs-AI **prawdziwym `draw()`** na
+prawdziwym canvasie, w zadanych rundach-checkpointach robi migawkę, hashuje wszystkie
+piksele klatki (FNV-1a) i porównuje z zapisanym wzorcem, pokazując miniaturę każdej
+planszy (✓ zgodne / ✗ zmiana z porównaniem wzorzec↔teraz / ⭑ nowe). Wzorzec trzymany
+w `localStorage` (przycisk „Ustaw jako wzorzec"; eksport/import haszy tekstem).
+Deterministyczne per seed (jak `sim.js`: `Math.random = makeRng(...)` po `newGame`).
+
+Kiedy używać: po zmianach w `render.js`/`gen-sprites.js`/geometrii — ustaw wzorzec
+**przed** zmianą, po zmianie uruchom i obejrzyj, które klatki się ruszyły (i czy
+celowo). Uzupełnia headless (`stress.js`/`sim.js` nie dotykają renderu).
+
+Uwaga techniczna: `visual-test.html` ładuje warstwę logiki + `render.js`/`ui.js`/
+`menu.js` (bez `main.js` — nie chce autostartu menu) i daje **atrapy elementów DOM**
+(`#stubs`), bo `newGame` woła `applyScreen`/`updateUI`/`showOverlay`, które sięgają po
+elementy interfejsu (część bez osłon na `null`).
+
+Do oglądania „na żywo" przyspieszonej partii samych botów służy natomiast **tryb
+obserwatora w samej grze** (lobby single → „Oglądam") z regulacją tempa AI 1×/4×/16×.
+
 ## Weryfikacja UI/wizualna
 
-Projekt jest czystym HTML/CSS/JS otwieranym z `file://` — nie ma zainstalowanego narzędzia do automatycznego sterowania przeglądarką (typu Playwright/`chromium-cli`) w standardowym środowisku roboczym tego repo. Zmiany w layoucie/CSS/renderowaniu canvasu należy sprawdzać **ręcznie**, otwierając `index.html` w przeglądarce po każdej zmianie (i robiąc **hard refresh**, `Ctrl+F5`, jeśli zmiana w `style.css` pozornie "nie działa" — przeglądarki potrafią agresywnie cache'ować lokalne pliki).
+Projekt jest czystym HTML/CSS/JS otwieranym z `file://` — nie ma zainstalowanego narzędzia do automatycznego sterowania przeglądarką (typu Playwright/`chromium-cli`) w standardowym środowisku roboczym tego repo. Zmiany w layoucie/CSS/renderowaniu canvasu należy sprawdzać **ręcznie**, otwierając `index.html` w przeglądarce po każdej zmianie (i robiąc **hard refresh**, `Ctrl+F5`, jeśli zmiana w `style.css` pozornie "nie działa" — przeglądarki potrafią agresywnie cache'ować lokalne pliki). Do regresji renderu na wielu partiach naraz — `visual-test.html` (wyżej).
 
 ## Znane charakterystyki
 
