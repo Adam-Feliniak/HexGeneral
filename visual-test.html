@@ -18,7 +18,7 @@
   #summary .fail { color: #ff7b7b; }
   #summary .new { color: #ffd91c; }
   #error { margin: 12px 16px; padding: 10px 14px; background: #3a1c1c; border: 1px solid #ff7b7b; border-radius: 6px; color: #ffb0b0; }
-  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; padding: 12px 16px; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; padding: 12px 16px; }
   .cell { border: 1px solid #4a4636; border-radius: 6px; overflow: hidden; background: #0f0e08; }
   .cell.fail { border-color: #ff7b7b; }
   .cell.newb { border-color: #ffd91c; }
@@ -28,7 +28,7 @@
   .cell.fail .badge { color: #ff7b7b; }
   .cell.newb .badge { color: #ffd91c; }
   .thumbs { display: flex; }
-  .thumbs img { width: 100%; display: block; image-rendering: pixelacy; }
+  .thumbs img { width: 100%; display: block; image-rendering: pixelated; }
   .thumbs .pair { width: 50%; }
   .thumbs .pair span { display: block; text-align: center; font-size: 10px; color: #9a947a; padding: 2px; }
   #board { display: none; }  /* prawdziwy canvas renderu — poza ekranem, źródło pikseli */
@@ -123,7 +123,7 @@ function hashCanvas() {
 }
 
 function thumbnail() {
-  const tw = 200, th = Math.max(1, Math.round(tw * canvas.height / canvas.width));
+  const tw = 360, th = Math.max(1, Math.round(tw * canvas.height / canvas.width));
   tcanvas.width = tw; tcanvas.height = th;
   tctx.imageSmoothingEnabled = false;
   tctx.drawImage(canvas, 0, 0, tw, th);
