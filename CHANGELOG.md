@@ -2,6 +2,19 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.4.2] - 2026-07-28
+
+- Tura nie oddaje się już sama po wyczerpaniu puli ruchów — kończy ją wyłącznie
+  gracz (przycisk „Zakończ turę" albo Enter). Po ostatnim ruchu zostaje okno na
+  decyzje niezależne od ruchów: wybór produkcji miasta, rozpoczęcie budowy drogi,
+  przypisanie złoża i samo obejrzenie planszy. W trybie multi limit czasu na turę
+  działa bez zmian
+- Przycisk „Zakończ turę" miga (pomarańczowy ↔ żółty, przejście co sekundę), gdy
+  ruchami nie da się już nic zrobić: pula ruchów wyczerpana **albo** wszystkie
+  jednostki już się w tej turze poruszyły, choć ruchy zostały. Podpowiedź, że tura
+  czeka na gracza; przy włączonym systemowym ograniczeniu animacji przycisk zostaje
+  żółty bez migania
+
 ## [0.4.1] - 2026-07-27
 
 - Znacznik buildu `BUILD_TAG` (`src/config.js`): widoczny w stopce menu obok wersji

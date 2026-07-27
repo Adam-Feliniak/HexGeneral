@@ -149,6 +149,21 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
 #end-turn:hover { background: #c96a26; }
 #end-turn:disabled { opacity: 0.45; cursor: default; transform: none; }
 
+/* Tura nie oddaje się sama (patrz input.js), więc migający przycisk jest jedyną
+   podpowiedzią, że ruch należy do gracza — włączany z ui.js, gdy ruchami nie da
+   się już nic zrobić (pusta pula albo wszystkie jednostki się poruszyły).
+   Tekst ciemnieje razem z tłem — kremowy #fff3d6 na żółtym byłby nieczytelny. */
+@keyframes end-turn-blink {
+  from { background: #b3591d; color: #fff3d6; }
+  to   { background: #ffd91c; color: #3a2a08; }
+}
+#end-turn.blink { animation: end-turn-blink 1s ease-in-out infinite alternate; }
+
+/* Podpowiedź musi przeżyć wyłączenie animacji — zostaje sam żółty, bez ruchu */
+@media (prefers-reduced-motion: reduce) {
+  #end-turn.blink { animation: none; background: #ffd91c; color: #3a2a08; }
+}
+
 #log {
   flex: 1;
   min-height: 80px;

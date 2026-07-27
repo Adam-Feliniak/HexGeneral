@@ -81,6 +81,18 @@ function moveCap(t) {
   return ut.moveBase + (tileOnRoad(t, t.army.player) ? ut.roadBonus : 0);
 }
 
+// czy gracz ma jeszcze jakąkolwiek jednostkę zdolną do ruchu w tej turze.
+// Patrzy tylko na licznik ruchów jednostki, nie na realną dostępność pól —
+// armia otoczona ze wszystkich stron nadal liczy się jako zdolna do ruchu,
+// bo sprawdzenie tego wymagałoby validMoves() dla każdej armii przy każdym
+// odświeżeniu UI. Używane do podpowiedzi „tura czeka na gracza" (ui.js)
+function hasMovableArmy(playerId) {
+  for (const row of state.tiles) for (const t of row) {
+    if (t.army && t.army.player === playerId && t.army.movesUsed < moveCap(t)) return true;
+  }
+  return false;
+}
+
 // pola osiągalne w tej turze (Map<pole, poprzednie pole na trasie>, bez pola
 // startowego) — wartością jest wskaźnik na poprzednika (trasa odtwarzana wstecz
 // tylko dla faktycznie wykonywanego ruchu w executeMove, zamiast kopiowania tablicy

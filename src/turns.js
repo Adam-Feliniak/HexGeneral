@@ -42,8 +42,9 @@ function startTurn() {
   if (!p.isHuman) aiStep(p.id, MOVES_PER_TURN, endTurn);
 }
 
-// kończy turę aktywnego gracza (kliknięcie "Koniec tury", wyczerpanie ruchów,
-// upłynięcie limitu czasu albo dokończenie ruchów AI) i przechodzi do kolejnego
+// kończy turę aktywnego gracza (kliknięcie "Koniec tury"/Enter, upłynięcie limitu
+// czasu albo dokończenie ruchów AI) i przechodzi do kolejnego. Wyczerpanie puli
+// ruchów świadomie NIE kończy tury — patrz komentarz w input.js
 function endTurn() {
   if (state.phase === 'over') { updateUI(); return; }
   const p = currentPlayer();

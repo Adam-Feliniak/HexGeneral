@@ -16,7 +16,14 @@ function updateUI() {
     : state.mode === 'multi'
       ? (cp.isHuman ? i18n.t('game.yourTurnMulti', { n: cp.id + 1, name: cp.name }) : i18n.t('game.botTurnMulti', { name: cp.name }))
       : '';
-  document.getElementById('end-turn').disabled = state.phase === 'over' || !cp.isHuman;
+  const endBtn = document.getElementById('end-turn');
+  endBtn.disabled = state.phase === 'over' || !cp.isHuman;
+  // miga, gdy ruchami nie da się już nic zrobić: pula wyczerpana ALBO wszystkie
+  // jednostki się w tej turze poruszyły (przy niewykorzystanej puli). Wcześniej
+  // byłoby to naganianie do kończenia tury
+  endBtn.classList.toggle('blink',
+    cp.isHuman && state.phase !== 'over' &&
+    (state.movesLeft <= 0 || !hasMovableArmy(cp.id)));
   updateTimerDisplay(performance.now());
 
   const box = document.getElementById('players');

@@ -8,6 +8,8 @@ Na starcie tury (`startTurn` w `turns.js`): zerowane jest zaznaczenie, pula ruch
 
 Tura kończy się (`endTurn`): produkcją siły w miastach gracza (`produce()`), po czym przechodzi do następnego żywego gracza; pełny obrót wszystkich graczy zwiększa `state.turn`.
 
+Turę człowieka kończy **wyłącznie sam gracz** — przycisk „Zakończ turę" albo Enter (`requestEndTurn`); w trybie multi z limitem czasu dodatkowo `checkTurnTimer`. **Wyczerpanie puli ruchów świadomie nie oddaje tury**: po ostatnim ruchu zostaje okno na decyzje niezależne od `movesLeft` — wybór produkcji miasta, rozpoczęcie budowy drogi, przypisanie złoża (`supplyCity`) i samo obejrzenie planszy. Panele miasta i złoża w `onTileClick` nie mają bramki na `movesLeft`, więc działają też przy zerze ruchów.
+
 ### Wybór imperium na starcie (tylko single-player)
 
 `canPickEmpire()` zwraca `true` tylko gdy: tryb single, gracz jest człowiekiem, to tura 1 i nie wykonał jeszcze żadnego ruchu (`movesLeft === MOVES_PER_TURN`). W tym oknie kliknięcie w **dowolną cudzą stolicę** przełącza, którym imperium gra człowiek (`switchHuman`) — porzucone imperium przechodzi pod AI z domyślną trudnością tej gry.

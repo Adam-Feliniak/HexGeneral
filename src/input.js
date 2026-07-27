@@ -60,10 +60,9 @@ function onTileClick(t) {
     // zaznaczona, żeby można było od razu wykonać kolejny ruch bez ponownego klikania na nią
     state.selected = (t.army && t.army.player === cp.id &&
       t.army.movesUsed < moveCap(t) && state.movesLeft > 0) ? t : null;
-    if (state.movesLeft <= 0 && state.phase !== 'over') {
-      const gid = state.gameId;
-      setTimeout(() => { if (state.gameId === gid) requestEndTurn(); }, 350);
-    }
+    // Turę kończy WYŁĄCZNIE gracz (przycisk / Enter) — po wyczerpaniu ruchów nie
+    // oddajemy jej automatycznie, bo zostają decyzje niezależne od puli ruchów:
+    // wybór produkcji miasta, budowa drogi, przypisanie złoża, obejrzenie planszy.
     updateUI();
     return;
   }

@@ -138,15 +138,13 @@ Legenda kosztu:
   [02-Architektura-i-pliki.md](02-Architektura-i-pliki.md). Otwiera drogę pod undo,
   scenariusze i cloud save. Nie ma ręcznych slotów (do rozważenia przy realnej
   potrzebie).
-- 🟢 **Ręczne kończenie tury (bez auto-oddawania po wyczerpaniu ruchów)** — dziś po
-  wykorzystaniu wszystkich ruchów tura sama się kończy: `input.js` (okolice linii 63)
-  odpala `requestEndTurn()` przez `setTimeout(..., 350)`, gdy `state.movesLeft <= 0`.
-  Odbiera to graczowi okno na decyzje niezależne od puli ruchów — wybór produkcji miast,
-  rozpoczęcie / kierunek budowy drogi, przypisanie złoża (`supplyCity`) czy samo
-  obejrzenie planszy po ostatnim ruchu. Propozycja: usunąć auto-oddawanie (turę kończy
-  wyłącznie gracz przyciskiem / Enterem) albo wystawić to jako opcję w ustawieniach.
-  Zmiana lokalna w `input.js` — reszta pętli tur (`requestEndTurn` / `endTurn`
-  w `turns.js`) już obsługuje ręczne kończenie.
+- ✅ **Ręczne kończenie tury (bez auto-oddawania po wyczerpaniu ruchów)** —
+  **zrealizowane** (v0.4.2): usunięte auto-oddawanie z `input.js` (`setTimeout(...,
+  350)` przy `state.movesLeft <= 0`). Turę człowieka kończy wyłącznie przycisk / Enter,
+  więc po ostatnim ruchu zostaje okno na decyzje niezależne od puli ruchów — produkcja
+  miast, budowa drogi, przypisanie złoża, obejrzenie planszy. Wariant „opcja
+  w ustawieniach" świadomie pominięty: nikt nie chciałby wracać do auto-oddawania,
+  a ekran Opcje i tak jest do rozbudowy osobno.
 - 🟡 **Cofnięcie ostatniego ruchu (undo)**, interaktywny samouczek, statystyki po partii.
 - 🟡 **Dźwięk / muzyka** — na `file://` audio trzeba zainline'ować (np. jako data-URI),
   ale jest to wykonalne.
