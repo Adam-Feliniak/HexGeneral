@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Hex General — regresja wizualna</title>
+<style>
+  body { margin: 0; background: #14120c; color: #cfc9a8; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; }
+  header { padding: 12px 16px; border-bottom: 1px solid #4a4636; position: sticky; top: 0; background: #14120c; z-index: 5; }
+  h1 { font-size: 18px; margin: 0 0 8px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .controls label { color: #9a947a; }
+  .controls input { width: 64px; background: #0f0e08; color: #cfc9a8; border: 1px solid #4a4636; border-radius: 4px; padding: 3px 6px; }
+  button { background: #2b2820; color: #ffd91c; border: 1px solid #6e6a52; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  button:hover { background: #3a362a; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #summary { margin: 8px 16px; font-size: 14px; min-height: 20px; }
+  #summary .ok { color: #7ec97e; }
+  #summary .fail { color: #ff7b7b; }
+  #summary .new { color: #ffd91c; }
+  #error { margin: 12px 16px; padding: 10px 14px; background: #3a1c1c; border: 1px solid #ff7b7b; border-radius: 6px; color: #ffb0b0; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; padding: 12px 16px; }
+  .cell { border: 1px solid #4a4636; border-radius: 6px; overflow: hidden; background: #0f0e08; }
+  .cell.fail { border-color: #ff7b7b; }
+  .cell.newb { border-color: #ffd91c; }
+  .cell .cap { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; font-size: 12px; }
+  .cell .badge { font-weight: 700; }
+  .cell.pass .badge { color: #7ec97e; }
+  .cell.fail .badge { color: #ff7b7b; }
+  .cell.newb .badge { color: #ffd91c; }
+  .thumbs { display: flex; }
+  .thumbs img { width: 100%; display: block; image-rendering: pixelacy; }
+  .thumbs .pair { width: 50%; }
+  .thumbs .pair span { display: block; text-align: center; font-size: 10px; color: #9a947a; padding: 2px; }
+  #board { display: none; }  /* prawdziwy canvas renderu — poza ekranem, źródło pikseli */
+  #stubs { display: none; }
+  .hint { color: #6e6a52; font-size: 12px; margin: 4px 16px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⬡ Hex General — regresja wizualna</h1>
+  <div class="controls">
+    <label>Partie: <input type="number" id="seeds" value="24" min="1" max="200"></label>
+    <label>Checkpointy (rundy): <input type="text" id="checkpoints" value="1,30,80" style="width:90px"></label>
+    <label>Trudność: <input type="text" id="difficulty" value="normal" style="width:80px"></label>
+    <button id="run">Uruchom</button>
+    <button id="set-baseline" disabled>Ustaw jako wzorzec</button>
+    <button id="export">Wzorzec → tekst</button>
+    <button id="import">Wczytaj wzorzec z tekstu</button>
+  </div>
+  <div id="summary">Kliknij „Uruchom", aby wyrenderować i porównać partie.</div>
+  <div class="hint">Uruchamiaj przez <b>node tools/serve.js</b> → http://localhost:8080/visual-test.html (odczyt pikseli canvasa nie działa z file://).</div>
+</header>
+<div id="error" hidden></div>
+<div id="grid"></div>
+
+<!-- prawdziwy canvas renderu (render.js wiąże #board przy wczytaniu) -->
+<canvas id="board"></canvas>
+
+<!-- stuby DOM: newGame woła applyScreen/updateUI/showOverlay, które sięgają po te
+     elementy (część bez osłon na null) — dajemy im atrapy zamiast pełnego index.html -->
+<div id="stubs">
+  <div id="app"></div><div id="menu-main"></div><div id="menu-sp-setup"></div>
+  <div id="menu-mp-setup"></div><div id="menu-tutorial"></div><div id="menu-options"></div>
+  <div id="menu-save"></div><div id="menu-continue"></div><div id="board-wrap"></div>
+  <div id="banner"></div><div id="tooltip"></div><div id="overlay"></div>
+  <div id="overlay-title"></div><div id="overlay-text"></div>
+  <div id="turn-label"></div><div id="moves-label"></div><div id="turn-player-label"></div>
+  <div id="turn-timer"></div><div id="players"></div><button id="end-turn"></button>
+  <div id="build-panel"></div><div id="build-panel-title"></div><div id="build-panel-group"></div>
+  <div id="seed-footer"></div><div id="ai-speed-field"></div><div id="ai-speed-group"></div>
+  <div id="log"></div><div id="version-tag"></div><div id="copyright-tag"></div>
+</div>
+
+<!-- warstwa logiki + render (bez main.js — nie chcemy autostartu menu) -->
+<script src="src/config.js"></script>
+<script src="src/locales-data.js"></script>
+<script src="src/i18n.js"></script>
+<script src="src/geometry.js"></script>
+<script src="src/utils.js"></script>
+<script src="src/mapgen.js"></script>
+<script src="src/state.js"></script>
+<script src="src/combat.js"></script>
+<script src="src/roads.js"></script>
+<script src="src/empire.js"></script>
+<script src="src/turns.js"></script>
+<script src="src/ai.js"></script>
+<script src="src/save.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/render.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/menu.js"></script>
+<script>
+'use strict';
+const BASELINE_KEY = 'hexgeneral.visualBaseline';
+const tcanvas = document.createElement('canvas');
+const tctx = tcanvas.getContext('2d');
+let lastRun = null; // { hashes:{}, thumbs:{} } z ostatniego przebiegu
+
+function rngSeedFor(mapSeed, rot) { return ((mapSeed * 0x9E3779B1) ^ (rot * 0x85EBCA77)) >>> 0; }
+function loadBaseline() { try { return JSON.parse(localStorage.getItem(BASELINE_KEY)) || null; } catch (e) { return null; } }
+
+// czeka aż wszystkie sprite'y (PNG z assets/) się wczytają — draw() ich potrzebuje
+function waitSprites() {
+  const imgs = [];
+  const collect = v => {
+    if (!v) return;
+    if (v instanceof HTMLImageElement) imgs.push(v);
+    else if (Array.isArray(v)) v.forEach(collect);
+    else if (typeof v === 'object') Object.values(v).forEach(collect);
+  };
+  collect(SPR);
+  return Promise.all(imgs.map(img => img.complete ? Promise.resolve()
+    : new Promise(res => { img.onload = img.onerror = res; })));
+}
+
+// FNV-1a po wszystkich bajtach klatki — czuły na każdą zmianę renderu
+function hashCanvas() {
+  const d = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < d.length; i++) { h ^= d[i]; h = Math.imul(h, 0x01000193); }
+  return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+function thumbnail() {
+  const tw = 200, th = Math.max(1, Math.round(tw * canvas.height / canvas.width));
+  tcanvas.width = tw; tcanvas.height = th;
+  tctx.imageSmoothingEnabled = false;
+  tctx.drawImage(canvas, 0, 0, tw, th);
+  return tcanvas.toDataURL('image/png');
+}
+
+// jedna partia sami-botowie do zadanych checkpointów; render + hash + miniatura
+function runSeed(seed, checkpoints, difficulty) {
+  newGame({ humanCount: 0, botCount: 6, aiDifficulty: difficulty, seed, timeLimit: Infinity });
+  Math.random = makeRng(rngSeedFor(seed, 0));
+  const diffCache = state.players.map(p => resolveDifficulty(p.difficulty));
+  const out = [];
+  let round = 0;
+  for (const cp of checkpoints) {
+    while (round < cp && state.phase !== 'over') {
+      round++;
+      state.turn = round; // wierność eskalacji AI (jak w sim.js)
+      for (let i = 0; i < state.players.length; i++) {
+        const p = state.players[i];
+        if (!p.alive || state.phase === 'over') continue;
+        resetMoved(p.id);
+        let moves = MOVES_PER_TURN, guard = 0;
+        while (moves > 0 && guard++ < 200) {
+          const mv = aiPickMove(p.id, diffCache[p.id]);
+          if (!mv) break;
+          moves -= executeMove(mv.from, mv.to);
+          if (state.phase === 'over') break;
+        }
+        if (state.phase !== 'over') produce(p.id);
+      }
+    }
+    // stabilna klatka: bez animacji/hoveru (transienty randomizowałyby piksele)
+    anims = []; floaters = []; effects = []; hoverTile = null;
+    draw(performance.now());
+    out.push({ round: cp, hash: hashCanvas(), thumb: thumbnail(), over: state.phase === 'over' });
+  }
+  return out;
+}
+
+function cell(seed, r, status, thumb, baseThumb) {
+  const div = document.createElement('div');
+  div.className = 'cell ' + (status === 'ok' ? 'pass' : status === 'fail' ? 'fail' : 'newb');
+  const badge = status === 'ok' ? '✓' : status === 'fail' ? '✗ ZMIANA' : '⭑ nowy';
+  const thumbs = status === 'fail' && baseThumb
+    ? `<div class="thumbs"><div class="pair"><span>wzorzec</span><img src="${baseThumb}"></div>`
+      + `<div class="pair"><span>teraz</span><img src="${thumb}"></div></div>`
+    : `<div class="thumbs"><img src="${thumb}"></div>`;
+  div.innerHTML = `<div class="cap"><span>seed ${seed} · runda ${r}</span><span class="badge">${badge}</span></div>` + thumbs;
+  return div;
+}
+
+async function run() {
+  const errBox = document.getElementById('error');
+  errBox.hidden = true;
+  const seeds = Math.max(1, parseInt(document.getElementById('seeds').value, 10) || 24);
+  const checkpoints = document.getElementById('checkpoints').value.split(',')
+    .map(s => parseInt(s.trim(), 10)).filter(n => n > 0);
+  const difficulty = document.getElementById('difficulty').value.trim() || 'normal';
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const summary = document.getElementById('summary');
+  summary.textContent = 'Wczytywanie sprite\'ów…';
+
+  setupCanvas();
+  if (!SPR) loadSprites();
+  await waitSprites();
+
+  const baseline = loadBaseline();
+  const run = { hashes: {}, thumbs: {} };
+  let ok = 0, fail = 0, fresh = 0;
+
+  for (let i = 0; i < seeds; i++) {
+    const seed = i + 1;
+    let snaps;
+    try {
+      snaps = runSeed(seed, checkpoints, difficulty);
+    } catch (e) {
+      errBox.hidden = false;
+      errBox.textContent = 'Wyjątek na seedzie ' + seed + ': ' + e.message;
+      break;
+    }
+    // hashCanvas mogło rzucić SecurityError (tainted canvas na file://)
+    for (const s of snaps) {
+      const key = seed + ':' + s.round;
+      run.hashes[key] = s.hash; run.thumbs[key] = s.thumb;
+      let status;
+      if (!baseline || baseline.hashes[key] === undefined) { status = 'new'; fresh++; }
+      else if (baseline.hashes[key] === s.hash) { status = 'ok'; ok++; }
+      else { status = 'fail'; fail++; }
+      grid.appendChild(cell(seed, s.round, status, s.thumb, baseline && baseline.thumbs[key]));
+    }
+    summary.innerHTML = `Postęp: ${i + 1}/${seeds} partii · `
+      + `<span class="ok">${ok} ✓</span> · <span class="fail">${fail} ✗</span> · <span class="new">${fresh} nowych</span>`;
+    await new Promise(r => setTimeout(r, 0)); // oddaj wątek, żeby miniatury malowały się na bieżąco
+  }
+
+  lastRun = run;
+  document.getElementById('set-baseline').disabled = false;
+  const verdict = !baseline ? ' — brak wzorca; kliknij „Ustaw jako wzorzec", żeby go zapisać.'
+    : fail === 0 ? ' — bez regresji ✓' : ` — ${fail} zmian do sprawdzenia!`;
+  summary.innerHTML += verdict;
+}
+
+document.getElementById('run').addEventListener('click', () => {
+  try { run(); }
+  catch (e) {
+    const errBox = document.getElementById('error');
+    errBox.hidden = false;
+    errBox.textContent = /getImageData|insecure|tainted|SecurityError/i.test(e.message)
+      ? 'Nie można odczytać pikseli canvasa — otwórz stronę przez serwer: node tools/serve.js, potem http://localhost:8080/visual-test.html'
+      : 'Błąd: ' + e.message;
+  }
+});
+document.getElementById('set-baseline').addEventListener('click', () => {
+  if (!lastRun) return;
+  localStorage.setItem(BASELINE_KEY, JSON.stringify(lastRun));
+  document.getElementById('summary').innerHTML += ' · <span class="ok">wzorzec zapisany</span>';
+});
+document.getElementById('export').addEventListener('click', () => {
+  const b = loadBaseline();
+  if (!b) { alert('Brak zapisanego wzorca.'); return; }
+  // hasze bez miniatur (miniatury są ciężkie; do przeniesienia/commita wystarczą hasze)
+  prompt('Skopiuj wzorzec (hasze):', JSON.stringify({ hashes: b.hashes }));
+});
+// auto-uruchomienie do headless smoke (np. ?auto=1&seeds=3) — bez wpływu na normalne użycie
+if (location.search.includes('auto')) {
+  const p = new URLSearchParams(location.search);
+  if (p.get('seeds')) document.getElementById('seeds').value = p.get('seeds');
+  if (p.get('checkpoints')) document.getElementById('checkpoints').value = p.get('checkpoints');
+  window.addEventListener('load', () => document.getElementById('run').click());
+}
+
+document.getElementById('import').addEventListener('click', () => {
+  const txt = prompt('Wklej wzorzec (hasze):');
+  if (!txt) return;
+  try {
+    const parsed = JSON.parse(txt);
+    if (!parsed.hashes) throw new Error('brak pola hashes');
+    localStorage.setItem(BASELINE_KEY, JSON.stringify({ hashes: parsed.hashes, thumbs: {} }));
+    document.getElementById('summary').textContent = 'Wzorzec wczytany — uruchom, aby porównać.';
+  } catch (e) { alert('Zły format: ' + e.message); }
+});
+</script>
+</body>
+</html>
