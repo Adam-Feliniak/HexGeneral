@@ -148,27 +148,9 @@ bramka przed wydaniem (obok `sim.js --games=300` dla metryk balansu).
 
 ## Protokół smoke przed wydaniem (przeglądarka, ręcznie)
 
-Ścieżek DOM headless nie sięgnie — przed każdym wydaniem przeklikać w przeglądarce
-(`Ctrl+F5` na start):
-
-1. Pełna partia single (mała liczba botów) do **wygranej** — overlay, „Nowa gra" z niego.
-2. Partia single do **przegranej** (oddaj stolicę) — overlay porażki.
-3. Start single: kliknięcie cudzej stolicy **przed pierwszym ruchem** przełącza imperium.
-4. Multi hot-seat 2 graczy **z limitem czasu** — timer odlicza, timeout oddaje turę.
-5. Budowa drogi z panelu miasta: wybór celu, podświetlenie, anulowanie w trakcie.
-6. Przypisanie złoża do miasta (panel złoża) i zmiana przypisania.
-7. Zmiana typu produkcji miasta; produkcja idzie w wybrany typ.
-8. W środku tury: „Menu główne" → **F5** → „Kontynuuj" — ta sama pozycja (w tym
-   zużyte ruchy, projekt drogi w toku, przypisania złóż).
-9. Ekran „Zapis gry": Pokaż zapis → Ctrl+C → Ctrl+V → Wczytaj; wklejenie śmieci →
-   komunikat błędu, gra nienaruszona.
-10. Wygrana partia → „Kontynuuj" znika z menu.
-11. „Nowa mapa" kliknięta w trakcie ruchu AI — nowa gra startuje czysto (bez
-    „duchów" starej tury).
-12. Przełączenie języka w trakcie partii — sidebar/panele/menu w nowym języku.
-13. Tooltipy: morze, cudze pola, złoża (z drogą i bez), armie wroga.
-14. Enter kończy turę, Esc czyści zaznaczenie/road-pick.
-15. Dłuższa sesja (kilka partii z rzędu) — brak spadku płynności.
+Ścieżek DOM headless nie sięgnie — przed każdym wydaniem przejść 15-punktową
+checklistę z **[12-Protokol-smoke.md](12-Protokol-smoke.md)** (osobny plik
+z checkboxami; jedno źródło prawdy, tu tylko odnośnik).
 
 ## Weryfikacja UI/wizualna
 
