@@ -2,44 +2,56 @@
 
 ## Siatka i tury
 
-Mapa to siatka heksagonalna **odd-r offset, pointy-top** (szczegóły geometryczne w [Architekturze](02-Architektura-i-pliki.md)). Gracze grają po kolei (`currentPlayerIndex`, `nextAliveIndex` pomija martwych graczy). Każda tura daje aktywnemu graczowi **wspólną pulę `MOVES_PER_TURN = 5` ruchów** (`state.movesLeft`) — nie każda armia osobno, tylko jeden globalny licznik na gracza, dzielony między wszystkie jego armie w tej turze.
+Mapa to siatka heksagonalna **odd-r offset, pointy-top** (szczegóły geometryczne w [Architekturze](02-Architektura-i-pliki.md)). Gracze grają po kolei (`currentPlayerIndex`, `nextAliveIndex` pomija martwych graczy). Każda tura daje aktywnemu graczowi **pulę `ACTIVATIONS_PER_TURN = 5` aktywacji** (`state.activationsLeft`) — czyli tyle *jednostek* wolno w niej rozkazać. Ile każda z nich przejdzie, zależy już od jej własnych punktów ruchu (patrz [Ruch](#ruch)).
 
-Na starcie tury (`startTurn` w `turns.js`): zerowane jest zaznaczenie, pula ruchów wraca do 5, resetuje się `movesUsed` wszystkich armii tego gracza (`resetMoved`). Jeśli to bot — od razu startuje `aiStep`.
+Na starcie tury (`startTurn` w `turns.js`): zerowane jest zaznaczenie, pula aktywacji wraca do 5, a `resetMoved` odświeża punkty ruchu wszystkich armii tego gracza i czyści ich `activated`. Jeśli to bot — od razu startuje `aiStep`.
 
 Tura kończy się (`endTurn`): produkcją siły w miastach gracza (`produce()`), po czym przechodzi do następnego żywego gracza; pełny obrót wszystkich graczy zwiększa `state.turn`.
 
-Turę człowieka kończy **wyłącznie sam gracz** — przycisk „Zakończ turę" albo Enter (`requestEndTurn`); w trybie multi z limitem czasu dodatkowo `checkTurnTimer`. **Wyczerpanie puli ruchów świadomie nie oddaje tury**: po ostatnim ruchu zostaje okno na decyzje niezależne od `movesLeft` — wybór produkcji miasta, rozpoczęcie budowy drogi, przypisanie złoża (`supplyCity`) i samo obejrzenie planszy. Panele miasta i złoża w `onTileClick` nie mają bramki na `movesLeft`, więc działają też przy zerze ruchów.
+Turę człowieka kończy **wyłącznie sam gracz** — przycisk „Zakończ turę" albo Enter (`requestEndTurn`); w trybie multi z limitem czasu dodatkowo `checkTurnTimer`. **Wyczerpanie puli świadomie nie oddaje tury**: po ostatnim ruchu zostaje okno na decyzje niezależne od ruchu — wybór produkcji miasta, rozpoczęcie budowy drogi, przypisanie złoża (`supplyCity`) i samo obejrzenie planszy. Panele miasta i złoża w `onTileClick` nie mają bramki na pulę, więc działają też przy zerze aktywacji.
 
 ### Wybór imperium na starcie (tylko single-player)
 
-`canPickEmpire()` zwraca `true` tylko gdy: tryb single, gracz jest człowiekiem, to tura 1 i nie wykonał jeszcze żadnego ruchu (`movesLeft === MOVES_PER_TURN`). W tym oknie kliknięcie w **dowolną cudzą stolicę** przełącza, którym imperium gra człowiek (`switchHuman`) — porzucone imperium przechodzi pod AI z domyślną trudnością tej gry.
+`canPickEmpire()` zwraca `true` tylko gdy: tryb single, gracz jest człowiekiem, to tura 1 i nie wykonał jeszcze żadnego ruchu (`activationsLeft === ACTIVATIONS_PER_TURN`). W tym oknie kliknięcie w **dowolną cudzą stolicę** przełącza, którym imperium gra człowiek (`switchHuman`) — porzucone imperium przechodzi pod AI z domyślną trudnością tej gry.
 
 ## Typy jednostek
 
-Armia na polu to obiekt `{ player, str, vet, movesUsed, type }`. `type` to jedna z trzech wartości zdefiniowanych w `UNIT_TYPES` (`config.js`):
+Armia na polu to obiekt `{ player, str, vet, type, mp, activated }`. `type` to jedna z trzech wartości zdefiniowanych w `UNIT_TYPES` (`config.js`):
 
-| Typ | Atak (`atk`) | Obrona (`def`) | Zasięg bazowy | Bonus z drogi | Waga wsparcia |
+| Typ | Atak (`atk`) | Obrona (`def`) | Punkty ruchu (`mp`) | Zasięg poza drogą / po drodze | Waga wsparcia |
 |---|---|---|---|---|---|
-| Piechota (`infantry`) | 1.00 | 1.00 | 1 | +1 (razem 2) | 1.00 |
-| Czołg (`tank`) | 1.25 | 0.85 | 1 | +2 (razem 3) | 0.80 |
-| Artyleria (`artillery`) | 0.75 | 1.20 | 1 | +0 (zawsze 1) | 1.80 |
+| Piechota (`infantry`) | 1.00 | 1.00 | 2 | 1 / 2 pola | 1.00 |
+| Czołg (`tank`) | 1.25 | 0.85 | 4 | 2 / 4 pola | 0.80 |
+| Artyleria (`artillery`) | 0.75 | 1.20 | 2 | 1 / 2 pola | 1.80 |
 
-Piechota to neutralny punkt odniesienia (mnożniki 1.00/1.00, identyczne z zachowaniem gry sprzed wprowadzenia typów). Czołg jest szybki i mocny w ataku, ale słabszy w obronie. Artyleria jest wolna (nigdy nie korzysta z bonusu drogi) i słaba w bezpośrednim ataku, ale silna w obronie i daje **prawie dwukrotnie większe wsparcie** sąsiadującym własnym armiom w bitwie niż piechota.
+Piechota to neutralny punkt odniesienia (mnożniki 1.00/1.00, identyczne z zachowaniem gry sprzed wprowadzenia typów). Czołg jest szybki i mocny w ataku, ale słabszy w obronie. Artyleria jest słaba w bezpośrednim ataku, ale silna w obronie i daje **prawie dwukrotnie większe wsparcie** sąsiadującym własnym armiom w bitwie niż piechota.
 
 Typ jednostki wybiera się w mieście, które ją produkuje (`city.buildType`) — patrz [Gospodarka](05-Gospodarka.md). Renderowanie (jaki sprite jest rysowany) zależy wyłącznie od `army.type`, nie od siły — to inna zasada niż okręty (patrz niżej).
 
 ## Ruch
 
-### Zasięg ruchu (`moveCap`)
+### Dwa budżety: aktywacje i punkty ruchu
 
-```js
-function moveCap(t) {
-  const ut = UNIT_TYPES[t.army.type];
-  return ut.moveBase + (tileOnRoad(t, t.army.player) ? ut.roadBonus : 0);
-}
-```
+Ruch ma **dwa niezależne limity**, których nie należy mylić:
 
-Piechota: 1 pole normalnie, 2 na aktywnej drodze. Czołg: 1 normalnie, **3** na drodze. Artyleria: zawsze 1, drogi jej nie przyspieszają. "Aktywna droga" to pole leżące na trasie własnego, nieprzerwanego połączenia złoże→miasto (`tileOnRoad`, patrz [Gospodarka](05-Gospodarka.md)).
+1. **Pula aktywacji gracza** (`state.activationsLeft`, `ACTIVATIONS_PER_TURN = 5`) — ile *jednostek* wolno rozkazać w turze. Aktywacja schodzi **raz na jednostkę**: kolejne ruchy tej samej armii w tej samej turze są darmowe, dopóki ma punkty ruchu. To ten limit tworzy napięcie „które 5 jednostek jest teraz ważne".
+2. **Punkty ruchu jednostki** (`army.mp`) — jak daleko ta konkretna armia dojdzie. Odświeżane na starcie tury przez `resetMoved`.
+
+`executeMove()` zwraca **liczbę zużytych aktywacji** (1 przy pierwszym ruchu armii, 0 przy kolejnym) i samo spina `army.mp`. Pulę aktywacji prowadzą wywołujący: człowiek `state.activationsLeft` (`input.js`), bot własny licznik rekurencji w `aiStep()`.
+
+### Koszt wejścia na pole (`moveCostStep`)
+
+| Wejście na | Koszt |
+|---|---|
+| własną drogę (`tileOnRoad`) | `MOVE_COST_ROAD = 1` |
+| każde inne pole (ląd, morze, miasto) | `MOVE_COST_DEFAULT = 2` |
+| przejście ląd↔woda | **cała pozostała pula** |
+
+Koszt jest właściwością **przejścia**, nie kafelka — dlatego `moveCostStep(from, to, playerId)` bierze oba pola. Kluczowa konsekwencja: **droga premiuje podróżowanie po niej, nie stanie na niej.** Czołg jadący drogą pokona 4 pola, ale ten sam czołg zjeżdżający z drogi w czyste pole zrobi tylko 2. (Poprzedni model dokładał `roadBonus` na podstawie pola, na którym jednostka stała, więc dawał dodatkowy zasięg **w każdym kierunku** — aurę zamiast korytarza.)
+
+Pula zależy od tego, **gdzie jednostka stoi na początku tury** (`maxMovePoints`): na lądzie `UNIT_TYPES[type].mp`, na morzu `SEA_MOVE_POINTS = 6` **jednakowo dla wszystkich typów** (przy koszcie 2 za pole = 3 pola żeglugi). Po zaokrętowaniu typ lądowy przestaje mieć znaczenie — tak samo jak w renderze, gdzie klasa okrętu wynika z siły armii, nie z typu.
+
+Jednostka z **pełną** pulą może zawsze wejść na jedno sąsiednie pole, choćby koszt pulę przekraczał. Dziś nie ma terenu droższego niż 2, więc reguła jest rezerwą pod przyszłe typy terenu (koszt 3+ nie zablokuje piechoty z 2 MP).
 
 ### Legalność kroku (`canStep`)
 
@@ -50,11 +62,15 @@ Pojedynczy krok z pola `from` na sąsiednie pole `to` jest legalny, jeśli:
 
 ### Wielokrokowa ścieżka (`reachableMoves`)
 
-BFS od pola startowego, do `moveCap` kroków. **Pola pośrednie na trasie muszą być puste** — nie da się "przeskoczyć" przez zajęty heks (ani wroga, ani własny). Tylko **ostatnie** pole na trasie może być zajęte: przez wroga (wtedy dochodzi do bitwy) albo przez własną armię tego samego typu (wtedy następuje połączenie).
+**Dijkstra** (maksymalizacja pozostałych punktów ruchu), nie BFS — koszty pól są różne, więc liczenie samych kroków dawałoby złe zasięgi. Zwraca `Map<pole, poprzednik>`, z której `executeMove` odtwarza trasę wstecz.
+
+Reguły trasy:
+- **Pola pośrednie muszą być puste** — nie da się "przeskoczyć" przez zajęty heks (ani wroga, ani własny). Tylko **ostatnie** pole może być zajęte: przez wroga (bitwa) albo własną armię tego samego typu (połączenie).
+- **Przejście ląd↔woda jest krokiem terminalnym.** Zeruje pulę, więc trasa nie może za nim kontynuować: `woda → woda → ląd` jest legalna, `ląd → woda → woda` nie. Nie ma potrzeby osobnego znacznika — zerowa pula sama zatrzymuje rozwijanie.
 
 ### Łączenie armii (merge)
 
-Wejście na pole z własną armią **tego samego typu** sumuje siły (`str`, ograniczone do `MAX_ARMY = 99`) i bierze **wyższy** z dwóch poziomów weterancji (`Math.max`, nie sumę). Połączona armia ma `movesUsed` ustawione na `Infinity` — zużyła swój ruch w tej turze. Różne typy nigdy się nie łączą (blokowane już na etapie `canStep`, więc pole zajęte przez inny typ w ogóle nie pojawia się jako legalny ruch).
+Wejście na pole z własną armią **tego samego typu** sumuje siły (`str`, ograniczone do `MAX_ARMY = 99`) i bierze **wyższy** z dwóch poziomów weterancji (`Math.max`, nie sumę). Połączona armia dostaje `mp = 0` i `activated = true` — bez tego dostałaby w tej turze ruch „za darmo", cudzymi punktami. Różne typy nigdy się nie łączą (blokowane już na etapie `canStep`, więc pole zajęte przez inny typ w ogóle nie pojawia się jako legalny ruch).
 
 ## Morale
 
@@ -125,7 +141,9 @@ Wizualnie pokazywana jako odznaka nad jednostką (`drawVetBadge` w `render.js`):
 
 Armia może wejść na wodę tylko z morza albo z **własnego portu** (miasto sąsiadujące z wodą, patrz [Generowanie mapy](03-Generowanie-mapy.md)) i może wylądować na **dowolnym** wybrzeżu (nie tylko porcie) — asymetria odzwierciedlona też w grafie spójności generatora mapy. Na morzu obowiązuje kara -15 do morale (patrz wyżej), niezależnie od typu jednostki.
 
-**Klasa okrętu jest czysto kosmetyczna** i niezwiązana z `army.type` — na wodzie sprite dobierany jest wyłącznie wg progu siły (`str`): poniżej 20 barka desantowa, 20–69 pancernik, 70+ lotniskowiec. Mechanika walki/ruchu na morzu jest identyczna dla każdego typu lądowego, który akurat płynie.
+**Zaokrętowanie i desant zużywają całą pozostałą pulę punktów ruchu** (wystarczy 1 punkt, żeby przejście wykonać). Ponieważ taki krok jest terminalny, w jednej turze nie da się wsiąść na statek i odpłynąć ani wylądować i wjechać w głąb lądu: desant zdobywa przyczółek, a obrońca dostaje turę na reakcję.
+
+Na morzu każda jednostka ma `SEA_MOVE_POINTS = 6` (**3 pola żeglugi**) niezależnie od typu lądowego. Spójnie z tym **klasa okrętu jest czysto kosmetyczna** i niezwiązana z `army.type` — na wodzie sprite dobierany jest wyłącznie wg progu siły (`str`): poniżej 20 barka desantowa, 20–69 pancernik, 70+ lotniskowiec. Gdyby kiedyś powiązać pulę morską z klasą okrętu, te progi są już w kodzie.
 
 ## Podboje i koniec gry
 

@@ -172,7 +172,7 @@ function drawArmy(t, now) {
     x = anim.x0 + (anim.x1 - anim.x0) * k;
     y = anim.y0 + (anim.y1 - anim.y0) * k;
   }
-  const dim = army.movesUsed >= moveCap(t) && army.player === state.currentPlayerIndex &&
+  const dim = !armyCanMove(t) && army.player === state.currentPlayerIndex &&
     state.phase !== 'over' && currentPlayer().isHuman;
   ctx.save();
   ctx.globalAlpha = dim ? 0.55 : 1;

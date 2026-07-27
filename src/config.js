@@ -18,7 +18,22 @@ const MAP_W = 23;
 const MAP_H = 14;
 const HEX = 28;                       // promień heksa (px)
 const HEX_W = Math.sqrt(3) * HEX;     // szerokość heksa (pointy-top)
-const MOVES_PER_TURN = 5;
+// Ile jednostek gracz może rozkazać w jednej turze. Aktywacja liczy się RAZ na
+// jednostkę: kolejne ruchy tej samej armii w tej turze są darmowe, dopóki ma
+// punkty ruchu. (Uwaga: "MP" w MP_PLAYER_COUNTS niżej to multiplayer, nie punkty ruchu.)
+const ACTIVATIONS_PER_TURN = 5;
+
+// Koszt wejścia na pole w punktach ruchu. Własna droga jest tania — dzięki temu
+// droga premiuje PODRÓŻOWANIE po niej, a nie samo stanie na niej (tak działał
+// dawny roadBonus, dodając zasięg w każdym kierunku, także w czyste pole).
+const MOVE_COST_ROAD = 1;
+const MOVE_COST_DEFAULT = 2;
+
+// Pula na morzu jest wspólna dla wszystkich typów lądowych: po zaokrętowaniu typ
+// przestaje mieć znaczenie (render.js dobiera klasę okrętu po sile armii, nie po
+// typie). 6 punktów przy koszcie 2 za pole = 3 pola żeglugi.
+const SEA_MOVE_POINTS = 6;
+
 const MAX_ARMY = 99;
 const CITY_COUNT = 16;
 const RESOURCE_COUNT = 6;             // złoża surowców na mapie
@@ -85,12 +100,14 @@ const AI_ESC_ASSAULT_RANGE = 4;
 const AI_SIEGE_MIN_STR = 25;
 
 // typy jednostek lądowych — atk/def: mnożniki armyPowerAt (siły w ataku/obronie),
-// moveBase/roadBonus: zasięg ruchu (moveCap) poza/na aktywnej drodze,
-// supportWeight: waga wkładu tej armii we wsparcie sąsiadów w bitwie (supportFor)
+// supportWeight: waga wkładu tej armii we wsparcie sąsiadów w bitwie (supportFor),
+// mp: punkty ruchu na turę na lądzie (koszt pola: 1 na własnej drodze, 2 poza nią),
+// więc piechota 1 pole / 2 po drodze, czołg 2 / 4, artyleria 1 / 2. Na morzu wszystkie
+// typy dostają SEA_MOVE_POINTS zamiast własnego mp.
 const UNIT_TYPES = {
-  infantry:  { key: 'infantry',  atk: 1.00, def: 1.00, moveBase: 1, roadBonus: 1, supportWeight: 1.00 },
-  tank:      { key: 'tank',      atk: 1.25, def: 0.85, moveBase: 1, roadBonus: 2, supportWeight: 0.80 },
-  artillery: { key: 'artillery', atk: 0.75, def: 1.20, moveBase: 1, roadBonus: 0, supportWeight: 1.80 },
+  infantry:  { key: 'infantry',  atk: 1.00, def: 1.00, mp: 2, supportWeight: 1.00 },
+  tank:      { key: 'tank',      atk: 1.25, def: 0.85, mp: 4, supportWeight: 0.80 },
+  artillery: { key: 'artillery', atk: 0.75, def: 1.20, mp: 2, supportWeight: 1.80 },
 };
 const UNIT_TYPE_ORDER = ['infantry', 'tank', 'artillery']; // kolejność w panelu budowy
 const DEFAULT_UNIT_TYPE = 'infantry';

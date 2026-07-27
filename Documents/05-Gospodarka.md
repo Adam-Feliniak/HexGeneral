@@ -15,7 +15,7 @@ gain = max(1, round(base * mult))
 
 Najpierw sprawdzane jest, czy miasto ma aktywny **projekt drogi** (`t.city.roadProject`, patrz niżej) — jeśli tak, `gain` z tej tury dolicza się do jego postępu zamiast do jednostek, i tyle (miasto nie buduje wtedy żadnej armii). W przeciwnym razie zależy od tego, co stoi na polu miasta i jaki typ jednostki miasto ma aktualnie wybrany do budowy (`city.buildType`, domyślnie `'infantry'`):
 
-- **Pole puste** → powstaje nowa armia typu `buildType`, z `vet: 0` i `movesUsed: Infinity` (nie może ruszyć się w tej samej turze, w której powstała).
+- **Pole puste** → powstaje nowa armia typu `buildType`, z `vet: 0` i `mp: 0` (nie może ruszyć się w tej samej turze, w której powstała — pełną pulę dostanie od `resetMoved` na starcie następnej tury).
 - **Stoi własna armia tego samego typu co `buildType`** → jej `str` rośnie o `gain` (ograniczone do `MAX_ARMY = 99`).
 - **Stoi własna armia INNEGO typu niż `buildType`** → **produkcja tej tury po prostu przepada**. Nie jest odkładana ani konwertowana — to celowo najprostsza reguła spójna z resztą gry (jedno pole trzyma dokładnie jedną armię, bez systemu kolejkowania). Gracz/AI ma pełną kontrolę: wystarczy zmienić `buildType` z powrotem, żeby produkcja znów działała.
 
@@ -98,13 +98,14 @@ wybrać inne z listy połączonych (`connectedCities`) — wybór zapisuje `reso
 i można go zmieniać. Wiele dróg do jednego złoża **nie** zwielokrotnia bonusu (jedno złoże =
 jeden +1). AI nie rusza wyboru (zostaje domyślne najbliższe).
 
-### Bonus ruchu i przecięcie
+### Zniżka ruchu i przecięcie
 
 `tileOnRoad(t, playerId)` = pole jest własnym heksem drogi (`t.road.owner === playerId &&
-t.owner === playerId`). Jednostka na takim polu ma większy zasięg ruchu (`moveCap` dolicza
-`roadBonus` typu: piechota +1, czołg +2, artyleria +0 — patrz
-[Mechanika rozgrywki](04-Mechanika-rozgrywki.md)). Bonus obejmuje całą sieć, także odcinki
-jeszcze w budowie.
+t.owner === playerId`). Wejście na takie pole kosztuje `MOVE_COST_ROAD = 1` punkt ruchu zamiast `MOVE_COST_DEFAULT = 2`
+(`moveCostStep` — patrz [Mechanika rozgrywki](04-Mechanika-rozgrywki.md)). Zniżka dotyczy
+**wejścia na drogę**, więc premiuje jazdę wzdłuż sieci, a nie samo stanie na niej: czołg
+przejedzie drogą 4 pola, ale zjeżdżając z niej w czyste pole tylko 2. Obejmuje całą sieć,
+także odcinki jeszcze w budowie.
 
 Przecięcie sieci = **wróg zajmuje heks drogi**: `captureTile` kasuje `t.road` na tym polu,
 więc sieć się rozspójnia (`connectedCities`/`supplyCityFor` liczą połączenia na bieżąco).

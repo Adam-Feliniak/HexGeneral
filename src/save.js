@@ -7,8 +7,7 @@
    z trzech powodów:
    - referencje do kafelków (roadProject.target/segment, supplyCity)
      muszą być zapisane jako współrzędne [c, r] i odtworzone po wczytaniu,
-   - Infinity (timeLimit, movesUsed świeżej armii) ginie w JSON (-> null),
-     więc kodujemy je stringiem 'inf',
+   - Infinity (timeLimit) ginie w JSON (-> null), więc kodujemy je stringiem 'inf',
    - transienty (selekcje, turnStartTime z performance.now(), gameId)
      nie mają sensu w zapisie i są odtwarzane na świeżo.
 
@@ -18,7 +17,9 @@
    (świadomie bez migracji przed 1.0).
    ============================================================ */
 
-const SAVE_FORMAT = 1;
+// 2: ruch przeszedł na punkty ruchu (army.mp/activated zamiast movesUsed,
+//    state.activationsLeft zamiast movesLeft) — zapisy formatu 1 są niezgodne
+const SAVE_FORMAT = 2;
 const SAVE_STORAGE_KEY = 'hexgeneral.save';
 
 // JSON nie zna Infinity (zamienia na null) — kodujemy jawnie
@@ -40,7 +41,7 @@ function serializeGame() {
     if (t.army) {
       st.army = {
         player: t.army.player, str: t.army.str, vet: t.army.vet,
-        movesUsed: saveEncInf(t.army.movesUsed), type: t.army.type,
+        mp: t.army.mp, activated: !!t.army.activated, type: t.army.type,
       };
     }
     if (t.city) {
@@ -72,7 +73,7 @@ function serializeGame() {
       phase: state.phase, human: state.human,
       humanPlayerCount: state.humanPlayerCount, aiDifficulty: state.aiDifficulty,
       currentPlayerIndex: state.currentPlayerIndex,
-      timeLimit: saveEncInf(state.timeLimit), movesLeft: state.movesLeft,
+      timeLimit: saveEncInf(state.timeLimit), activationsLeft: state.activationsLeft,
       players: state.players.map(p => ({
         name: p.name, color: p.color, dark: p.dark, id: p.id, alive: p.alive,
         capital: p.capital.slice(), isHuman: p.isHuman, difficulty: p.difficulty,
@@ -110,7 +111,7 @@ function deserializeGame(data) {
     if (st.army) {
       t.army = {
         player: st.army.player, str: st.army.str, vet: st.army.vet,
-        movesUsed: saveDecInf(st.army.movesUsed), type: st.army.type,
+        mp: st.army.mp || 0, activated: !!st.army.activated, type: st.army.type,
       };
     }
     if (st.city) {
@@ -159,7 +160,7 @@ function deserializeGame(data) {
     turnStartTime: performance.now(),
     timeLimit: saveDecInf(g.timeLimit),
     aiSpeed: (state && state.aiSpeed) || 1, // preferencja sesji, nie część zapisu
-    movesLeft: g.movesLeft,
+    activationsLeft: g.activationsLeft,
     selected: null,
     selectedCity: null,
     selectedResource: null,
@@ -217,9 +218,9 @@ function resumeLoadedGame() {
     // zapis powstał w trakcie tury AI (wyjście do menu) — budżet ruchów AI żyje
     // w zamknięciu aiStep i nie jest serializowalny, więc AI zaczyna turę od
     // nowa; to czyste, bo produce() odpala się dopiero na końcu tury
-    state.movesLeft = MOVES_PER_TURN;
+    state.activationsLeft = ACTIVATIONS_PER_TURN;
     resetMoved(p.id);
-    aiStep(p.id, MOVES_PER_TURN, endTurn);
+    aiStep(p.id, ACTIVATIONS_PER_TURN, endTurn);
   }
 }
 

@@ -55,8 +55,8 @@ function rngSeedFor(mapSeed, rot) {
 
 // sterownik jednej partii (string wstrzykiwany do kontekstu vm). Ma bezpośredni
 // dostęp do state, newGame, aiPickMove, executeMove, produce, resetMoved,
-// MOVES_PER_TURN. Wierny pętli gry: resetMoved na starcie tury, do
-// MOVES_PER_TURN "hopów" ruchu, produce na koniec. Zwraca zwięzły wynik.
+// ACTIVATIONS_PER_TURN. Wierny pętli gry: resetMoved na starcie tury, do
+// ACTIVATIONS_PER_TURN aktywacji jednostek, produce na koniec. Zwraca zwięzły wynik.
 const DRIVER_SRC = `
   (function makeDriver() {
     return function __simRunGame(o) {
@@ -83,11 +83,11 @@ const DRIVER_SRC = `
           if (!p.alive) continue;
           if (state.phase === 'over') break;
           resetMoved(p.id);
-          var moves = MOVES_PER_TURN, guard = 0;
-          while (moves > 0 && guard++ < 200) {
+          var activations = ACTIVATIONS_PER_TURN, guard = 0;
+          while (activations > 0 && guard++ < 200) {
             var mv = aiPickMove(p.id, diffCache[p.id]);
             if (!mv) break;
-            moves -= executeMove(mv.from, mv.to);
+            activations -= executeMove(mv.from, mv.to);
             if (state.phase === 'over') break;
           }
           if (state.phase === 'over') break;

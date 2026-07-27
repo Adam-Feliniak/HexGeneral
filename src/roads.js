@@ -165,7 +165,7 @@ function failRoadProject(fromCityTile) {
   addLog(i18n.t('log.roadFailed', { city: fromCityTile.city.name }));
 }
 
-// czy pole daje bonus ruchu — dowolny własny heks drogi (patrz moveCap w combat.js)
+// czy pole daje zniżkę ruchu — dowolny własny heks drogi (patrz moveCostStep w combat.js)
 function tileOnRoad(t, playerId) {
   return !!(t.road && t.road.owner === playerId && t.owner === playerId);
 }
@@ -212,7 +212,9 @@ function produce(playerId) {
       // (jedno pole = jedna armia, bez kolejkowania; gracz/AI może zmienić buildType)
       if (t.army.type === buildType) t.army.str = Math.min(MAX_ARMY, t.army.str + gain);
     } else if (!t.army) {
-      t.army = { player: playerId, str: gain, vet: 0, movesUsed: Infinity, type: buildType };
+      // mp: 0 — świeża jednostka nie rusza się w turze powstania; resetMoved
+      // da jej pełną pulę na początku następnej tury gracza
+      t.army = { player: playerId, str: gain, vet: 0, type: buildType, mp: 0, activated: false };
     }
   }
 }

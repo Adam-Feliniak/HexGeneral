@@ -4,9 +4,16 @@
    kolejny człowiek przy stole w trybie multi/hot-seat)
    ============================================================ */
 
+// odświeża pulę punktów ruchu i czyści aktywacje na początek tury gracza.
+// Pula zależy od tego, GDZIE jednostka stoi (maxMovePoints): na morzu wszystkie
+// typy dostają tyle samo. Przejście ląd<->woda jest krokiem terminalnym, więc
+// pula nigdy nie zmienia się w środku ruchu — ustalenie jej raz tutaj wystarcza
 function resetMoved(playerId) {
   for (const row of state.tiles) for (const t of row) {
-    if (t.army && t.army.player === playerId) t.army.movesUsed = 0;
+    if (t.army && t.army.player === playerId) {
+      t.army.mp = maxMovePoints(t);
+      t.army.activated = false;
+    }
   }
 }
 
@@ -25,7 +32,7 @@ function startTurn() {
   if (state.phase === 'over') { updateUI(); return; }
   const p = currentPlayer();
   state.selected = null;
-  state.movesLeft = MOVES_PER_TURN;
+  state.activationsLeft = ACTIVATIONS_PER_TURN;
   state.turnStartTime = performance.now();
   resetMoved(p.id);
   if (state.mode === 'multi') {
@@ -39,7 +46,7 @@ function startTurn() {
   // autozapis na początku tury człowieka — spójny punkt wznowienia (osłona typeof,
   // bo headless harness/sim ładuje turns.js bez save.js)
   if (p.isHuman && typeof autosave === 'function') autosave();
-  if (!p.isHuman) aiStep(p.id, MOVES_PER_TURN, endTurn);
+  if (!p.isHuman) aiStep(p.id, ACTIVATIONS_PER_TURN, endTurn);
 }
 
 // kończy turę aktywnego gracza (kliknięcie "Koniec tury"/Enter, upłynięcie limitu

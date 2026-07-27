@@ -73,22 +73,48 @@ function canStep(from, to, playerId, unitType) {
   return !blockedByFriendly(to, playerId, unitType);
 }
 
-// zasięg ruchu jednostki w tej turze (w polach) — zależy od typu, dodatkowy
-// bonus z aktywnej drogi też jest typowo-zależny (patrz UNIT_TYPES w config.js)
-function moveCap(t) {
+// pełna pula punktów ruchu jednostki stojącej na tym polu — na morzu typ nie ma
+// znaczenia (patrz SEA_MOVE_POINTS w config.js)
+function maxMovePoints(t) {
   if (!t.army) return 0;
-  const ut = UNIT_TYPES[t.army.type];
-  return ut.moveBase + (tileOnRoad(t, t.army.player) ? ut.roadBonus : 0);
+  return t.land ? UNIT_TYPES[t.army.type].mp : SEA_MOVE_POINTS;
 }
 
-// czy gracz ma jeszcze jakąkolwiek jednostkę zdolną do ruchu w tej turze.
-// Patrzy tylko na licznik ruchów jednostki, nie na realną dostępność pól —
-// armia otoczona ze wszystkich stron nadal liczy się jako zdolna do ruchu,
-// bo sprawdzenie tego wymagałoby validMoves() dla każdej armii przy każdym
-// odświeżeniu UI. Używane do podpowiedzi „tura czeka na gracza" (ui.js)
+// czy przejście between polami zmienia środowisko (załadunek na statek albo desant)
+function isEmbarkStep(from, to) {
+  return !!from.land !== !!to.land;
+}
+
+// koszt wejścia z `from` na `to`. Przejście ląd<->woda zżera CAŁĄ pozostałą pulę,
+// dlatego zwracamy Infinity — wywołujący traktuje je jako krok kończący ruch
+// (patrz reachableMoves: takie pole jest terminalne). Legalność przejścia rozstrzyga
+// canStep (na wodę tylko z morza albo własnego portu), tu liczy się wyłącznie koszt.
+function moveCostStep(from, to, playerId) {
+  if (isEmbarkStep(from, to)) return Infinity;
+  return tileOnRoad(to, playerId) ? MOVE_COST_ROAD : MOVE_COST_DEFAULT;
+}
+
+// Dwa poziomy, bo pula aktywacji ma dwóch właścicieli: człowiek wydaje
+// state.activationsLeft, a AI prowadzi własny licznik w rekurencji aiStep().
+//
+// poziom jednostki — czy ma jeszcze punkty ruchu. Nie sprawdza realnej dostępności
+// pól: armia otoczona ze wszystkich stron nadal liczy się jako zdolna do ruchu, bo
+// wymagałoby to validMoves() dla każdej armii przy każdym odświeżeniu UI
+function armyCanMove(t) {
+  return !!t.army && t.army.mp > 0;
+}
+
+// poziom gracza-człowieka — czy tę armię wolno teraz rozkazać. Już aktywowana
+// jednostka nie potrzebuje kolejnej aktywacji, dopóki ma punkty ruchu
+function armyCanBeOrdered(t) {
+  return armyCanMove(t) && (t.army.activated || state.activationsLeft > 0);
+}
+
+// czy gracz ma jeszcze jakąkolwiek jednostkę do rozkazania w tej turze —
+// podpowiedź „tura czeka na gracza" (ui.js)
 function hasMovableArmy(playerId) {
   for (const row of state.tiles) for (const t of row) {
-    if (t.army && t.army.player === playerId && t.army.movesUsed < moveCap(t)) return true;
+    if (t.army && t.army.player === playerId && armyCanBeOrdered(t)) return true;
   }
   return false;
 }
@@ -102,22 +128,43 @@ function hasMovableArmy(playerId) {
 // własną (połączenie)
 function reachableMoves(t) {
   if (!t.army) return new Map();
-  const seen = new Map([[t, null]]);
-  let frontier = [t];
-  for (let step = 0; step < moveCap(t); step++) {
-    const next = [];
-    for (const cur of frontier) {
-      if (cur !== t && cur.army) continue;
-      for (const n of neighborsOf(cur)) {
-        if (seen.has(n) || !canStep(cur, n, t.army.player, t.army.type)) continue;
-        seen.set(n, cur);
-        next.push(n);
+  const playerId = t.army.player, unitType = t.army.type;
+  const full = maxMovePoints(t);
+  const prev = new Map([[t, null]]);
+  const left = new Map([[t, t.army.mp]]); // ile MP zostaje po dotarciu na pole
+  const queue = [t];
+  while (queue.length) {
+    // zawsze rozwijamy pole z największym zapasem MP (Dijkstra na maksimum);
+    // pól jest MAP_W*MAP_H, więc liniowe szukanie maksimum jest tańsze niż kopiec
+    let bi = 0;
+    for (let i = 1; i < queue.length; i++) if (left.get(queue[i]) > left.get(queue[bi])) bi = i;
+    const cur = queue.splice(bi, 1)[0];
+    const mpLeft = left.get(cur);
+    // 0 MP = koniec marszu; po przejściu ląd<->woda zawsze tu trafiamy, co samo
+    // czyni desant/załadunek krokiem terminalnym (bez osobnego znacznika)
+    if (mpLeft <= 0) continue;
+    // armia na polu pośrednim kończy ruch (starcie albo połączenie) — nie rozwijamy
+    if (cur !== t && cur.army) continue;
+    for (const n of neighborsOf(cur)) {
+      if (!canStep(cur, n, playerId, unitType)) continue;
+      let nextMp;
+      if (isEmbarkStep(cur, n)) {
+        nextMp = 0; // zżera całą pulę, ale wystarczy 1 MP, żeby wykonać przejście
+      } else {
+        const cost = moveCostStep(cur, n, playerId);
+        // pełna pula zawsze pozwala wejść na jedno pole, choćby koszt ją przekraczał
+        // (rezerwa pod przyszły drogi teren o koszcie > mp piechoty)
+        if (cost > mpLeft && !(cur === t && mpLeft >= full)) continue;
+        nextMp = Math.max(0, mpLeft - cost);
       }
+      if (left.has(n) && left.get(n) >= nextMp) continue;
+      left.set(n, nextMp);
+      prev.set(n, cur);
+      queue.push(n);
     }
-    frontier = next;
   }
-  seen.delete(t);
-  return seen;
+  prev.delete(t);
+  return prev;
 }
 
 function validMoves(t) {
@@ -162,9 +209,11 @@ function resolveBattle(from, to) {
   }
 }
 
-// wykonuje ruch armii na pole `to` (zakłada, że jest w reachableMoves(from));
-// zwraca liczbę pól faktycznie pokonanych (1 albo 2 przy skoku po drodze) —
-// tyle kosztuje to w puli ruchów tury (state.movesLeft)
+// wykonuje ruch armii na pole `to` (zakłada, że jest w reachableMoves(from)).
+// Zwraca liczbę ZUŻYTYCH AKTYWACJI: 1, gdy armia rusza się w tej turze pierwszy raz,
+// 0 przy kolejnym ruchu tej samej armii — tyle kosztuje to w puli tury
+// (state.activationsLeft u człowieka, lokalny licznik w aiStep u bota).
+// Punkty ruchu armii spina sama ta funkcja.
 function executeMove(from, to) {
   // odtworzenie trasy ze wskaźników poprzedników (patrz reachableMoves); dla pola
   // spoza zasięgu pętla urywa się od razu i zostaje [to] — jak dawny fallback
@@ -174,29 +223,42 @@ function executeMove(from, to) {
   path.reverse();
   if (!path.length) path.push(to);
   const army = from.army;
+  const usedActivation = army.activated ? 0 : 1;
+  army.activated = true;
+  // koszt liczony po faktycznej trasie; przejście ląd<->woda zeruje pulę (może być
+  // tylko ostatnim krokiem, patrz reachableMoves, ale liczymy ogólnie)
+  let mp = army.mp;
+  let at = from;
+  for (const step of path) {
+    mp = isEmbarkStep(at, step) ? 0 : Math.max(0, mp - moveCostStep(at, step, army.player));
+    at = step;
+  }
+  army.mp = mp;
   // pola pośrednie na trasie są zawsze puste (patrz reachableMoves) — armia
   // przechodząca przez nie zajmuje je tak samo jak dawny ruch krok-po-kroku
   for (const step of path.slice(0, -1)) captureTile(step, army.player);
 
   if (to.army && to.army.player !== army.player) {
     const won = resolveBattle(from, to);
-    if (!won) { updateUI(); return path.length; } // armia atakująca zniszczona — ruch zużyty
+    // armia atakująca zniszczona — aktywacja i tak zużyta
+    if (!won) { updateUI(); return usedActivation; }
   }
   if (to.army && to.army.player === army.player) {
     // łączenie armii — zawsze tego samego typu, bo canStep blokuje wejście
     // na pole z własną armią innego typu (nie ma tu więc czego sprawdzać)
     to.army.str = Math.min(MAX_ARMY, to.army.str + army.str);
     to.army.vet = Math.max(to.army.vet, army.vet);
-    to.army.movesUsed = Infinity;
+    // scalona armia kończy turę: bez tego dostałaby ruch "za darmo" cudzymi punktami
+    to.army.mp = 0;
+    to.army.activated = true;
     from.army = null;
   } else {
     from.army = null;
     to.army = army;
-    army.movesUsed += path.length;
     captureTile(to, army.player);
   }
   const a = hexCenter(from.c, from.r), b = hexCenter(to.c, to.r);
   anims.push({ tile: to, x0: a.x, y0: a.y, x1: b.x, y1: b.y, t: 0 });
   updateUI();
-  return path.length;
+  return usedActivation;
 }

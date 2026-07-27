@@ -9,7 +9,7 @@ function updateUI() {
   document.getElementById('turn-label').textContent = i18n.t('game.turn', { n: state.turn });
   document.getElementById('moves-label').textContent =
     state.phase === 'over' ? i18n.t('game.gameOver')
-    : cp.isHuman ? i18n.t('game.movesLeft', { moves: state.movesLeft, total: MOVES_PER_TURN })
+    : cp.isHuman ? i18n.t('game.orders', { orders: state.activationsLeft, total: ACTIVATIONS_PER_TURN })
     : i18n.t('game.enemyMoving');
   document.getElementById('turn-player-label').textContent =
     state.phase === 'over' ? ''
@@ -18,12 +18,11 @@ function updateUI() {
       : '';
   const endBtn = document.getElementById('end-turn');
   endBtn.disabled = state.phase === 'over' || !cp.isHuman;
-  // miga, gdy ruchami nie da się już nic zrobić: pula wyczerpana ALBO wszystkie
-  // jednostki się w tej turze poruszyły (przy niewykorzystanej puli). Wcześniej
-  // byłoby to naganianie do kończenia tury
+  // miga, gdy nie da się już nic rozkazać: brak aktywacji ALBO żadna jednostka nie
+  // ma punktów ruchu. hasMovableArmy() sprawdza oba warunki naraz (armyCanBeOrdered),
+  // więc wystarczy samo to wywołanie
   endBtn.classList.toggle('blink',
-    cp.isHuman && state.phase !== 'over' &&
-    (state.movesLeft <= 0 || !hasMovableArmy(cp.id)));
+    cp.isHuman && state.phase !== 'over' && !hasMovableArmy(cp.id));
   updateTimerDisplay(performance.now());
 
   const box = document.getElementById('players');

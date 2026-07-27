@@ -25,8 +25,13 @@ Legenda kosztu:
   i inputu. Otwiera realną rolę zwiadu i zasadzek.
 - 🟡 **Okopanie / fortyfikacje** — jednostka stojąca kilka tur w miejscu dostaje bonus
   obronny; miasta mogłyby mieć poziomy umocnień.
-- 🟡 **Modyfikatory terenu w walce** — wzgórza/las = +obrona, przekraczanie rzeki/brzegu
-  = kara. Jeśli jeszcze ich nie ma, mocno pogłębiają taktykę na istniejącej mapie.
+- 🟡 **Typy terenu (koszt ruchu + modyfikatory walki)** — wzgórza/las = +obrona i droższe
+  wejście, przekraczanie rzeki/brzegu = kara. **Potaniało po v0.5.0:** system punktów ruchu
+  wprowadził już tabelę kosztów wejścia na pole (`moveCostStep` w `combat.js`), a reguła
+  „pełna pula zawsze pozwala na jedno pole" jest właśnie rezerwą pod koszt 3+, więc nowy
+  teren to dopisanie wierszy do tabeli plus mnożnik w `armyPowerAt()`. Brakującą częścią
+  zostaje samo **wygenerowanie i narysowanie** terenu (`mapgen.js` + render — dziś kafelek
+  zna tylko `land`/`shade`/`shallow`).
 
 ## Gospodarka i rozbudowa
 
@@ -285,9 +290,11 @@ razem ze stanem gry — inaczej wczytana partia mogłaby zmienić reguły w loci
 2. **Linie zaopatrzenia / atrycja** — nadbudowa nad istniejącym `moraleAt()` (liczy już
    dystans do najbliższego własnego miasta), więc relatywnie tanio zmienia decyzje
    gracza (nagradza przecinanie szlaków wroga).
-3. **Modyfikatory terenu w walce** — uwaga: wymaga *najpierw* dodania typów terenu
-   w `mapgen.js` i renderze (dziś kafelek ma tylko `land`/`shade`), dopiero potem mnożnik
-   w `armyPowerAt()`. Większe niż się wydaje, ale domyka taktykę.
+3. **Typy terenu** — po v0.5.0 połowa fundamentu już stoi: tabela kosztów wejścia
+   (`moveCostStep`) przyjmuje nowe wartości bez refaktoru, a reguła „pełna pula zawsze
+   pozwala na jedno pole" chroni piechotę przed nieprzejezdnym terenem. Zostaje generowanie
+   i render terenu (`mapgen.js` — dziś kafelek ma tylko `land`/`shade`/`shallow`) oraz
+   mnożnik w `armyPowerAt()`. Domyka taktykę i wreszcie wykorzystuje system MP.
 4. **Mgła wojny** — najbardziej „gra robi się inna" pomysł, ale największy zakres
    (render + AI + input).
 5. Duże kierunki (rozwój morski, tryb złożony z budynkami/technologiami, lotnictwo)

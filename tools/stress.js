@@ -146,9 +146,16 @@ const INVARIANTS_SRC = `(function checkInvariants() {
     bad.push('phase=over przy ' + aliveCount + ' zywych (multi)');
   if (state.phase !== 'over' && aliveCount <= 1)
     bad.push('phase=active przy ' + aliveCount + ' zywych');
-  // movesLeft moze zejsc do -2: ostatni ruch moze byc 2-3 hopowy (moveCap z droga)
-  if (!(state.movesLeft >= -2 && state.movesLeft <= MOVES_PER_TURN))
-    bad.push('movesLeft poza zakresem: ' + state.movesLeft);
+  // aktywacja schodzi dokladnie po 1, wiec pula nie moze zejsc pod zero
+  // (przed przejsciem na punkty ruchu dopuszczalne bylo -2: ruch mogl byc 2-3 hopowy)
+  if (!(state.activationsLeft >= 0 && state.activationsLeft <= ACTIVATIONS_PER_TURN))
+    bad.push('activationsLeft poza zakresem: ' + state.activationsLeft);
+  for (const row of state.tiles) for (const t of row) {
+    if (!t.army) continue;
+    const max = maxMovePoints(t);
+    if (!(t.army.mp >= 0 && t.army.mp <= max))
+      bad.push('army.mp poza zakresem: ' + t.army.mp + '/' + max + ' na ' + t.c + ',' + t.r);
+  }
   if (state.log.length > 40) bad.push('log > 40');
   if (anims.length > 20000 || floaters.length > 20000 || effects.length > 20000)
     bad.push('animacje rosna bez ograniczen');
@@ -209,9 +216,9 @@ function runFuzzGame(seed, maxTurns) {
     actions++;
     const roll = rng();
     if (roll < 0.55) {
-      // klik: własna armia z ruchami, potem klik w losowy legalny cel
-      const armies = g(`state.tiles.flat().filter(t => t.army && t.army.player === currentPlayer().id && t.army.movesUsed < moveCap(t))`);
-      if (armies.length && st.movesLeft > 0) {
+      // klik: własna armia, którą wolno rozkazać, potem klik w losowy legalny cel
+      const armies = g(`state.tiles.flat().filter(t => t.army && t.army.player === currentPlayer().id && armyCanBeOrdered(t))`);
+      if (armies.length) {
         const a = pick(armies);
         call('(t => onTileClick(t))', a);
         const moves = call('(t => validMoves(t))', a);
@@ -305,11 +312,11 @@ function runSoak(games, maxTurns) {
       if (!p.alive || state.phase === 'over') continue;
       resetMoved(p.id);
       const d = resolveDifficulty(p.difficulty);
-      let moves = MOVES_PER_TURN, guard = 0;
-      while (moves > 0 && guard++ < 200) {
+      let activations = ACTIVATIONS_PER_TURN, guard = 0;
+      while (activations > 0 && guard++ < 200) {
         const mv = aiPickMove(p.id, d);
         if (!mv) break;
-        moves -= executeMove(mv.from, mv.to);
+        activations -= executeMove(mv.from, mv.to);
         if (state.phase === 'over') break;
       }
       if (state.phase !== 'over') produce(p.id);

@@ -7,7 +7,7 @@
 // (w hot-seat każdy gracz od startu prowadzi wyznaczone imperium, więc mechanika wyłączona)
 function canPickEmpire() {
   return state.mode === 'single' && currentPlayer().isHuman &&
-    state.turn === 1 && state.movesLeft === MOVES_PER_TURN;
+    state.turn === 1 && state.activationsLeft === ACTIVATIONS_PER_TURN;
 }
 
 function switchHuman(id) {
@@ -54,19 +54,17 @@ function onTileClick(t) {
   }
   const sel = state.selected;
   if (sel && sel !== t && validMoves(sel).includes(t)) {
-    const hops = executeMove(sel, t);
-    state.movesLeft -= hops;
-    // jednostka na drodze ma zasięg 2 — jeśli zostały jej jeszcze ruchy, zostaje
-    // zaznaczona, żeby można było od razu wykonać kolejny ruch bez ponownego klikania na nią
-    state.selected = (t.army && t.army.player === cp.id &&
-      t.army.movesUsed < moveCap(t) && state.movesLeft > 0) ? t : null;
+    state.activationsLeft -= executeMove(sel, t);
+    // jednostka z zapasem punktów ruchu zostaje zaznaczona, żeby dokończyć marsz
+    // bez ponownego klikania — kolejny ruch tej samej armii nie kosztuje aktywacji
+    state.selected = (t.army && t.army.player === cp.id && armyCanBeOrdered(t)) ? t : null;
     // Turę kończy WYŁĄCZNIE gracz (przycisk / Enter) — po wyczerpaniu ruchów nie
     // oddajemy jej automatycznie, bo zostają decyzje niezależne od puli ruchów:
     // wybór produkcji miasta, budowa drogi, przypisanie złoża, obejrzenie planszy.
     updateUI();
     return;
   }
-  if (t.army && t.army.player === cp.id && t.army.movesUsed < moveCap(t) && state.movesLeft > 0) {
+  if (t.army && t.army.player === cp.id && armyCanBeOrdered(t)) {
     state.selected = (sel === t) ? null : t;
   } else {
     state.selected = null;
@@ -121,6 +119,11 @@ function tileTooltip(t) {
     lines.push(i18n.t('tooltip.army', {
       type: i18n.t('unit.' + t.army.type), player: state.players[t.army.player].name, str: t.army.str, morale: m,
     }));
+    // punkty ruchu tylko dla własnych jednostek — u wroga byłaby to darmowa informacja
+    // wywiadowcza, a gracz i tak nie może nim rozkazywać
+    if (t.army.player === currentPlayer().id && currentPlayer().isHuman) {
+      lines.push(i18n.t('tooltip.movePoints', { mp: t.army.mp, total: maxMovePoints(t) }));
+    }
   }
   if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
     lines.push(i18n.t('tooltip.pickEmpireHint'));

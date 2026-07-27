@@ -65,11 +65,11 @@ run(`(() => {
     for (const p of state.players) {
       if (!p.alive) continue;
       const diff = resolveDifficulty(p.difficulty);
-      let moves = MOVES_PER_TURN, guard = 0;
-      while (moves > 0 && guard++ < 50) {
+      let activations = ACTIVATIONS_PER_TURN, guard = 0;
+      while (activations > 0 && guard++ < 50) {
         const mv = aiPickMove(p.id, diff);
         if (!mv) break;
-        moves -= executeMove(mv.from, mv.to);
+        activations -= executeMove(mv.from, mv.to);
       }
       produce(p.id);
       resetMoved(p.id);
@@ -104,7 +104,7 @@ Najważniejsze cechy (i dlaczego tak):
   `multi` (`humanCount = liczba graczy`), a potem przełącza wszystkich na AI — dzięki
   temu partia toczy się do ostatniego stojącego.
 - **Pętla ręczna, nie `startTurn`/`aiStep`.** Te używają `setTimeout`/bannerów; runner
-  replikuje przebieg wprost: `resetMoved` → do `MOVES_PER_TURN` hopów `aiPickMove`/
+  replikuje przebieg wprost: `resetMoved` → do `ACTIVATIONS_PER_TURN` aktywacji `aiPickMove`/
   `executeMove` → `produce`.
 - **`--mirror` znosi bias pozycji.** Sloty startują na stałych stolicach i w stałej
   kolejności tur, co samo w sobie przechyla win-rate. Bez `--mirror` raport pokazuje

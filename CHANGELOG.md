@@ -2,6 +2,40 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [Nieopublikowane]
+
+Docelowo `0.5.0` — wersja i tag zostaną nadane, gdy zmiana będzie domknięta
+(zostaje podświetlenie zasięgu na planszy i przejście protokołu smoke).
+
+
+- **Punkty ruchu zamiast bonusu drogowego.** Każda jednostka ma własną pulę punktów
+  ruchu i płaci za **wejście na pole**: 1 na własnej drodze, 2 poza nią. Dzięki temu
+  droga premiuje jazdę wzdłuż sieci, a nie samo stanie na niej — czołg przejedzie
+  drogą 4 pola, ale zjeżdżając z niej w czyste pole tylko 2. Poprzedni model doliczał
+  bonus na podstawie pola, na którym jednostka stała, więc dawał dodatkowy zasięg
+  w każdym kierunku (aura zamiast korytarza)
+- **Prędkość jednostek wreszcie się różni**: piechota 2 pkt ruchu, czołg 4, artyleria 2
+  (wcześniej wszystkie miały zasięg bazowy 1 i różniły się tylko bonusem drogowym).
+  Artyleria korzysta teraz z dróg jak pozostałe jednostki — zniżka jest jednolita
+- **Wspólna pula tury to teraz 5 rozkazów, nie 5 heksów.** Rozkaz liczy się raz na
+  jednostkę: kolejne ruchy tej samej armii w tej turze są darmowe, dopóki ma punkty
+  ruchu. Zachowuje napięcie „które 5 jednostek jest teraz ważne", ale pozwala rozłożyć
+  marsz na kroki. Panel boczny pokazuje „Rozkazy: n/5", a tooltip własnej jednostki
+  jej punkty ruchu
+- **Desant i załadunek na statek zużywają wszystkie punkty ruchu** (wystarczy 1 punkt,
+  by przejście wykonać). Taki krok kończy ruch, więc w jednej turze nie da się wsiąść
+  na statek i odpłynąć ani wylądować i wjechać w głąb lądu — desant zdobywa przyczółek,
+  obrońca ma turę na reakcję. Załadunek nadal tylko z portu, desant nadal na dowolny brzeg
+- **Na morzu każda jednostka płynie 3 pola** niezależnie od typu lądowego (spójnie
+  z renderem, gdzie klasa okrętu zależy od siły armii, nie od typu)
+- Balans po zmianie (seria 300 gier `normal` vs `normal`): remisy **7% → 2,7%**,
+  mediana długości partii ~122 → ~109 rund, balans stron 50,7/49,3 (szum).
+  Szybsze czołgi i korytarze dróg domykają partie lepiej, nie gorzej
+- Zasięg ruchu liczony jest teraz algorytmem Dijkstry (koszty pól są różne, więc
+  liczenie samych kroków dawałoby złe wyniki)
+- **`SAVE_FORMAT` 2 — zapisy z wcześniejszych wersji są niezgodne** i dostają czytelny
+  komunikat zamiast błędu (świadomie bez migracji przed 1.0)
+
 ## [0.4.2] - 2026-07-28
 
 - Tura nie oddaje się już sama po wyczerpaniu puli ruchów — kończy ją wyłącznie

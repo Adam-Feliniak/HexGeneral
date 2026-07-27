@@ -118,13 +118,13 @@ mirror), balans stron 52/48 (szum).
 ## Pętla wykonania (`aiStep`)
 
 ```
-aiStep(playerId, movesLeft, done):
+aiStep(playerId, activationsLeft, done):
   jeśli gra zakończona → koniec
-  jeśli brak ruchów → done() (kończy turę)
+  jeśli brak aktywacji → done() (kończy turę)
   wybierz najlepszy ruch (aiPickMove)
   jeśli brak ruchu → done()
-  wykonaj ruch (executeMove), policz zużyte hopy
-  po thinkDelay ms → aiStep(playerId, movesLeft - hopy, done)
+  wykonaj ruch (executeMove), policz zużyte aktywacje (0 albo 1)
+  po thinkDelay ms → aiStep(playerId, activationsLeft - zużyte, done)
 ```
 
 Rekurencyjna pętla z `setTimeout` między krokami (kontrolowana przez `gameId`, żeby spóźnione callbacki z porzuconej gry nie wpływały na nową) — kończy się wywołaniem `endTurn` przekazanym jako `done`.

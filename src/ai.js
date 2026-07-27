@@ -79,7 +79,8 @@ function aiPickMove(playerId, diff) {
     if (!t.army) continue;
     if (t.army.player === playerId) {
       myStr += t.army.str;
-      if (t.army.movesUsed < moveCap(t)) armies.push(t);
+      // tylko punkty ruchu — pulę aktywacji pilnuje licznik w aiStep(), nie state
+      if (armyCanMove(t)) armies.push(t);
     } else if (state.players[t.army.player].alive) {
       enemyStr += t.army.str;
     }
@@ -268,19 +269,22 @@ function aiPickMove(playerId, diff) {
   return best;
 }
 
-function aiStep(playerId, movesLeft, done) {
+// activationsLeft: własny licznik rekurencji (bot nie rusza state.activationsLeft),
+// zmniejszany o aktywacje faktycznie zużyte przez executeMove — kolejny ruch tej
+// samej armii w tej turze jest darmowy, więc może zwrócić 0
+function aiStep(playerId, activationsLeft, done) {
   if (state.phase === 'over') { updateUI(); return; }
-  if (movesLeft <= 0) { done(); return; }
+  if (activationsLeft <= 0) { done(); return; }
   const diff = resolveDifficulty(state.players[playerId].difficulty);
   const mv = aiPickMove(playerId, diff);
   if (!mv) { done(); return; }
-  const hops = executeMove(mv.from, mv.to);
+  const used = executeMove(mv.from, mv.to);
   if (state.phase === 'over') return;
   const gid = state.gameId;
   // aiSpeed: przyspieszenie ruchów AI (przycisk w sidebarze; kluczowe w trybie
   // obserwatora, przydatne też w zwykłej grze przy wielu botach)
   setTimeout(() => {
     if (state.gameId !== gid) return; // gra została zrestartowana w międzyczasie
-    aiStep(playerId, movesLeft - hops, done);
+    aiStep(playerId, activationsLeft - used, done);
   }, Math.round(diff.thinkDelay / (state.aiSpeed || 1)));
 }

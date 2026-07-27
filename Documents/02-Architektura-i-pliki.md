@@ -23,14 +23,14 @@ Poza tymi przypadkami, funkcje z dowolnego pliku mogą swobodnie wołać funkcje
 
 | Plik | Odpowiedzialność | Kluczowe funkcje/stałe |
 |---|---|---|
-| `config.js` | Stałe rozgrywki: rozmiar mapy, gracze, nazwy miast, pozycje stolic, typy jednostek, poziomy trudności AI | `MAP_W/H`, `HEX`, `MOVES_PER_TURN`, `MAX_ARMY`, `UNIT_TYPES`, `AI_DIFFICULTY_PRESETS`, `PLAYERS_DEF`, `CAPITAL_SPOTS`, `resolveDifficulty()` |
+| `config.js` | Stałe rozgrywki: rozmiar mapy, gracze, nazwy miast, pozycje stolic, typy jednostek, poziomy trudności AI | `MAP_W/H`, `HEX`, `ACTIVATIONS_PER_TURN`, `MOVE_COST_ROAD/DEFAULT`, `SEA_MOVE_POINTS`, `MAX_ARMY`, `UNIT_TYPES`, `AI_DIFFICULTY_PRESETS`, `PLAYERS_DEF`, `CAPITAL_SPOTS`, `resolveDifficulty()` |
 | `locales-data.js` | **Wygenerowany** (nie edytować ręcznie) zrzut `locales/*.json` jako stała JS | `I18N_DATA` |
 | `i18n.js` | Tłumaczenia UI, przełączanie języka, zapamiętywanie w `localStorage` | `i18n.t()`, `i18n.setLanguage()`, `applyI18n()` |
 | `geometry.js` | Geometria siatki heksagonalnej (odd-r, pointy-top) | `neighborCoords()`, `hexDist()`, `hexCenter()`, `hexCorner()` |
 | `utils.js` | Losowość (w tym deterministyczny PRNG z ziarna) i mieszanie kolorów | `rnd()`, `irnd()`, `shuffle()`, `makeRng()`, `mixColor()` |
 | `mapgen.js` | Proceduralne generowanie mapy: ląd, stolice, miasta, porty, złoża, gwarancja spójności | `generateMap()`, `ensureCapitalConnectivity()` |
 | `state.js` | Stan gry, tworzenie nowej gry, dostęp do pól planszy, log wydarzeń | `newGame()`, `tileAt()`, `neighborsOf()`, `addLog()` |
-| `combat.js` | Morale, siła bojowa, legalność ruchu, zasięg ruchu, rozstrzyganie bitew | `moraleAt()`, `armyPowerAt()`, `canStep()`, `moveCap()`, `reachableMoves()`, `resolveBattle()`, `executeMove()` |
+| `combat.js` | Morale, siła bojowa, legalność ruchu, zasięg ruchu, rozstrzyganie bitew | `moraleAt()`, `armyPowerAt()`, `canStep()`, `moveCostStep()`, `maxMovePoints()`, `reachableMoves()`, `resolveBattle()`, `executeMove()` |
 | `roads.js` | Sieć dróg budowana przez gracza/AI (heksy `road`), zaopatrzenie i produkcja siły w miastach | `roadCost()`, `startRoadProject()`, `completeRoadProject()`, `connectedCities()`, `supplyCityFor()`, `tileOnRoad()`, `produce()` |
 | `empire.js` | Zajmowanie pól, aneksja całego imperium, warunek końca gry | `captureTile()`, `conquerEmpire()`, `checkGameOver()` |
 | `turns.js` | Kolejność tur (człowiek/AI), limit czasu | `startTurn()`, `endTurn()`, `requestEndTurn()`, `checkTurnTimer()` |
@@ -51,7 +51,7 @@ przyszłe korekty `mapgen.js` nie psuły cicho starych zapisów). Kodek jest jaw
 
 - referencje do kafelków (`roadProject.target`/`.segment[]`, `supplyCity`) są
   zapisywane jako współrzędne `[c, r]` i odtwarzane po wczytaniu przez nową siatkę,
-- `Infinity` (`timeLimit`, `movesUsed`) jest kodowane stringiem `'inf'`
+- `Infinity` (`timeLimit`) jest kodowane stringiem `'inf'`
   (JSON zamieniłby je na `null`),
 - transienty (selekcje, `turnStartTime`, `gameId`, `anims`/`floaters`/`effects`)
   nie są zapisywane — odtwarzane na świeżo przy wczytaniu.
@@ -90,7 +90,7 @@ state = {
   currentPlayerIndex,
   turnStartTime,
   timeLimit,              // sekundy albo Infinity
-  movesLeft,              // wspólna pula ruchów aktywnego gracza w tej turze
+  activationsLeft,        // ile jednostek aktywny gracz może jeszcze rozkazać w tej turze
   selected,               // zaznaczone pole z armią (albo null)
   selectedCity,           // zaznaczone własne pole z miastem — steruje panelem produkcji
   players: [{ id, name, color, dark, isHuman, alive, capital, difficulty, ... }],
@@ -113,7 +113,7 @@ Poza `state` istnieją jeszcze osobne, niezależnie resetowane tablice modułowe
                                          // sąsiadujących heksów drogi tego samego właściciela;
                                          // pole miasta źródłowego i trasa NIE są tu trzymane
   owner: -1 | playerId,
-  army: null | { player, str, vet, movesUsed, type },
+  army: null | { player, str, vet, type, mp, activated },
   shade: number (-1..1), // losowa wariacja koloru terenu, też steruje typem złoża i dekoracją
   coast: number[],       // (tylko ląd) kierunki krawędzi stykających się z wodą — do rysowania piany
   shallow: bool,          // (tylko woda) czy sąsiaduje z lądem — płycizna

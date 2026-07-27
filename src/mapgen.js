@@ -46,7 +46,7 @@ function generateMap(playerCount = PLAYERS_DEF.length, seed = null) {
         resource: null,   // 'oil' | 'farm' | 'mine' (+ opcjonalne supplyCity: pole miasta zaopatrywanego)
         road: null,       // { owner } — heks sieci dróg (roads.js); miasto źródłowe/trasa nie są tu trzymane
         owner: -1,
-        army: null,       // { player, str, vet, movesUsed }
+        army: null,       // { player, str, vet, type, mp, activated }
         shade: rnd(-1, 1, rand), // drobna wariacja koloru terenu
       });
     }
