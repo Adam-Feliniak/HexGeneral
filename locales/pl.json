@@ -29,6 +29,9 @@
 
   "lobby.sp.title": "Pojedynczy gracz",
   "lobby.sp.botCount": "Liczba botów",
+  "lobby.sp.mode": "Tryb",
+  "lobby.sp.modePlay": "Gram",
+  "lobby.sp.modeSpectate": "Oglądam (sami botowie)",
 
   "lobby.tutorial.title": "Jak grać?",
 
@@ -62,6 +65,7 @@
   "game.seedFooter": "Seed: {{seed}}",
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Trudność botów: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
+  "game.aiSpeed": "Tempo AI",
 
   "unit.infantry": "Piechota",
   "unit.tank": "Czołg",

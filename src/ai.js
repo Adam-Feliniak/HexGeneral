@@ -277,8 +277,10 @@ function aiStep(playerId, movesLeft, done) {
   const hops = executeMove(mv.from, mv.to);
   if (state.phase === 'over') return;
   const gid = state.gameId;
+  // aiSpeed: przyspieszenie ruchów AI (przycisk w sidebarze; kluczowe w trybie
+  // obserwatora, przydatne też w zwykłej grze przy wielu botach)
   setTimeout(() => {
     if (state.gameId !== gid) return; // gra została zrestartowana w międzyczasie
     aiStep(playerId, movesLeft - hops, done);
-  }, diff.thinkDelay);
+  }, Math.round(diff.thinkDelay / (state.aiSpeed || 1)));
 }

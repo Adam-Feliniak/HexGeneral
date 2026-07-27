@@ -29,6 +29,9 @@
 
   "lobby.sp.title": "Einzelspieler",
   "lobby.sp.botCount": "Anzahl Bots",
+  "lobby.sp.mode": "Modus",
+  "lobby.sp.modePlay": "Spielen",
+  "lobby.sp.modeSpectate": "Zuschauen (nur Bots)",
 
   "lobby.tutorial.title": "Spielanleitung",
 
@@ -62,6 +65,7 @@
   "game.seedFooter": "Seed: {{seed}}",
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Bot-Schwierigkeit: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
+  "game.aiSpeed": "KI-Tempo",
 
   "unit.infantry": "Infanterie",
   "unit.tank": "Panzer",

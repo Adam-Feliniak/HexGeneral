@@ -26,6 +26,10 @@
   <div class="menu-box">
     <h2 data-i18n="lobby.sp.title">Pojedynczy gracz</h2>
     <div class="menu-field">
+      <span data-i18n="lobby.sp.mode">Tryb</span>
+      <div id="sp-mode-group" class="choice-group"></div>
+    </div>
+    <div class="menu-field">
       <span data-i18n="lobby.sp.botCount">Liczba botów</span>
       <div id="sp-bots-group" class="choice-group"></div>
     </div>
@@ -160,6 +164,14 @@
     </div>
     <div id="turn-player-label"></div>
     <div id="players"></div>
+    <div class="menu-field" id="ai-speed-field">
+      <span data-i18n="game.aiSpeed">Tempo AI</span>
+      <div id="ai-speed-group" class="choice-group">
+        <button data-speed="1">1×</button>
+        <button data-speed="4">4×</button>
+        <button data-speed="16">16×</button>
+      </div>
+    </div>
     <button id="end-turn" data-i18n="game.endTurn">Zakończ turę ⏎</button>
     <button id="new-game" data-i18n="game.newMap">Nowa mapa</button>
     <button id="menu-btn" data-i18n="game.mainMenu">Menu główne</button>

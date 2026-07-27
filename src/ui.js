@@ -42,6 +42,15 @@ function updateUI() {
     box.appendChild(div);
   }
 
+  // panel tempa AI ma sens tylko, gdy w grze są boty (obserwator albo gra z botami)
+  const speedField = document.getElementById('ai-speed-field');
+  if (speedField) {
+    speedField.hidden = !state.players.some(p => !p.isHuman);
+    document.querySelectorAll('#ai-speed-group button').forEach(btn => {
+      btn.className = Number(btn.dataset.speed) === (state.aiSpeed || 1) ? 'selected' : '';
+    });
+  }
+
   updateBuildPanel(cp);
 
   const footer = document.getElementById('seed-footer');

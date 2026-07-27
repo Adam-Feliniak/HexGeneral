@@ -31,9 +31,12 @@ function newGame(opts = {}) {
     : hadGame ? state.timeLimit : Infinity;
   const mapSeed = opts.seed != null ? opts.seed : randomSeed();
 
-  const playerCount = Math.min(6, Math.max(1, humanCount) + Math.max(0, botCount));
-  const actualHumanCount = Math.min(Math.max(1, humanCount), playerCount);
-  const mode = actualHumanCount <= 1 ? 'single' : 'multi';
+  // humanCount 0 = tryb obserwatora (sami botowie); zawsze min. 2 imperia,
+  // inaczej partia nie miałaby warunku końca
+  const playerCount = Math.max(2, Math.min(6, Math.max(0, humanCount) + Math.max(0, botCount)));
+  const actualHumanCount = Math.min(Math.max(0, humanCount), playerCount);
+  // 0 ludzi -> 'multi' (koniec gry = ostatnie żywe imperium, nie upadek slota 0)
+  const mode = actualHumanCount === 1 ? 'single' : 'multi';
 
   const tiles = generateMap(playerCount, mapSeed);
   state = {
@@ -53,7 +56,8 @@ function newGame(opts = {}) {
     aiDifficulty,          // preset ('easy'..'nightmare') albo liczba 0-100 (custom) — wspólna dla botów tej gry
     currentPlayerIndex: 0,
     turnStartTime: performance.now(),
-    timeLimit: mode === 'multi' ? timeLimit : Infinity,
+    timeLimit: mode === 'multi' && actualHumanCount > 0 ? timeLimit : Infinity,
+    aiSpeed: (state && state.aiSpeed) || 1, // mnożnik tempa ruchów AI (1/4/16, przeżywa "Nową mapę")
     movesLeft: MOVES_PER_TURN,
     selected: null,      // wybrane pole z armią gracza
     selectedCity: null,  // wybrane własne pole z miastem (panel budowy)
@@ -90,7 +94,7 @@ function newGame(opts = {}) {
 }
 
 function defaultSpSetup() {
-  return { bots: 3, difficulty: 'normal', customDiff: 50, seedMode: 'random', seedValue: randomSeed() };
+  return { bots: 3, difficulty: 'normal', customDiff: 50, seedMode: 'random', seedValue: randomSeed(), spectate: false };
 }
 function defaultMpSetup() {
   return {

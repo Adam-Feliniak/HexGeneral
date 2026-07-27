@@ -25,6 +25,12 @@ function goToScreen(name) {
   applyScreen();
 }
 
+// tryb obserwatora: gra złożona z samych botów nie ma ludzkiej tury, która by ją
+// napędzała — pierwszą turę AI trzeba odpalić jawnie (dalej pętla tur toczy się sama)
+function kickOffAiGame() {
+  if (state.phase !== 'over' && !currentPlayer().isHuman) startTurn();
+}
+
 // widoczność i etykieta „Kontynuuj" w menu głównym (autozapis z save.js)
 function refreshMainMenu() {
   const btn = document.getElementById('menu-continue');
@@ -121,6 +127,16 @@ function renderSeedGroup(groupId, inputId, previewId, setup, onChange) {
 
 function renderSpSetup() {
   const setup = state.spSetup;
+  // tryb: gram (1 człowiek + boty) / obserwator (sami botowie, oglądasz partię)
+  const modeBox = document.getElementById('sp-mode-group');
+  modeBox.innerHTML = '';
+  for (const [key, labelKey] of [['play', 'lobby.sp.modePlay'], ['spectate', 'lobby.sp.modeSpectate']]) {
+    const btn = document.createElement('button');
+    btn.textContent = i18n.t(labelKey);
+    btn.className = (setup.spectate ? 'spectate' : 'play') === key ? 'selected' : '';
+    btn.addEventListener('click', () => { setup.spectate = key === 'spectate'; renderSpSetup(); });
+    modeBox.appendChild(btn);
+  }
   const botsBox = document.getElementById('sp-bots-group');
   botsBox.innerHTML = '';
   for (const n of SP_BOT_COUNT_OPTIONS) {
@@ -274,7 +290,14 @@ function initMenu() {
 
   document.getElementById('sp-start').addEventListener('click', () => {
     const s = state.spSetup;
-    newGame({ humanCount: 1, botCount: s.bots, aiDifficulty: effectiveDifficulty(s), seed: s.seedValue });
+    // obserwator: 0 ludzi, a "liczba botów" oznacza przeciwników jak w trybie gry,
+    // więc +1 zastępuje slot gracza (te same rozmiary partii w obu trybach)
+    newGame({
+      humanCount: s.spectate ? 0 : 1,
+      botCount: s.spectate ? s.bots + 1 : s.bots,
+      aiDifficulty: effectiveDifficulty(s), seed: s.seedValue,
+    });
+    kickOffAiGame();
   });
   document.getElementById('mp-start').addEventListener('click', () => {
     const s = state.mpSetup;

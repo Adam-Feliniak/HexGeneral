@@ -518,6 +518,27 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
   margin-bottom: 6px;
 }
 
+/* panel tempa AI w sidebarze (widoczny, gdy w grze są boty) */
+#ai-speed-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 12px;
+  color: #9a947a;
+}
+#ai-speed-field[hidden] { display: none; }
+#ai-speed-group {
+  display: flex;
+  gap: 4px;
+}
+#ai-speed-group button {
+  padding: 2px 8px;
+  font-size: 12px;
+  min-width: 0;
+  width: auto;
+}
+
 #turn-player-label {
   font-weight: 700;
   color: #ffd91c;

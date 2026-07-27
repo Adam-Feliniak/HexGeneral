@@ -159,8 +159,14 @@ function initInput() {
     document.getElementById('tooltip').hidden = true;
   });
   document.getElementById('end-turn').addEventListener('click', requestEndTurn);
-  document.getElementById('new-game').addEventListener('click', () => newGame());
-  document.getElementById('overlay-btn').addEventListener('click', () => newGame());
+  document.getElementById('new-game').addEventListener('click', () => { newGame(); kickOffAiGame(); });
+  document.getElementById('overlay-btn').addEventListener('click', () => { newGame(); kickOffAiGame(); });
+  document.querySelectorAll('#ai-speed-group button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.aiSpeed = Number(btn.dataset.speed) || 1;
+      updateUI();
+    });
+  });
   document.addEventListener('keydown', ev => {
     if (!state || state.screen !== 'game') return;
     if (ev.key === 'Enter') requestEndTurn();

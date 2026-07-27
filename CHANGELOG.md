@@ -2,6 +2,17 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.4.0] - 2026-07-27
+
+- Tryb obserwatora: w lobby single-player przełącznik „Gram / Oglądam" —
+  „Oglądam" uruchamia partię samych botów, którą się podgląda
+- Regulacja tempa AI (1× / 4× / 16×) w panelu bocznym gry — przyspiesza ruchy
+  botów; przydatne przy obserwacji i przy grze z wieloma botami
+- Narzędzia deweloperskie (nie wpływają na grę): `tools/serve.js` (statyczny
+  serwer, żeby narzędzia mogły czytać piksele canvasa) i `visual-test.html`
+  (regresja wizualna — renderuje wiele partii, hashuje klatki renderu i
+  porównuje z zapisanym wzorcem, pokazując miniatury plansz)
+
 ## [0.3.1] - 2026-07-27
 
 - Przebieg stabilnościowy: nowy harness `tools/stress.js` (fuzz losowych legalnych

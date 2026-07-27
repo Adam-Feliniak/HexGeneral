@@ -28,6 +28,9 @@
   "lobby.common.back": "Back",
 
   "lobby.sp.title": "Single Player",
+  "lobby.sp.mode": "Mode",
+  "lobby.sp.modePlay": "Play",
+  "lobby.sp.modeSpectate": "Spectate (bots only)",
   "lobby.sp.botCount": "Number of Bots",
 
   "lobby.tutorial.title": "How to Play",
@@ -62,6 +65,7 @@
   "game.seedFooter": "Seed: {{seed}}",
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Bot Difficulty: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
+  "game.aiSpeed": "AI Speed",
 
   "unit.infantry": "Infantry",
   "unit.tank": "Tank",

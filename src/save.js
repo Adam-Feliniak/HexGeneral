@@ -154,6 +154,7 @@ function deserializeGame(data) {
     currentPlayerIndex: g.currentPlayerIndex,
     turnStartTime: performance.now(),
     timeLimit: saveDecInf(g.timeLimit),
+    aiSpeed: (state && state.aiSpeed) || 1, // preferencja sesji, nie część zapisu
     movesLeft: g.movesLeft,
     selected: null,
     selectedCity: null,
