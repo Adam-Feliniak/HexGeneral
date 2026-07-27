@@ -202,7 +202,12 @@ async function run() {
       snaps = runSeed(seed, checkpoints, difficulty);
     } catch (e) {
       errBox.hidden = false;
-      errBox.textContent = 'Wyjątek na seedzie ' + seed + ': ' + e.message;
+      errBox.innerHTML = /getImageData|tainted|cross-origin|SecurityError|insecure/i.test(e.message)
+        ? '⚠ Ta strona musi być otwarta <b>przez serwer</b>, nie z pliku. W terminalu: '
+          + '<b>node tools/serve.js</b>, a potem otwórz w przeglądarce '
+          + '<b>http://localhost:8080/visual-test.html</b> (nie dwuklikiem pliku). '
+          + 'Odczyt pikseli canvasa jest zablokowany na file://.'
+        : 'Wyjątek na seedzie ' + seed + ': ' + e.message;
       break;
     }
     // hashCanvas mogło rzucić SecurityError (tainted canvas na file://)
@@ -248,6 +253,16 @@ document.getElementById('export').addEventListener('click', () => {
   // hasze bez miniatur (miniatury są ciężkie; do przeniesienia/commita wystarczą hasze)
   prompt('Skopiuj wzorzec (hasze):', JSON.stringify({ hashes: b.hashes }));
 });
+// ostrzeżenie od razu przy otwarciu z pliku (zanim ktoś kliknie „Uruchom" i dostanie
+// mniej czytelny błąd tainted-canvas z głębi renderu)
+if (location.protocol === 'file:') {
+  const errBox = document.getElementById('error');
+  errBox.hidden = false;
+  errBox.innerHTML = '⚠ Otwarto z pliku (file://). Regresja wizualna wymaga serwera — '
+    + 'odczyt pikseli canvasa jest inaczej zablokowany. Uruchom <b>node tools/serve.js</b> '
+    + 'i wejdź na <b>http://localhost:8080/visual-test.html</b>.';
+}
+
 // auto-uruchomienie do headless smoke (np. ?auto=1&seeds=3) — bez wpływu na normalne użycie
 if (location.search.includes('auto')) {
   const p = new URLSearchParams(location.search);
