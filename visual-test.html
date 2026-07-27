@@ -102,6 +102,7 @@ const BASELINE_KEY = 'hexgeneral.visualBaseline';
 const tcanvas = document.createElement('canvas');
 const tctx = tcanvas.getContext('2d');
 let lastRun = null; // { hashes:{}, thumbs:{} } z ostatniego przebiegu
+let lastDifficulty = 'normal'; // trudność ostatniego przebiegu (do przerenderowania w lupie)
 
 function rngSeedFor(mapSeed, rot) { return ((mapSeed * 0x9E3779B1) ^ (rot * 0x85EBCA77)) >>> 0; }
 function loadBaseline() { try { return JSON.parse(localStorage.getItem(BASELINE_KEY)) || null; } catch (e) { return null; } }
@@ -173,10 +174,13 @@ function cell(seed, r, status, thumb, baseThumb) {
   const div = document.createElement('div');
   div.className = 'cell ' + (status === 'ok' ? 'pass' : status === 'fail' ? 'fail' : 'newb');
   const badge = status === 'ok' ? '✓' : status === 'fail' ? '✗ ZMIANA' : '⭑ nowy';
+  // miniatury „teraz"/nowe mają data-seed/round → lupa przerenderuje je w pełnej
+  // rozdzielczości; miniatura wzorca (historyczna) pokazywana jest jak jest (klasa ref)
+  const cur = `<img data-seed="${seed}" data-round="${r}" src="${thumb}">`;
   const thumbs = status === 'fail' && baseThumb
-    ? `<div class="thumbs"><div class="pair"><span>wzorzec</span><img src="${baseThumb}"></div>`
-      + `<div class="pair"><span>teraz</span><img src="${thumb}"></div></div>`
-    : `<div class="thumbs"><img src="${thumb}"></div>`;
+    ? `<div class="thumbs"><div class="pair"><span>wzorzec</span><img class="ref" src="${baseThumb}"></div>`
+      + `<div class="pair"><span>teraz</span>${cur}</div></div>`
+    : `<div class="thumbs">${cur}</div>`;
   div.innerHTML = `<div class="cap"><span>seed ${seed} · runda ${r}</span><span class="badge">${badge}</span></div>` + thumbs;
   return div;
 }
@@ -188,6 +192,7 @@ async function run() {
   const checkpoints = document.getElementById('checkpoints').value.split(',')
     .map(s => parseInt(s.trim(), 10)).filter(n => n > 0);
   const difficulty = document.getElementById('difficulty').value.trim() || 'normal';
+  lastDifficulty = difficulty;
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
   const summary = document.getElementById('summary');
@@ -269,7 +274,18 @@ const lightbox = document.getElementById('lightbox');
 const lightboxImg = lightbox.querySelector('img');
 function closeLightbox() { lightbox.hidden = true; lightboxImg.src = ''; }
 document.getElementById('grid').addEventListener('click', e => {
-  if (e.target.tagName === 'IMG') { lightboxImg.src = e.target.src; lightbox.hidden = false; }
+  const img = e.target;
+  if (img.tagName !== 'IMG') return;
+  if (img.dataset.seed) {
+    // przerenderuj tę partię w PEŁNEJ rozdzielczości canvasa (deterministyczne:
+    // ten sam seed+runda co miniatura) — ostry podgląd zamiast rozciągniętej miniatury
+    setupCanvas();
+    runSeed(+img.dataset.seed, [+img.dataset.round], lastDifficulty);
+    lightboxImg.src = canvas.toDataURL('image/png');
+  } else {
+    lightboxImg.src = img.src; // miniatura wzorca (historyczna) — pokazujemy jak jest
+  }
+  lightbox.hidden = false;
 });
 lightbox.addEventListener('click', closeLightbox);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lightbox.hidden) closeLightbox(); });
@@ -294,7 +310,15 @@ if (location.search.includes('auto')) {
   const p = new URLSearchParams(location.search);
   if (p.get('seeds')) document.getElementById('seeds').value = p.get('seeds');
   if (p.get('checkpoints')) document.getElementById('checkpoints').value = p.get('checkpoints');
-  window.addEventListener('load', () => document.getElementById('run').click());
+  window.addEventListener('load', () => {
+    document.getElementById('run').click();
+    if (p.get('lb')) { // smoke: po zakończeniu przebiegu otwórz pierwszą miniaturę w lupie
+      const iv = setInterval(() => {
+        const im = document.querySelector('#grid img[data-seed]');
+        if (im) { clearInterval(iv); im.click(); }
+      }, 300);
+    }
+  });
 }
 
 document.getElementById('import').addEventListener('click', () => {
