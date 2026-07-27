@@ -44,6 +44,7 @@
   <h1>⬡ Hex General — regresja wizualna</h1>
   <div class="controls">
     <label>Partie: <input type="number" id="seeds" value="24" min="1" max="200"></label>
+    <label>Seed początkowy: <input type="number" id="seed-start" value="1" min="1" max="999999"></label>
     <label>Checkpointy (rundy): <input type="text" id="checkpoints" value="1,30,80" style="width:90px"></label>
     <label>Trudność: <input type="text" id="difficulty" value="normal" style="width:80px"></label>
     <button id="run">Uruchom</button>
@@ -189,6 +190,7 @@ async function run() {
   const errBox = document.getElementById('error');
   errBox.hidden = true;
   const seeds = Math.max(1, parseInt(document.getElementById('seeds').value, 10) || 24);
+  const seedStart = Math.max(1, parseInt(document.getElementById('seed-start').value, 10) || 1);
   const checkpoints = document.getElementById('checkpoints').value.split(',')
     .map(s => parseInt(s.trim(), 10)).filter(n => n > 0);
   const difficulty = document.getElementById('difficulty').value.trim() || 'normal';
@@ -207,7 +209,7 @@ async function run() {
   let ok = 0, fail = 0, fresh = 0;
 
   for (let i = 0; i < seeds; i++) {
-    const seed = i + 1;
+    const seed = seedStart + i;
     let snaps;
     try {
       snaps = runSeed(seed, checkpoints, difficulty);
@@ -309,6 +311,7 @@ if (location.protocol === 'file:') {
 if (location.search.includes('auto')) {
   const p = new URLSearchParams(location.search);
   if (p.get('seeds')) document.getElementById('seeds').value = p.get('seeds');
+  if (p.get('start')) document.getElementById('seed-start').value = p.get('start');
   if (p.get('checkpoints')) document.getElementById('checkpoints').value = p.get('checkpoints');
   window.addEventListener('load', () => {
     document.getElementById('run').click();
