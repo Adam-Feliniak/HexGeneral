@@ -150,6 +150,18 @@ Legenda kosztu:
   miast, budowa drogi, przypisanie złoża, obejrzenie planszy. Wariant „opcja
   w ustawieniach" świadomie pominięty: nikt nie chciałby wracać do auto-oddawania,
   a ekran Opcje i tak jest do rozbudowy osobno.
+- 🟢 **(opcjonalne) Osobny kolor pól desantu i załadunku w podświetleniu zasięgu** —
+  *sam zasięg jest poprawny* i nie wymaga zmian: `render.js` iteruje wprost
+  `validMoves(sel)`, więc podświetlenie wydłuża się wzdłuż drogi i skraca nad wodą
+  automatycznie (sprawdzone). Luka jest wyłącznie w **czytelności**: pole, na które
+  wejście zżera całą pulę punktów ruchu (zaokrętowanie z portu, desant na brzeg),
+  wygląda identycznie jak zwykły krok, mimo że konsekwencja taktyczna jest zupełnie
+  inna. Wrogie pola mają już swój kolor (czerwony), te nie mają żadnego wyróżnika.
+  Zmiana lokalna w bloku podświetleń `render.js` (~10 linii): warunek
+  `isEmbarkStep(sel, n)` i trzeci wariant kolorystyczny — proponowany odcień morski,
+  żeby nie kolidował z białym zasięgiem, czerwonym wrogiem ani złotym wyborem trasy
+  drogi. Świadomie zostawione jako opcjonalne: gra jest bez tego w pełni grywalna,
+  a wybór kolorystyki to decyzja estetyczna, nie poprawka błędu.
 - 🟡 **Cofnięcie ostatniego ruchu (undo)**, interaktywny samouczek, statystyki po partii.
 - 🟡 **Dźwięk / muzyka** — na `file://` audio trzeba zainline'ować (np. jako data-URI),
   ale jest to wykonalne.
