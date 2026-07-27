@@ -15,6 +15,12 @@ To odwraca perspektywę wobec backlogu: **`10-Przyszle-plany.md` jest w większo
 mniejsza lista „utwardzania produktu" — w dużej części nieefektowna robota, której
 w backlogu nie ma.
 
+**Stan dokumentu: aktualny na v0.4.1.** Od pierwszej wersji tej analizy doszły: tryb
+obserwatora i regulacja tempa AI (v0.4.0 — przydatne przy pokazywaniu gry i przy zdalnej
+krytyce partii botów), narzędzie regresji wizualnej `visual-test.html` oraz infrastruktura
+buildów testerskich (v0.4.1). Żadna z tych rzeczy nie zamknęła bramki P0 poza testami
+zewnętrznymi, ale wszystkie obniżyły koszt kolejnych kroków.
+
 ## Rdzeń EA vs roadmapa EA
 
 Dwie różne listy, których nie wolno mylić:
@@ -43,11 +49,12 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 | Dystrybucja (wrapper + platforma) | brak | Musi *gdzieś* być (Steam/itch) | **P0 (launch)** |
 | Strona sklepu + opis EA + roadmapa | brak | Steam wymaga „czemu EA / jak długo / co dojdzie" | **P0 (Steam)** |
 | Kanał feedbacku (Discord/forum) | brak | Cały sens EA to feedback | **P0, tani** |
-| Onboarding / samouczek | statyczny tekst + tooltipy | Pierwsze 10 min decyduje o refundzie | **P1** |
-| Dźwięk / muzyka | **zero audio** | Cisza = „niedokończona" dla wielu graczy | **P1** |
-| Wydajność (długie partie, dużo armii) | `aiPickMove` to wąskie gardło | Płynność bez zacinania | **P1** |
-| QoL (ręczne kończenie tury, undo, ustawienia) | częściowo | Brak irytujących tarć | **P1/P2** |
-| Dostępność (paleta pod daltonizm, toggle animacji) | 6 kolorów graczy — do sprawdzenia | Kolory rozróżnialne | **P2** |
+| Testy zewnętrzne (przed publicznym playtestem) | ✅ **infrastruktura gotowa** (v0.4.1: `tools/pack-build.js`, `BUILD_TAG`, protokół w [13](13-Testy-zewnetrzne.md)) | Ktoś poza autorem musi zagrać przed EA | **P0 — narzędzia zamknięte, przebieg do wykonania** |
+| Onboarding / samouczek | statyczny tekst + tooltipy | Pierwsze 10 min decyduje o refundzie | **P1 — patrz nota niżej** |
+| Dźwięk / muzyka | **zero audio** | Cisza = „niedokończona" dla wielu graczy | **P1 — patrz nota niżej** |
+| Wydajność (długie partie, dużo armii) | ~~`aiPickMove` wąskie gardło~~ → znacznie mniej pilne (v0.2.1: ~2,2× szybsze AI przy bitowo identycznych decyzjach; v0.4.0: suwak tempa 1×/4×/16×) | Płynność bez zacinania | **P2** (zdegradowane z P1) |
+| QoL (ręczne kończenie tury, undo, ustawienia) | częściowo — ręczne kończenie tury ✔ (przycisk + Enter), undo brak, ekran Opcje bardzo cienki (tylko seed + trudność) | Brak irytujących tarć | **P1/P2** |
+| Dostępność (paleta pod daltonizm, toggle animacji) | ⚠️ **sprawdzone — realna kolizja**: `PLAYERS_DEF` ma `#d64550` (czerwony, gracz ludzki) i `#3fae62` (zielony, gracz 3), czyli klasyczny konflikt przy deuteranopii | Kolory rozróżnialne | **P2, tani** (kształt/symbol obok koloru albo przesunięcie palety) |
 | Treść / regrywalność | proceduralne mapy, seedy, 3 jednostki, trudność | Wystarcza na *minimalny* EA; rozmiary map = tani boost | **P2** |
 | Hook / tożsamość (jednozdaniowy pitch) | niewypowiedziany | Store page potrzebuje „czemu ta gra" | **P1** |
 | Legal (LICENSE, rating wiekowy) | LICENSE ✔, rating do wypełnienia | Kwestionariusz wieku na Steam | **P2** |
@@ -61,11 +68,25 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
    legalnych akcji przez prawdziwe ścieżki gry + inwarianty stanu + soak sesyjny) —
    500 partii bez wyjątków i naruszeń; do powtarzania przed każdym wydaniem razem
    z protokołem smoke z `09-Przewodnik-developera.md`.
-4. **Dystrybucja + strona sklepu** — Electron/NW.js wrapper, kapsułki, screeny, opis EA,
+4. **Testy zewnętrzne** — infrastruktura gotowa (v0.4.1): `node tools/pack-build.js --tag=...`
+   produkuje czysty build (88 plików / ~196 KB, bez `.git`, `Documents/` i `tools/`), fale
+   dystrybucji i protokół w [13-Testy-zewnetrzne.md](13-Testy-zewnetrzne.md). Do wykonania
+   został sam **przebieg**: ktoś poza autorem musi dograć partie, zanim cokolwiek pójdzie
+   publicznie.
+5. **Dystrybucja + strona sklepu** — Electron/NW.js wrapper, kapsułki, screeny, opis EA,
    roadmapa. Robota ~dni, ale proces Steam to ~4–8 tygodni kalendarza (opłata $100,
    podatki, 30-dniowa karencja, recenzje). **Pierwsze realne złamanie „no build"** —
    w warstwie dystrybucji, nie w samej grze.
-5. **Kanał feedbacku** — Discord + wątek. Tani, ale bez niego EA nie ma sensu.
+6. **Kanał feedbacku** — Discord + wątek. Tani, ale bez niego EA nie ma sensu.
+
+### Nota: audio i onboarding awansują przez testy zewnętrzne
+
+Formalnie oba są P1, ale w praktyce mają **twardy deadline wcześniejszy niż premiera**: to
+dokładnie ta amunicja, po którą sięga niechętny krytyk („grałem, drewno bez dźwięku, nie
+wiedziałem co robić"). Ponieważ ryzyko ze strony testerów jest **narracyjne, nie własnościowe**
+(patrz [13-Testy-zewnetrzne.md](13-Testy-zewnetrzne.md)), obroną nie jest tajność ani NDA,
+tylko wersja, której się nie wstydzisz. Praktyczny wniosek: **audio i onboarding przed falą 2
+testerów**, nie przed samym EA.
 
 ## Gate #1: zamykanie gier (dlaczego to priorytet)
 

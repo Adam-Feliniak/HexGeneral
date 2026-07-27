@@ -3,9 +3,16 @@
    KONFIGURACJA — stałe rozgrywki, gracze, nazwy miast
    ============================================================ */
 
-const GAME_VERSION = '0.4.0';
+const GAME_VERSION = '0.4.1';
 // Nota o prawach autorskich w stopce menu (obok wersji); pełne warunki w pliku LICENSE
 const GAME_COPYRIGHT = '© 2026 Adam Feliniak';
+
+// Znacznik buildu testerskiego — podstawiany przez `node tools/pack-build.js --tag=...`
+// wyłącznie w KOPII w dist/, nigdy w tym pliku. Pusty = build deweloperski (nic nie pokazuje).
+// Trafia też do koperty zapisu, więc z nadesłanego zapisu widać, z czyjego builda pochodzi.
+// Świadomie próg, nie zamek: w czystym JS każdy to usunie — chroni przed przypadkowym
+// podaniem dalej, nie przed determinacją (dlatego sens jest w poinformowaniu testerów).
+const BUILD_TAG = '';
 
 const MAP_W = 23;
 const MAP_H = 14;

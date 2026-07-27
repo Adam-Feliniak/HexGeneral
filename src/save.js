@@ -62,6 +62,10 @@ function serializeGame() {
   return {
     format: SAVE_FORMAT,
     version: GAME_VERSION,
+    // znacznik buildu testerskiego (pusty w buildzie deweloperskim) — pozwala ustalić,
+    // z czyjej kopii pochodzi nadesłany zapis; pole koperty, nie stan gry, więc bez
+    // podbicia SAVE_FORMAT (deserializeGame ignoruje nieznane pola, stare zapisy działają)
+    build: BUILD_TAG,
     savedAt: Date.now(),
     game: {
       mode: state.mode, mapSeed: state.mapSeed, turn: state.turn,

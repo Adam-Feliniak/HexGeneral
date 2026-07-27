@@ -4,3 +4,11 @@ Desktop.ini
 
 # Lokalne dokumenty robocze (nie wersjonowane)
 Hex-General-estymacja.pdf
+
+# Buildy testerskie (generowane przez tools/pack-build.js)
+dist/
+
+# Zmienne srodowiskowe / sekrety
+.env
+.env.*
+!.env.example

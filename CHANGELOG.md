@@ -2,6 +2,21 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.4.1] - 2026-07-27
+
+- Znacznik buildu `BUILD_TAG` (`src/config.js`): widoczny w stopce menu obok wersji
+  i zapisywany w kopercie zapisu, więc z nadesłanego zapisu widać, z której kopii
+  pochodzi. Pusty w repo = build deweloperski; format zapisu bez zmian (pole koperty,
+  nie stan gry — stare zapisy wczytują się dalej)
+- Narzędzie deweloperskie `tools/pack-build.js`: pakuje build testerski do `dist/<tag>/`
+  na podstawie allowlisty (88 plików / ~196 KB — sama gra), bez `.git`, `Documents/`
+  i `tools/`. Lista `src/*.js` brana z `<script src=...>` w `index.html`, żeby nie
+  rozjechała się z kolejnością wczytywania
+- Dokumentacja: nowy `Documents/13-Testy-zewnetrzne.md` (fale dystrybucji buildów,
+  zbieranie zapisów jako raportów błędów, higiena dostępu) oraz odświeżony
+  `11-Early-Access.md` — sprawdzona kolizja palety czerwony/zielony pod deuteranopię
+  i zdegradowana pozycja „wydajność" po v0.2.1
+
 ## [0.4.0] - 2026-07-27
 
 - Tryb obserwatora: w lobby single-player przełącznik „Gram / Oglądam" —

@@ -9,7 +9,7 @@ if (typeof document !== 'undefined' && canvas) {
   initInput();
   initMenu();
   const vt = document.getElementById('version-tag');
-  if (vt) vt.textContent = 'v' + GAME_VERSION;
+  if (vt) vt.textContent = 'v' + GAME_VERSION + (BUILD_TAG ? ' · ' + BUILD_TAG : '');
   const ct = document.getElementById('copyright-tag');
   if (ct) ct.textContent = GAME_COPYRIGHT;
   state = {
