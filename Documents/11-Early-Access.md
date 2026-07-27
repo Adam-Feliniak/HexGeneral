@@ -39,7 +39,7 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 |---|---|---|---|
 | Zamykalność rozgrywki | ~~40%~~ → **~7%** remisów (v0.2.2 + v0.2.3) | Gra *niezawodnie* dobiega do końca | **P0 — gate #1, zasadniczo zamknięty** |
 | Zapis / wczytywanie | ✅ **zrobione** (v0.3.0: autozapis + Kontynuuj + eksport/import tekstowy) | Partia bez save'a to refund | **P0 — zamknięte** |
-| Stabilność (pełne partie bez crasha/softlocka) | brak testów, nieznane | Zero zawiesów w długiej grze | **P0** |
+| Stabilność (pełne partie bez crasha/softlocka) | ✅ **przebieg wykonany** (`tools/stress.js`: 500 partii fuzz z inwariantami + soak — 0 naruszeń; protokół smoke w `09`) | Zero zawiesów w długiej grze | **P0 — zamknięte** |
 | Dystrybucja (wrapper + platforma) | brak | Musi *gdzieś* być (Steam/itch) | **P0 (launch)** |
 | Strona sklepu + opis EA + roadmapa | brak | Steam wymaga „czemu EA / jak długo / co dojdzie" | **P0 (Steam)** |
 | Kanał feedbacku (Discord/forum) | brak | Cały sens EA to feedback | **P0, tani** |
@@ -57,8 +57,10 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 1. **Zamykanie gier** (gate #1, patrz niżej) — bez tego rdzeń jest zepsuty na poziomie pętli.
 2. ✅ **Zapis / wczytywanie** — **zrobione** (v0.3.0): autozapis + „Kontynuuj" +
    eksport/import tekstowy; format z bramką `SAVE_FORMAT` (migracje po 1.0).
-3. **Przebieg stabilnościowy** — rozegrać wiele *pełnych* partii (headless + ręcznie),
-   łapać softlocki/wyjątki/perf. Zamiennik testów, których nie ma.
+3. ✅ **Przebieg stabilnościowy** — **wykonany**: `tools/stress.js` (fuzz losowych
+   legalnych akcji przez prawdziwe ścieżki gry + inwarianty stanu + soak sesyjny) —
+   500 partii bez wyjątków i naruszeń; do powtarzania przed każdym wydaniem razem
+   z protokołem smoke z `09-Przewodnik-developera.md`.
 4. **Dystrybucja + strona sklepu** — Electron/NW.js wrapper, kapsułki, screeny, opis EA,
    roadmapa. Robota ~dni, ale proces Steam to ~4–8 tygodni kalendarza (opłata $100,
    podatki, 30-dniowa karencja, recenzje). **Pierwsze realne złamanie „no build"** —

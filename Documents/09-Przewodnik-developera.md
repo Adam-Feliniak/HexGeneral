@@ -117,6 +117,59 @@ Najważniejsze cechy (i dlaczego tak):
   coś o balansie. Limit `--max-turns` domyślnie 500 (gry rozstrzygają się zwykle w
   300–500 rundach).
 
+## Harness stabilnościowy (`tools/stress.js`)
+
+Uzupełnienie sim.js o to, czego sim NIE ćwiczy: sim gra przez czystą warstwę logiki
+(`aiPickMove`/`executeMove`/`produce`), a stress przechodzi przez **prawdziwą pętlę
+gry i ścieżki człowieka** — kliknięcia przez `onTileClick` (selekcje, ruchy,
+road-pick, `switchHuman`), pętlę tur z `setTimeout` (aiStep, auto-koniec tury) na
+ręcznie pompowanej kolejce timeoutów i kontrolowanym zegarze `performance.now`,
+zapis/wczytanie w środku partii, „Nową mapę" w trakcie zakolejkowanych timeoutów
+starej gry (test osłon `gameId`) oraz timer tury w multi.
+
+```
+node tools/stress.js --games=200                # fuzz: losowe legalne akcje + inwarianty
+node tools/stress.js --games=1 --seed=123       # reprodukcja konkretnej partii
+node --expose-gc tools/stress.js --mode=soak    # sesja: 10+ partii z rzędu, trend heapu
+```
+
+- **Fuzz** steruje turami ludzi losowymi LEGALNYMI akcjami (w granicach tego, co
+  pozwala lobby/UI) i po każdej rundzie oraz po każdym wczytaniu sprawdza
+  **inwarianty stanu** (m.in. armie 1..MAX_ARMY z żywym właścicielem, spójność
+  stolic z `capitalOf`, żywi właściciele pól/dróg, domknięte projekty dróg,
+  `phase` zgodne z liczbą żywych). Naruszenie/wyjątek → seed do reprodukcji.
+- **Soak** gra wiele partii z rzędu w jednym kontekście (jak gracz bez odświeżania
+  strony) — trend pamięci między partiami ma być płaski, czas rundy stabilny.
+- Deterministyczny per seed (losowość sterownika i gry z mulberry32, kolejka
+  timeoutów deterministyczna).
+
+Kiedy uruchamiać: po każdej zmianie w mechanice/AI/zapisie — fuzz ~200 partii jako
+bramka przed wydaniem (obok `sim.js --games=300` dla metryk balansu).
+
+## Protokół smoke przed wydaniem (przeglądarka, ręcznie)
+
+Ścieżek DOM headless nie sięgnie — przed każdym wydaniem przeklikać w przeglądarce
+(`Ctrl+F5` na start):
+
+1. Pełna partia single (mała liczba botów) do **wygranej** — overlay, „Nowa gra" z niego.
+2. Partia single do **przegranej** (oddaj stolicę) — overlay porażki.
+3. Start single: kliknięcie cudzej stolicy **przed pierwszym ruchem** przełącza imperium.
+4. Multi hot-seat 2 graczy **z limitem czasu** — timer odlicza, timeout oddaje turę.
+5. Budowa drogi z panelu miasta: wybór celu, podświetlenie, anulowanie w trakcie.
+6. Przypisanie złoża do miasta (panel złoża) i zmiana przypisania.
+7. Zmiana typu produkcji miasta; produkcja idzie w wybrany typ.
+8. W środku tury: „Menu główne" → **F5** → „Kontynuuj" — ta sama pozycja (w tym
+   zużyte ruchy, projekt drogi w toku, przypisania złóż).
+9. Ekran „Zapis gry": Pokaż zapis → Ctrl+C → Ctrl+V → Wczytaj; wklejenie śmieci →
+   komunikat błędu, gra nienaruszona.
+10. Wygrana partia → „Kontynuuj" znika z menu.
+11. „Nowa mapa" kliknięta w trakcie ruchu AI — nowa gra startuje czysto (bez
+    „duchów" starej tury).
+12. Przełączenie języka w trakcie partii — sidebar/panele/menu w nowym języku.
+13. Tooltipy: morze, cudze pola, złoża (z drogą i bez), armie wroga.
+14. Enter kończy turę, Esc czyści zaznaczenie/road-pick.
+15. Dłuższa sesja (kilka partii z rzędu) — brak spadku płynności.
+
 ## Weryfikacja UI/wizualna
 
 Projekt jest czystym HTML/CSS/JS otwieranym z `file://` — nie ma zainstalowanego narzędzia do automatycznego sterowania przeglądarką (typu Playwright/`chromium-cli`) w standardowym środowisku roboczym tego repo. Zmiany w layoucie/CSS/renderowaniu canvasu należy sprawdzać **ręcznie**, otwierając `index.html` w przeglądarce po każdej zmianie (i robiąc **hard refresh**, `Ctrl+F5`, jeśli zmiana w `style.css` pozornie "nie działa" — przeglądarki potrafią agresywnie cache'ować lokalne pliki).
