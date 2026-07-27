@@ -2,6 +2,16 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.3.1] - 2026-07-27
+
+- Przebieg stabilnościowy: nowy harness `tools/stress.js` (fuzz losowych legalnych
+  akcji przez prawdziwe ścieżki gry — kliknięcia, pętla tur, zapis w środku partii,
+  timer multi — z inwariantami stanu; tryb soak dla sesji wielu partii). 500 partii
+  fuzz + soak bez wyjątków i naruszeń
+- Utwardzenie importu zapisu: odrzucanie spreparowanych zapisów z mniej niż
+  2 graczami (taka partia nigdy nie mogłaby się skończyć)
+- Protokół smoke przed wydaniem w przewodniku developera
+
 ## [0.3.0] - 2026-07-27
 
 - Zapis i wczytywanie gry: autozapis (początek tury gracza + wyjście do menu),

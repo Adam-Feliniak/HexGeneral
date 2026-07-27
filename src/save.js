@@ -85,8 +85,10 @@ function serializeGame() {
 function deserializeGame(data) {
   if (!data || data.format !== SAVE_FORMAT || !data.game) return false;
   const g = data.game;
+  // min. 2 graczy: żaden legalny zapis nie ma mniej (partia z 1 imperium nigdy
+  // by się nie skończyła — lobby nie pozwala jej stworzyć, import też nie powinien)
   if (!Array.isArray(g.tiles) || g.tiles.length !== MAP_W * MAP_H ||
-      !Array.isArray(g.players) || !g.players.length) return false;
+      !Array.isArray(g.players) || g.players.length < 2) return false;
 
   // 1) siatka kafelków (bez referencji między kafelkami)
   const tiles = [];
