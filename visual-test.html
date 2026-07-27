@@ -28,7 +28,10 @@
   .cell.fail .badge { color: #ff7b7b; }
   .cell.newb .badge { color: #ffd91c; }
   .thumbs { display: flex; }
-  .thumbs img { width: 100%; display: block; image-rendering: pixelated; }
+  .thumbs img { width: 100%; display: block; image-rendering: pixelated; cursor: zoom-in; }
+  #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.88); display: flex; align-items: center; justify-content: center; z-index: 100; cursor: zoom-out; }
+  #lightbox[hidden] { display: none; }
+  #lightbox img { max-width: 96vw; max-height: 96vh; image-rendering: pixelated; border: 2px solid #6e6a52; box-shadow: 0 0 40px #000; }
   .thumbs .pair { width: 50%; }
   .thumbs .pair span { display: block; text-align: center; font-size: 10px; color: #9a947a; padding: 2px; }
   #board { display: none; }  /* prawdziwy canvas renderu — poza ekranem, źródło pikseli */
@@ -53,6 +56,9 @@
 </header>
 <div id="error" hidden></div>
 <div id="grid"></div>
+
+<!-- podgląd po kliknięciu miniatury (klik/Esc zamyka) -->
+<div id="lightbox" hidden><img alt=""></div>
 
 <!-- prawdziwy canvas renderu (render.js wiąże #board przy wczytaniu) -->
 <canvas id="board"></canvas>
@@ -244,9 +250,29 @@ document.getElementById('run').addEventListener('click', () => {
 });
 document.getElementById('set-baseline').addEventListener('click', () => {
   if (!lastRun) return;
-  localStorage.setItem(BASELINE_KEY, JSON.stringify(lastRun));
-  document.getElementById('summary').innerHTML += ' · <span class="ok">wzorzec zapisany</span>';
+  const summary = document.getElementById('summary');
+  try {
+    localStorage.setItem(BASELINE_KEY, JSON.stringify(lastRun));
+    summary.innerHTML += ' · <span class="ok">wzorzec zapisany</span>';
+  } catch (e) {
+    // przekroczony limit localStorage (miniatury są ciężkie) — zapisz same hasze;
+    // porównanie dalej działa, tylko na porażce nie pokażemy miniatury wzorca
+    try {
+      localStorage.setItem(BASELINE_KEY, JSON.stringify({ hashes: lastRun.hashes, thumbs: {} }));
+      summary.innerHTML += ' · <span class="ok">wzorzec zapisany (bez miniatur — za dużo danych)</span>';
+    } catch (e2) { alert('Nie udało się zapisać wzorca: ' + e2.message); }
+  }
 });
+
+// klik w miniaturę -> podgląd na cały ekran; klik gdziekolwiek albo Esc zamyka
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = lightbox.querySelector('img');
+function closeLightbox() { lightbox.hidden = true; lightboxImg.src = ''; }
+document.getElementById('grid').addEventListener('click', e => {
+  if (e.target.tagName === 'IMG') { lightboxImg.src = e.target.src; lightbox.hidden = false; }
+});
+lightbox.addEventListener('click', closeLightbox);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !lightbox.hidden) closeLightbox(); });
 document.getElementById('export').addEventListener('click', () => {
   const b = loadBaseline();
   if (!b) { alert('Brak zapisanego wzorca.'); return; }
