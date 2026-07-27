@@ -2,11 +2,7 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
-## [Nieopublikowane]
-
-Docelowo `0.5.0` — wersja i tag zostaną nadane, gdy zmiana będzie domknięta
-(zostaje podświetlenie zasięgu na planszy i przejście protokołu smoke).
-
+## [0.5.0] - 2026-07-28
 
 - **Punkty ruchu zamiast bonusu drogowego.** Każda jednostka ma własną pulę punktów
   ruchu i płaci za **wejście na pole**: 1 na własnej drodze, 2 poza nią. Dzięki temu
@@ -32,7 +28,9 @@ Docelowo `0.5.0` — wersja i tag zostaną nadane, gdy zmiana będzie domknięta
   mediana długości partii ~122 → ~109 rund, balans stron 50,7/49,3 (szum).
   Szybsze czołgi i korytarze dróg domykają partie lepiej, nie gorzej
 - Zasięg ruchu liczony jest teraz algorytmem Dijkstry (koszty pól są różne, więc
-  liczenie samych kroków dawałoby złe wyniki)
+  liczenie samych kroków dawałoby złe wyniki). Podświetlenie zasięgu na planszy
+  odzwierciedla to wprost: wydłuża się wzdłuż drogi i skraca nad wodą, gdzie
+  zaokrętowanie kończy ruch
 - **`SAVE_FORMAT` 2 — zapisy z wcześniejszych wersji są niezgodne** i dostają czytelny
   komunikat zamiast błędu (świadomie bez migracji przed 1.0)
 
