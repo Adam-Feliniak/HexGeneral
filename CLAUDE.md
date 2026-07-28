@@ -60,6 +60,15 @@ Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes 
 4. If it's a new sprite file/category, register it in `loadSprites()` in `src/sprites.js`.
 5. Commit the changed/new `assets/*.png` alongside the generator change.
 
+### Adding/changing a sound
+Unlike sprites, **sounds are not files** — they're synthesized at runtime, so there is nothing to regenerate or commit.
+1. Edit the recipe in `SFX_RECIPES` (`src/audio.js`) — one `(rate) => Float32Array` function per sound. Helpers: `addTone()` (oscillator with pitch sweep), `addNoise()` (noise + one-pole lowpass), `finishBuffer()` (normalize + fade tail).
+2. Audition it: `node tools/gen-sounds.js --only=explosion` renders `dist/sfx/explosion.wav` so you can hear it and inspect the waveform in an audio editor. The game never loads these files; `dist/` is gitignored.
+3. New sound: add the key to `SFX_RECIPES`, then call it **always** via `if (typeof playSfx === 'function') playSfx('name');` — `stress.js`, `sim.js` and `visual-test.html` load the game logic without `audio.js`.
+4. Consider entries in `SFX_MIN_GAP` (retrigger spacing) and `SFX_ALWAYS` (does it survive fast-forwarded AI) — a frequent event without them machine-guns in observer mode.
+
+Music lives in `MUSIC_TRACKS` as note tables played by oscillators; the generator can't render it, so audition music in the game. Full rationale and inventory: `Documents/14-Dzwiek.md`.
+
 ### Headless verification (no test framework exists)
 
 The repo has never had a formal test suite. Instead, DOM-touching functions across `src/*.js` guard themselves with:

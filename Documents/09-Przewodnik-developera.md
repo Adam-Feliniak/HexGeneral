@@ -23,6 +23,33 @@ Brak builda, brak serwera, brak `npm install`. Wystarczy otworzyć `index.html` 
 
 Pełny opis systemu malowania (paleta, `outline()`, przebarwianie) w [Grafice i sprite'ach](07-Grafika-i-sprite-y.md).
 
+### Dodanie/strojenie dźwięku
+
+Uwaga na różnicę wobec sprite'ów: **dźwięki nie są plikami w repo**. Gra syntezuje je
+w runtime z przepisów, więc nie ma czego regenerować ani commitować — zmiana przepisu
+działa od razu po odświeżeniu strony.
+
+1. Edytuj przepis w `SFX_RECIPES` (`src/audio.js`) — jedna funkcja `(rate) => Float32Array`
+   na dźwięk, wzorem `explosion()`/`shot()`. Do dyspozycji `addTone()` (oscylator
+   z przemiataniem wysokości), `addNoise()` (szum z filtrem dolnoprzepustowym)
+   i `finishBuffer()` (normalizacja + wygaszenie ogona).
+2. **Odsłuchaj:** `node tools/gen-sounds.js --only=explosion` renderuje dźwięk do
+   `dist/sfx/explosion.wav` — otwórz go w edytorze audio, żeby zobaczyć przebieg
+   i porównać wersje przed/po. `--rate=44100` daje podglądowo wyższą jakość.
+   Gra tych plików **nie wczytuje**, `dist/` jest gitignorowane.
+3. Powtarzaj 1-2, aż zabrzmi dobrze.
+4. Nowy dźwięk: dodaj klucz do `SFX_RECIPES`, potem wywołaj go z kodu **zawsze przez
+   osłonę** `if (typeof playSfx === 'function') playSfx('nazwa');` — harnessy
+   (`stress.js`, `sim.js`) i `visual-test.html` ładują logikę bez `audio.js`.
+5. Rozważ wpis w `SFX_MIN_GAP` (odstęp między powtórzeniami) i `SFX_ALWAYS` (czy dźwięk
+   ma przechodzić przy przyspieszonym AI) — bez tego dźwięk częstego zdarzenia zamienia
+   się w karabin maszynowy w trybie obserwatora.
+
+Muzyka to partytury `MUSIC_TRACKS` (tabela `[ćwierćnuta, długość, MIDI, instrument]`),
+grane oscylatorami — nie da się ich odsłuchać generatorem, trzeba uruchomić grę.
+
+Pełny opis (dlaczego proceduralnie, inwentarz, pułapki) w [Dźwięku](14-Dzwiek.md).
+
 ### Dodanie nowej mechaniki gry
 
 Ponieważ nie ma modułów, nowa funkcja w dowolnym `src/*.js` jest natychmiast widoczna dla wszystkich pozostałych plików — nie trzeba nic eksportować/importować. Jedyne, o czym trzeba pamiętać:

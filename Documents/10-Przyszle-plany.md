@@ -150,18 +150,6 @@ Legenda kosztu:
   miast, budowa drogi, przypisanie złoża, obejrzenie planszy. Wariant „opcja
   w ustawieniach" świadomie pominięty: nikt nie chciałby wracać do auto-oddawania,
   a ekran Opcje i tak jest do rozbudowy osobno.
-- 🟢 **(opcjonalne) Osobny kolor pól desantu i załadunku w podświetleniu zasięgu** —
-  *sam zasięg jest poprawny* i nie wymaga zmian: `render.js` iteruje wprost
-  `validMoves(sel)`, więc podświetlenie wydłuża się wzdłuż drogi i skraca nad wodą
-  automatycznie (sprawdzone). Luka jest wyłącznie w **czytelności**: pole, na które
-  wejście zżera całą pulę punktów ruchu (zaokrętowanie z portu, desant na brzeg),
-  wygląda identycznie jak zwykły krok, mimo że konsekwencja taktyczna jest zupełnie
-  inna. Wrogie pola mają już swój kolor (czerwony), te nie mają żadnego wyróżnika.
-  Zmiana lokalna w bloku podświetleń `render.js` (~10 linii): warunek
-  `isEmbarkStep(sel, n)` i trzeci wariant kolorystyczny — proponowany odcień morski,
-  żeby nie kolidował z białym zasięgiem, czerwonym wrogiem ani złotym wyborem trasy
-  drogi. Świadomie zostawione jako opcjonalne: gra jest bez tego w pełni grywalna,
-  a wybór kolorystyki to decyzja estetyczna, nie poprawka błędu.
 - 🟡 **Cofnięcie ostatniego ruchu (undo)**, interaktywny samouczek, statystyki po partii.
 - ✅ **Dźwięk / muzyka** — **iteracja 1 zrobiona** (v0.6.0, `src/audio.js`): 8 efektów
   i dwie pętle chiptune, wszystko **syntezowane proceduralnie w runtime**, zero plików
@@ -172,6 +160,37 @@ Legenda kosztu:
   [14-Dzwiek.md](14-Dzwiek.md), strojenie przez `tools/gen-sounds.js`.
   **Iteracja 2:** dźwięk startu tury (pierwszy kandydat — to rytm gry), osobne brzmienia
   per typ jednostki, zaokrętowanie/desant, ukończenie drogi, produkcja, timer tury w multi.
+
+### Drobne zaległości (niski priorytet)
+
+Rzeczy zauważone przy okazji innych prac. Wszystkie są **tanie** i żadna nie psuje
+rozgrywki — stąd niski priorytet, mimo niskiego kosztu. Nie blokują ani testów
+zewnętrznych, ani Early Access.
+
+- 🟢 **Niespójne utrwalanie ustawień w Opcjach** — głośność (dodana w v0.6.0) przeżywa
+  odświeżenie strony, bo idzie do `localStorage` (`hexgeneral.audio`), a `defaultSeed`
+  i `defaultDifficulty` z tego samego ekranu **giną**, bo żyją tylko w `state.options`
+  na czas sesji. Na jednym ekranie jedno działa, drugie nie. Naprawa: utrwalić cały
+  `state.options` pod własnym kluczem, wzorem `i18n.js` (z `try/catch` na tryb prywatny)
+  i odczytać go w `defaultOptions()` (`state.js`).
+- 🟢 **Kolizja palety graczy pod daltonizmem** — `PLAYERS_DEF` (`config.js`) ma `#d64550`
+  (czerwony, domyślny gracz ludzki) i `#3fae62` (zielony, gracz 3), czyli klasyczny
+  konflikt przy deuteranopii — najczęstszej postaci daltonizmu. Sprawdzone w kodzie, nie
+  hipoteza. Naprawa: przesunąć jeden z odcieni albo dodać drugi nośnik informacji obok
+  koloru (kształt/symbol przy kropce gracza i na jednostkach), co jest odporniejsze
+  niż samo strojenie palety. Powiązane z pozycją „animacje jako opcja" niżej — obie są
+  z obszaru dostępności.
+- 🟢 **(opcjonalne) Osobny kolor pól desantu i załadunku w podświetleniu zasięgu** —
+  *sam zasięg jest poprawny* i nie wymaga zmian: `render.js` iteruje wprost
+  `validMoves(sel)`, więc podświetlenie wydłuża się wzdłuż drogi i skraca nad wodą
+  automatycznie (sprawdzone). Luka jest wyłącznie w **czytelności**: pole, na które
+  wejście zżera całą pulę punktów ruchu (zaokrętowanie z portu, desant na brzeg),
+  wygląda identycznie jak zwykły krok, mimo że konsekwencja taktyczna jest zupełnie
+  inna. Wrogie pola mają już swój kolor (czerwony), te nie mają żadnego wyróżnika.
+  Zmiana lokalna w bloku podświetleń `render.js` (~10 linii): warunek
+  `isEmbarkStep(sel, n)` i trzeci wariant kolorystyczny — proponowany odcień morski,
+  żeby nie kolidował z białym zasięgiem, czerwonym wrogiem ani złotym wyborem trasy
+  drogi. Wybór kolorystyki to decyzja estetyczna, nie poprawka błędu.
 
 ## Grafika i animacje
 
