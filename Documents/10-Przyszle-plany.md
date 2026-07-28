@@ -41,6 +41,53 @@ Legenda kosztu:
   rozbudowa istniejącego systemu `resource`.
 - 🔴 **Prosty tech-tree / globalne ulepszenia** — odblokowania (lepszy pancerz, tańsze
   drogi) dające długoterminową progresję w dłuższych partiach.
+- 🟡 **System monopoli surowcowych** (do przemyślenia) — kontrola nad wieloma złożami
+  tego samego typu daje bonus powiązany z typem jednostki. Pomysł ma naturalne
+  odwzorowanie, bo **liczba typów złóż i typów jednostek jest ta sama**:
+
+  | Złoże | Jednostka | Uzasadnienie |
+  |---|---|---|
+  | `farm` | piechota | żywność i rekruci |
+  | `oil` | czołg | paliwo |
+  | `mine` | artyleria | stal i amunicja |
+
+  Wartość dla rozgrywki: złoża przestają być tylko „+1 do produkcji", a stają się celami
+  o znaczeniu strategicznym. Utrata jednego złoża **łamie monopol**, więc pojawia się
+  motyw rajdu na zaplecze i obrony zaplecza — czyli dokładnie ten rodzaj decyzji, którego
+  grze dziś brakuje.
+
+  **Twardy prerekwizyt: dziś to nie zadziała, bo typy złóż są losowe.** `mapgen.js`
+  przypisuje typ wyłącznie po `t.shade` (`t.resource = t.shade < -0.45 ? 'mine' : t.shade > 0.15 ? 'farm' : 'oil'`),
+  bez żadnego wyrównywania. Zmierzone na 400 mapach przy `RESOURCE_COUNT = 6`:
+
+  | Typ | Średnio | Min | Map z mniej niż 2 |
+  |---|---|---|---|
+  | `farm` | 2,47 | 0 | 21,0% |
+  | `oil` | 1,85 | 0 | 40,0% |
+  | `mine` | 1,68 | 0 | **45,8%** |
+
+  **Tylko na 12,5% map każdy typ ma co najmniej 2 sztuki.** Bonus „za dwie farmy" byłby
+  więc na większości map nieosiągalny dla części typów, a do tego niesymetryczny (farmy
+  najłatwiejsze, kopalnie najrzadsze). Pierwszym krokiem musi być **gwarantowany rozkład
+  typów w `mapgen.js`** — np. rozdanie po równo z resztą losowo, zamiast wyliczania z szumu.
+
+  Pytania do rozstrzygnięcia, zanim to ruszy:
+  - **Próg czy pełny monopol?** Przy 6 złożach i 3 typach „dwie sztuki" *jest* pełnym
+    monopolem, więc dziś te pojęcia się zlewają. Próg musi skalować się z liczbą złóż,
+    inaczej pozycja „kilka rozmiarów mapy" go zepsuje.
+  - **Bonus w produkcji czy w walce?** Produkcja (taniej/szybciej) jest tania i bezpieczna.
+    Mnożnik bojowy dotyka `armyPowerAt`, a więc i wyceny ruchów AI — wymaga przestrojenia
+    balansu i serii przez `sim.js`.
+  - **Wymagać podłączenia drogą?** Dziś złoże daje +1 tylko podłączone do sieci
+    (`supplyCity`). Monopol liczony od samego posiadania byłby prostszy, ale rozjechałby
+    się z istniejącą zasadą — a liczony od podłączenia robi z dróg wymóg, nie opcję.
+  - **AI musi to rozumieć**, inaczej człowiek dostaje darmową przewagę: `aiTargets` wycenia
+    już złoża, ale trzeba podbić wagę złoża domykającego monopol i tego, które monopol
+    wroga łamie.
+  - **Stan monopolu wyliczać, nie zapisywać** — da się policzyć z `state.tiles`, więc
+    `SAVE_FORMAT` zostaje nietknięty.
+  - UI: gracz musi widzieć, co ma i ile brakuje (panel boczny), inaczej mechanika jest
+    niewidzialna.
 
 ## Mapa i świat
 
@@ -55,6 +102,33 @@ Legenda kosztu:
 - 🟢 **Podgląd / reroll mapy w lobby** — możliwość podejrzenia i przelosowania seeda
   (mechanika seeda już istnieje w `state`/`mapSeed`) przed startem, zwłaszcza gdy dojdą
   rozmiary i kształty.
+- 🟡 **Rzeki i mosty** — rzeka jako naturalna linia obrony i wąskie gardło ruchu, mosty
+  jako punkty, o które warto się bić. Wraz z „liniami zaopatrzenia" i „przecinaniem
+  szlaków" daje grze geografię, której dziś nie ma: mapa jest jednorodnym lądem, więc
+  front nie ma się o co zaczepić.
+
+  **Kluczowa decyzja projektowa: rzeka jako krawędź, nie jako heks.** Rzeka-heks jest
+  banalna do zrobienia (kolejny typ terenu), ale zjada pola i wygląda jak kanał zamiast
+  rzeki. Rzeka na **krawędzi** między dwoma polami jest tym, czym rzeka faktycznie jest —
+  i to dokładnie pasuje do obecnego kodu ruchu:
+
+  > `moveCostStep(from, to, playerId)` przyjmuje **oba** pola, bo koszt przejścia
+  > ląd↔woda i tak jest właściwością krawędzi, nie kafelka. Koszt przeprawy przez rzekę
+  > wpina się w tę samą sygnaturę, bez zmiany kształtu funkcji.
+
+  Refaktor ruchu z v0.5.0 zrobił więc połowę roboty. Do zrobienia zostaje:
+  - dane: zbiór krawędzi z rzeką per kafelek (wzorem istniejącego `coast[]`, które już
+    trzyma indeksy krawędzi stykających się z wodą — ten sam wzorzec, gotowy do skopiowania),
+  - generowanie w `mapgen.js` (rzeka jako ścieżka od wnętrza do wybrzeża) i render
+    krawędzi w `render.js`,
+  - koszt przeprawy w `moveCostStep` plus most jako krawędź z rzeką, ale bez kary,
+  - modyfikator obronny przy walce **przez** rzekę (`armyPowerAt` musi wtedy wiedzieć,
+    z której strony następuje atak — dziś nie dostaje tej informacji),
+  - **`SAVE_FORMAT` do podbicia** (nowe pole kafelka wpływające na rozgrywkę),
+  - budowa mostu jako cel punktów produkcji, naturalnie obok `roadProject` w `roads.js`;
+    droga przecinająca rzekę powinna wymagać mostu.
+
+  Wchłania dotychczasową pozycję „Mosty / przeprawy" z sekcji *Domeny i ruch*.
 
 ## Tryby i AI
 
@@ -253,8 +327,8 @@ naturalnie eksponuje wartość zwiadu.
 - 🟡 **Linie zaopatrzenia / atrycja** — jednostki odcięte od sieci dróg/miast słabną
   z turami. Dobrze łączy się z istniejącą siecią dróg i nagradza przecinanie szlaków
   wroga zamiast tylko bicia armii wprost.
-- 🟡 **Mosty / przeprawy** — element terenu i cel dla jednostki inżynieryjnej; wpina się
-  w ewentualne modyfikatory rzek w walce.
+- 🟡 **Mosty / przeprawy** — przeniesione do pozycji „Rzeki i mosty" w sekcji
+  [Mapa i świat](#mapa-i-świat), bo most bez rzeki nie ma sensu.
 
 ## Dynamika świata
 
