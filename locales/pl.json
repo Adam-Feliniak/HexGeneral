@@ -45,6 +45,10 @@
   "lobby.options.title": "Opcje",
   "lobby.options.defaultSeed": "Domyślny seed",
   "lobby.options.defaultDifficulty": "Domyślna trudność botów",
+  "lobby.options.mute": "Wycisz dźwięk",
+  "lobby.options.volumeMaster": "Głośność ogólna",
+  "lobby.options.volumeMusic": "Muzyka",
+  "lobby.options.volumeSfx": "Efekty dźwiękowe",
 
   "difficulty.easy": "Łatwy",
   "difficulty.normal": "Normalny",

@@ -22,9 +22,13 @@ function captureTile(t, playerId) {
     t.city.capitalOf = -1; // zdobyta stolica staje się zwykłym miastem
   } else if (t.city && prevOwner !== playerId && prevOwner >= 0) {
     addLog(i18n.t('log.captureCity', { player: state.players[playerId].name, city: t.city.name }));
+    if (typeof playSfx === 'function') playSfx('city');
   } else if (t.city && prevOwner < 0) {
     addLog(i18n.t('log.claimCity', { player: state.players[playerId].name, city: t.city.name }));
+    if (typeof playSfx === 'function') playSfx('city');
   }
+  // uwaga: dźwięk tylko w gałęziach z miastem — captureTile odpala się przy KAŻDYM
+  // zajętym polu, więc warunek na t.city jest tu konieczny
 }
 
 function conquerEmpire(loserId, winnerId) {
@@ -43,6 +47,7 @@ function conquerEmpire(loserId, winnerId) {
   }
   addLog(i18n.t('log.conquerEmpire', { winner: winner.name, loser: loser.name }));
   showBanner(i18n.t('banner.empireAnnexed', { loser: loser.name, winner: winner.name }));
+  if (typeof playSfx === 'function') playSfx('annex');
   checkGameOver();
 }
 
@@ -54,9 +59,12 @@ function checkGameOver() {
     // osłona typeof — headless sim/harness ładuje empire.js bez save.js
     if (typeof clearAutosave === 'function') clearAutosave();
     const win = alive[0];
+    // muzyka milknie, żeby sting końcowy nie kolidował z pętlą
+    if (typeof stopMusic === 'function') stopMusic();
     if (state.mode === 'multi') {
       showOverlay(i18n.t('overlay.victoryMultiTitle'),
         i18n.t('overlay.victoryMultiText', { n: win.id + 1, name: win.name, turn: state.turn }));
+      if (typeof playSfx === 'function') playSfx('victory');
     } else {
       showOverlay(
         win.isHuman ? i18n.t('overlay.missionCompleteTitle') : i18n.t('overlay.gameOverTitle'),
@@ -64,10 +72,13 @@ function checkGameOver() {
           ? i18n.t('overlay.missionCompleteText', { name: win.name, turn: state.turn })
           : i18n.t('overlay.aiWinsText', { name: win.name })
       );
+      if (typeof playSfx === 'function') playSfx(win.isHuman ? 'victory' : 'defeat');
     }
   } else if (state.mode === 'single' && !state.players[state.human].alive && state.phase !== 'over') {
     state.phase = 'over';
     if (typeof clearAutosave === 'function') clearAutosave();
+    if (typeof stopMusic === 'function') stopMusic();
     showOverlay(i18n.t('overlay.gameOverTitle'), i18n.t('overlay.capitalFellText'));
+    if (typeof playSfx === 'function') playSfx('defeat');
   }
 }

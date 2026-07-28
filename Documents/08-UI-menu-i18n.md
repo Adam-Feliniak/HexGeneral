@@ -11,7 +11,7 @@ Cała nawigacja steruje się jednym polem `state.screen`, a `applyScreen()` (`me
 | `'mp-setup'` | `#menu-mp-setup` | Lobby multiplayer: liczba graczy, liczba botów, trudność, seed, limit czasu na turę |
 | `'tutorial'` | `#menu-tutorial` | Statyczny ekran "Jak grać?" — pełna lista zasad (ta sama treść co zwijana pomoc w grze, patrz niżej) |
 | `'save'` | `#menu-save` | Ekran „Zapis gry": pole tekstowe do skopiowania zapisu (Pokaż zapis → Ctrl+C) lub wklejenia i wczytania (Ctrl+V → Wczytaj); logika w `save.js`, obsługa w `menu.js` |
-| `'options'` | `#menu-options` | Domyślny seed i domyślna trudność botów dla przyszłych gier |
+| `'options'` | `#menu-options` | Domyślny seed i domyślna trudność botów dla przyszłych gier; wyciszenie i trzy suwaki głośności (ogólna / muzyka / efekty) — patrz [Dźwięk](14-Dzwiek.md). Uwaga na niespójność utrwalania: głośność idzie do `localStorage` (`hexgeneral.audio`), a seed i trudność żyją tylko w `state.options` na czas sesji |
 | `'game'` | `#app` | Właściwa plansza gry (canvas + sidebar) |
 
 Autozapis: gra zapisuje się do `localStorage` na początku każdej tury człowieka

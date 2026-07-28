@@ -9,7 +9,7 @@ Kolejność wczytywania w `index.html`:
 ```
 config.js → locales-data.js → i18n.js → geometry.js → utils.js → mapgen.js
 → state.js → combat.js → roads.js → empire.js → turns.js → ai.js
-→ save.js → sprites.js → render.js → ui.js → input.js → menu.js → main.js
+→ save.js → sprites.js → audio.js → render.js → ui.js → input.js → menu.js → main.js
 ```
 
 Kolejność ma znaczenie tylko tam, gdzie kod **wykonuje się natychmiast przy wczytaniu** pliku (nie tylko definiuje funkcje):
@@ -37,6 +37,7 @@ Poza tymi przypadkami, funkcje z dowolnego pliku mogą swobodnie wołać funkcje
 | `ai.js` | Wybór ruchów i celów botów, dobór typu produkcji/budowy dróg | `aiTargets()`, `aiPickMove()`, `aiStep()`, `aiAssignBuildType()`, `aiAssignCityProject()` |
 | `save.js` | Zapis gry: jawny kodek stanu (JSON), autozapis w `localStorage` (klucz `hexgeneral.save`), „Kontynuuj", eksport/import tekstowy | `serializeGame()`, `deserializeGame()`, `autosave()`, `loadAutosave()`, `exportSaveText()`, `importSaveText()` |
 | `sprites.js` | Wczytywanie plików PNG z `assets/` do obiektu `SPR` | `loadSprites()`, `sprOk()` |
+| `audio.js` | Proceduralnie syntezowane dźwięki i chiptune (zero plików audio), ustawienia głośności | `SFX_RECIPES`, `playSfx()`, `initAudio()`, `setMusicTrack()`, `setAudioSetting()` |
 | `render.js` | Całe rysowanie na `<canvas>` | `draw()`, `frame()`, `drawTile()`, `drawArmy()`, `drawCity()`, `drawRoads()` |
 | `ui.js` | Panel boczny, banery, ekran końca gry, panel produkcji | `updateUI()`, `updateBuildPanel()`, `showBanner()`, `showOverlay()` |
 | `input.js` | Obsługa kliknięć/najechania myszą, tooltipy, skróty klawiszowe | `onTileClick()`, `tileTooltip()`, `initInput()` |

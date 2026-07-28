@@ -6,6 +6,7 @@
 if (typeof document !== 'undefined' && canvas) {
   setupCanvas();
   loadSprites();
+  initAudio();
   initInput();
   initMenu();
   const vt = document.getElementById('version-tag');

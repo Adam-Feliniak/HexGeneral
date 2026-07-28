@@ -140,6 +140,24 @@
         <option value="nightmare" data-i18n="difficulty.nightmare">Koszmar</option>
       </select>
     </div>
+    <div class="menu-field">
+      <label class="opt-check">
+        <input type="checkbox" id="opt-mute">
+        <span data-i18n="lobby.options.mute">Wycisz dźwięk</span>
+      </label>
+    </div>
+    <div class="menu-field">
+      <span data-i18n="lobby.options.volumeMaster">Głośność ogólna</span>
+      <div class="slider-row"><input type="range" id="opt-vol-master" min="0" max="100" step="5"><output id="opt-vol-master-val"></output></div>
+    </div>
+    <div class="menu-field">
+      <span data-i18n="lobby.options.volumeMusic">Muzyka</span>
+      <div class="slider-row"><input type="range" id="opt-vol-music" min="0" max="100" step="5"><output id="opt-vol-music-val"></output></div>
+    </div>
+    <div class="menu-field">
+      <span data-i18n="lobby.options.volumeSfx">Efekty dźwiękowe</span>
+      <div class="slider-row"><input type="range" id="opt-vol-sfx" min="0" max="100" step="5"><output id="opt-vol-sfx-val"></output></div>
+    </div>
     <button id="options-back" data-i18n="lobby.common.back">Wróć</button>
   </div>
 </div>
@@ -220,6 +238,7 @@
 <script src="src/ai.js"></script>
 <script src="src/save.js"></script>
 <script src="src/sprites.js"></script>
+<script src="src/audio.js"></script>
 <script src="src/render.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/input.js"></script>

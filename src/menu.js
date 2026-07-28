@@ -14,6 +14,8 @@ function applyScreen() {
   document.getElementById('menu-options').hidden = s !== 'options';
   document.getElementById('menu-save').hidden = s !== 'save';
   if (s === 'menu') refreshMainMenu();
+  // osłona typeof — headless harness ładuje menu.js bez audio.js
+  if (typeof updateMusicForScreen === 'function') updateMusicForScreen();
 }
 
 function goToScreen(name) {
@@ -236,6 +238,33 @@ function renderOptions() {
   const select = document.getElementById('opt-diff-select');
   select.value = opt.defaultDifficulty;
   select.onchange = () => { opt.defaultDifficulty = select.value; applyOptionsToSetups(); };
+
+  renderAudioOptions();
+}
+
+// Ustawienia dźwięku nie są częścią state.options ani zapisu gry — to preferencja
+// użytkownika trzymana w localStorage (wzorem języka w i18n.js), dlatego czytamy je
+// wprost z audio.js. Osłona typeof: headless harness ładuje menu.js bez audio.js.
+function renderAudioOptions() {
+  if (typeof getAudioSettings !== 'function') return;
+  const s = getAudioSettings();
+  const mute = document.getElementById('opt-mute');
+  if (mute) {
+    mute.checked = !!s.muted;
+    mute.onchange = () => { setAudioSetting('muted', mute.checked); renderAudioOptions(); };
+  }
+  for (const [kind, id] of [['master', 'opt-vol-master'], ['music', 'opt-vol-music'], ['sfx', 'opt-vol-sfx']]) {
+    const el = document.getElementById(id);
+    const out = document.getElementById(id + '-val');
+    if (!el) continue;
+    el.value = Math.round(s[kind] * 100);
+    el.disabled = !!s.muted;
+    if (out) out.textContent = el.value + '%';
+    el.oninput = () => {
+      setAudioSetting(kind, Number(el.value) / 100);
+      if (out) out.textContent = el.value + '%';
+    };
+  }
 }
 
 function renderLangPicker() {

@@ -51,7 +51,7 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 | Kanał feedbacku (Discord/forum) | brak | Cały sens EA to feedback | **P0, tani** |
 | Testy zewnętrzne (przed publicznym playtestem) | ✅ **infrastruktura gotowa** (v0.4.1: `tools/pack-build.js`, `BUILD_TAG`, protokół w [13](13-Testy-zewnetrzne.md)) | Ktoś poza autorem musi zagrać przed EA | **P0 — narzędzia zamknięte, przebieg do wykonania** |
 | Onboarding / samouczek | statyczny tekst + tooltipy | Pierwsze 10 min decyduje o refundzie | **P1 — patrz nota niżej** |
-| Dźwięk / muzyka | **zero audio** | Cisza = „niedokończona" dla wielu graczy | **P1 — patrz nota niżej** |
+| Dźwięk / muzyka | ✅ **iteracja 1 zrobiona** (v0.6.0: 8 dźwięków + dwie pętle chiptune, wszystko syntezowane proceduralnie — patrz [14-Dzwiek.md](14-Dzwiek.md)) | Cisza = „niedokończona" dla wielu graczy | **P1 — zamknięte na poziomie „gra nie jest niema"** |
 | Wydajność (długie partie, dużo armii) | ~~`aiPickMove` wąskie gardło~~ → znacznie mniej pilne (v0.2.1: ~2,2× szybsze AI przy bitowo identycznych decyzjach; v0.4.0: suwak tempa 1×/4×/16×) | Płynność bez zacinania | **P2** (zdegradowane z P1) |
 | QoL (ręczne kończenie tury, undo, ustawienia) | częściowo — ręczne kończenie tury ✔ (przycisk + Enter), undo brak, ekran Opcje bardzo cienki (tylko seed + trudność) | Brak irytujących tarć | **P1/P2** |
 | Dostępność (paleta pod daltonizm, toggle animacji) | ⚠️ **sprawdzone — realna kolizja**: `PLAYERS_DEF` ma `#d64550` (czerwony, gracz ludzki) i `#3fae62` (zielony, gracz 3), czyli klasyczny konflikt przy deuteranopii | Kolory rozróżnialne | **P2, tani** (kształt/symbol obok koloru albo przesunięcie palety) |

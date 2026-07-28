@@ -19,6 +19,7 @@ Ten folder zawiera pełną, wyczerpującą dokumentację projektu, wygenerowaną
 11. [Gotowość na Early Access](11-Early-Access.md) — analiza luk „rdzeń vs roadmapa", ścieżka krytyczna do wypuszczenia i sekwencja dystrybucji (web-first → Steam)
 12. [Protokół smoke](12-Protokol-smoke.md) — 15-punktowa checklista ręcznych testów w przeglądarce przed każdym wydaniem (uzupełnienie headless: `tools/stress.js` + `tools/sim.js`)
 13. [Testy zewnętrzne](13-Testy-zewnetrzne.md) — wydawanie buildów testerom: fale dystrybucji, co zawiera build i czego celowo nie zawiera, znakowanie (`BUILD_TAG`), zbieranie zapisów jako raportów błędów
+14. [Dźwięk](14-Dzwiek.md) — dlaczego dźwięk jest generowany proceduralnie (argument licencyjny przy wydaniu komercyjnym), inwentarz dźwięków, strojenie przez `tools/gen-sounds.js`
 
 ## Najważniejsze fakty w skrócie
 

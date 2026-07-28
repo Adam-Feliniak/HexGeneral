@@ -163,8 +163,15 @@ Legenda kosztu:
   drogi. Świadomie zostawione jako opcjonalne: gra jest bez tego w pełni grywalna,
   a wybór kolorystyki to decyzja estetyczna, nie poprawka błędu.
 - 🟡 **Cofnięcie ostatniego ruchu (undo)**, interaktywny samouczek, statystyki po partii.
-- 🟡 **Dźwięk / muzyka** — na `file://` audio trzeba zainline'ować (np. jako data-URI),
-  ale jest to wykonalne.
+- ✅ **Dźwięk / muzyka** — **iteracja 1 zrobiona** (v0.6.0, `src/audio.js`): 8 efektów
+  i dwie pętle chiptune, wszystko **syntezowane proceduralnie w runtime**, zero plików
+  audio w repo. Przewidywanie „trzeba zainline'ować jako data-URI" okazało się niepotrzebne:
+  na `file://` blokowane jest tylko `fetch()`/`decodeAudioData`, a `ctx.createBuffer()`
+  z wypełnieniem próbek to czysta arytmetyka. Kluczowa korzyść przy wydaniu komercyjnym:
+  `LICENSE` zostaje bez zmian, bo nie ma cudzych assetów. Opis w
+  [14-Dzwiek.md](14-Dzwiek.md), strojenie przez `tools/gen-sounds.js`.
+  **Iteracja 2:** dźwięk startu tury (pierwszy kandydat — to rytm gry), osobne brzmienia
+  per typ jednostki, zaokrętowanie/desant, ukończenie drogi, produkcja, timer tury w multi.
 
 ## Grafika i animacje
 

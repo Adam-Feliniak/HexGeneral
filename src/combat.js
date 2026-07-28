@@ -190,6 +190,7 @@ function resolveBattle(from, to) {
 
   const c = hexCenter(to.c, to.r);
   effects.push({ x: c.x, y: c.y, t: 0 });
+  if (typeof playSfx === 'function') { playSfx('shot'); playSfx('explosion'); }
   if (aPow > dPow) {
     const loss = Math.min(att.str - 1, Math.round(att.str * 0.75 * (dPow / aPow)));
     att.str -= loss;
@@ -242,6 +243,9 @@ function executeMove(from, to) {
     const won = resolveBattle(from, to);
     // armia atakująca zniszczona — aktywacja i tak zużyta
     if (!won) { updateUI(); return usedActivation; }
+  } else if (typeof playSfx === 'function') {
+    // dźwięk marszu tylko dla ruchu bez bitwy — bitwa ma własne strzał + eksplozję
+    playSfx('move');
   }
   if (to.army && to.army.player === army.player) {
     // łączenie armii — zawsze tego samego typu, bo canStep blokuje wejście

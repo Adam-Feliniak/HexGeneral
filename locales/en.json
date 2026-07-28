@@ -45,6 +45,10 @@
   "lobby.options.title": "Options",
   "lobby.options.defaultSeed": "Default Seed",
   "lobby.options.defaultDifficulty": "Default Bot Difficulty",
+  "lobby.options.mute": "Mute sound",
+  "lobby.options.volumeMaster": "Master volume",
+  "lobby.options.volumeMusic": "Music",
+  "lobby.options.volumeSfx": "Sound effects",
 
   "difficulty.easy": "Easy",
   "difficulty.normal": "Normal",

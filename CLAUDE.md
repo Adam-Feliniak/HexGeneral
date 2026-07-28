@@ -41,6 +41,12 @@ node tools/gen-sprites.js     # after editing tools/gen-sprites.js — regenerat
 
 After `gen-sprites.js` changes, commit the regenerated `assets/*.png` files too — there's no build step to produce them otherwise.
 
+```
+node tools/gen-sounds.js      # optional — renders SFX recipes to dist/sfx/*.wav for auditioning
+```
+
+Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes every SFX into an `AudioBuffer` at runtime and plays music from a note table. `gen-sounds.js` exists only so you can hear a recipe in an audio editor while tuning it — its output goes to gitignored `dist/` and the game never loads it. See [14-Dzwiek.md](Documents/14-Dzwiek.md).
+
 ### Adding/changing UI text
 1. Add/edit the same key in **all three** `locales/pl.json`, `locales/en.json`, `locales/de.json`.
 2. Run `node tools/build-locales.js`.
@@ -70,9 +76,9 @@ For UI/CSS/canvas rendering changes, verify manually by opening `index.html` in 
 ```
 config.js → locales-data.js → i18n.js → geometry.js → utils.js → mapgen.js
 → state.js → combat.js → roads.js → empire.js → turns.js → ai.js
-→ save.js → sprites.js → render.js → ui.js → input.js → menu.js → main.js
+→ save.js → sprites.js → audio.js → render.js → ui.js → input.js → menu.js → main.js
 ```
-Order only matters where a file executes code immediately at load time (not just defining functions): `i18n.js` calls `i18nInit()` at the end (needs `I18N_DATA` from `locales-data.js`); `main.js` (last) actually starts the game — `setupCanvas()`, `loadSprites()`, `initInput()`, `initMenu()`, initial menu-screen state, `applyScreen()`, `applyI18n()`, `requestAnimationFrame(frame)`. Otherwise, functions in any file may freely call functions in any other file — there's no enforced dependency hierarchy, just topical grouping.
+Order only matters where a file executes code immediately at load time (not just defining functions): `i18n.js` calls `i18nInit()` at the end (needs `I18N_DATA` from `locales-data.js`); `main.js` (last) actually starts the game — `setupCanvas()`, `loadSprites()`, `initAudio()`, `initInput()`, `initMenu()`, initial menu-screen state, `applyScreen()`, `applyI18n()`, `requestAnimationFrame(frame)`. Otherwise, functions in any file may freely call functions in any other file — there's no enforced dependency hierarchy, just topical grouping.
 
 | File | Responsibility | Key functions/constants |
 |---|---|---|
@@ -90,6 +96,7 @@ Order only matters where a file executes code immediately at load time (not just
 | `ai.js` | Bot move/target selection, production choice | `aiTargets()`, `aiPickMove()`, `aiStep()`, `aiAssignBuildType()` |
 | `save.js` | Save/load: explicit state codec (JSON), autosave to `localStorage` (`hexgeneral.save`), continue, text export/import | `serializeGame()`, `deserializeGame()`, `autosave()`, `loadAutosave()`, `exportSaveText()`, `importSaveText()` |
 | `sprites.js` | Loads PNGs from `assets/` into `SPR` | `loadSprites()`, `sprOk()` |
+| `audio.js` | Procedurally synthesized SFX + chiptune (no audio files at all), volume settings | `SFX_RECIPES`, `playSfx()`, `initAudio()`, `setMusicTrack()`, `setAudioSetting()` |
 | `render.js` | All canvas drawing | `draw()`, `frame()`, `drawTile()`, `drawArmy()`, `drawCity()`, `drawRoads()` |
 | `ui.js` | Sidebar, banners, game-over screen, production panel | `updateUI()`, `updateBuildPanel()`, `showBanner()`, `showOverlay()` |
 | `input.js` | Click/hover handling, tooltips, keyboard shortcuts | `onTileClick()`, `tileTooltip()`, `initInput()` |

@@ -77,6 +77,11 @@ const FILES = ['index.html', 'style.css', 'LICENSE'].concat(scripts, assets);
 //   CHANGELOG.md   metryki balansu i historia strojenia AI
 //   visual-test.html, README.md
 //   locales/*.json niepotrzebne w runtime — gra ładuje src/locales-data.js
+//
+// Audio świadomie nie ma tu wpisu: dźwięki są syntezowane w runtime z przepisów
+// w src/audio.js, więc w assets/ nie ma plików audio do kopiowania. Gdyby kiedyś
+// pojawiły się (np. `gen-sounds.js --out=assets/sfx`), trzeba rozszerzyć filtr
+// rozszerzeń wyżej — dziś przepuszcza wyłącznie .png i cicho pominąłby WAV-y.
 
 // --- kopiowanie -------------------------------------------------------------
 

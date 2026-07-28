@@ -2,6 +2,30 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.6.0] - 2026-07-28
+
+- **Gra przestała być niema.** 8 efektów dźwiękowych (klik, marsz, wystrzał, eksplozja,
+  zdobycie miasta, aneksja imperium, zwycięstwo, porażka) i dwie pętle muzyki chiptune
+  (menu i rozgrywka)
+- **Wszystko generowane proceduralnie — w repo nie ma ani jednego pliku audio.** Dźwięki
+  są syntezowane do `AudioBuffer` przy pierwszym kliknięciu, muzyka grana z tabeli nut.
+  Ma to znaczenie przy planowanym wydaniu komercyjnym: nie ma cudzych licencji do
+  pilnowania, a `LICENSE` (mówiący, że dźwięk jest wyłączną własnością autora) zostaje
+  bez zmian
+- Przewidywanie z backlogu, że na `file://` trzeba będzie inline'ować audio jako data-URI,
+  okazało się niepotrzebne: blokowane jest tylko `fetch()`/`decodeAudioData`, a wypełnianie
+  bufora próbkami to czysta arytmetyka. Uniknięte ~270 KB plików WAV i ~1,3 MB na pętlę muzyki
+- Ekran „Opcje" dostał wyciszenie i trzy suwaki głośności (ogólna / muzyka / efekty),
+  zapamiętywane między sesjami (`localStorage`, jak wybór języka). Format zapisu bez zmian —
+  to preferencja użytkownika, nie stan gry
+- Dźwięki są ograniczane w czasie (odstęp między powtórzeniami, limit głosów, przy tempie AI
+  4×/16× przechodzą tylko ważne zdarzenia), żeby tryb obserwatora i przyspieszone AI nie
+  zamieniły ich w karabin maszynowy
+- Nowe narzędzie deweloperskie `tools/gen-sounds.js` — renderuje te same przepisy do plików
+  WAV w `dist/sfx/` do odsłuchu i strojenia w edytorze audio. Gra ich nie wczytuje
+- Balans AI potwierdzony jako nietknięty: seria 300 gier daje wynik identyczny co przed
+  zmianą (2,7% remisów, 50,7/49,3)
+
 ## [0.5.0] - 2026-07-28
 
 - **Punkty ruchu zamiast bonusu drogowego.** Każda jednostka ma własną pulę punktów
