@@ -103,6 +103,12 @@ function tileTooltip(t) {
     lines.push(t.city.capitalOf >= 0
       ? i18n.t('tooltip.capital', { city: t.city.name })
       : i18n.t('tooltip.city', { city: t.city.name }) + (t.city.port ? i18n.t('tooltip.portSuffix') : ''));
+    // produkcja tylko dla miast, które mają właściciela — niczyje nic nie produkują
+    if (t.owner >= 0) {
+      lines.push(i18n.t('tooltip.cityProduction', {
+        gain: cityGain(t, t.owner, cityResourceBonus(t, t.owner)),
+      }));
+    }
   }
   if (t.resource) {
     const RES_NAMES = { oil: i18n.t('tooltip.resourceOil'), farm: i18n.t('tooltip.resourceFarm'), mine: i18n.t('tooltip.resourceMine') };

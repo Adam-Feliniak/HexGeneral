@@ -170,10 +170,30 @@ function tileOnRoad(t, playerId) {
   return !!(t.road && t.road.owner === playerId && t.owner === playerId);
 }
 
+// Ile punktów produkcji daje miasto w jednej turze. Jedno miejsce prawdy — woła to
+// i produce(), i tooltip w input.js, żeby pokazywana wartość nie mogła rozjechać się
+// z faktycznie doliczaną. `resourceBonus` podaje wywołujący, bo produce() liczy go raz
+// dla wszystkich miast, a tooltip tylko dla jednego (patrz cityResourceBonus).
+function cityGain(cityTile, playerId, resourceBonus) {
+  const p = state.players[playerId];
+  const mult = p.isHuman ? 1 : resolveDifficulty(p.difficulty).economy;
+  const base = (cityTile.city.capitalOf === playerId ? 3 : 1) + (resourceBonus || 0);
+  return Math.max(1, Math.round(base * mult));
+}
+
+// bonus ze złóż dla JEDNEGO miasta — wersja dla tooltipa (produce() ma własną,
+// wsadową pętlę, żeby nie skanować planszy raz na każde miasto)
+function cityResourceBonus(cityTile, playerId) {
+  let n = 0;
+  for (const row of state.tiles) for (const t of row) {
+    if (!t.resource || t.owner !== playerId || !t.road) continue;
+    if (supplyCityFor(t, playerId) === cityTile) n++;
+  }
+  return n;
+}
+
 function produce(playerId) {
   const p = state.players[playerId];
-  const diff = p.isHuman ? null : resolveDifficulty(p.difficulty);
-  const mult = diff ? diff.economy : 1;
 
   // każde własne złoże połączone z siecią daje +1 do jednego (wybranego lub najbliższego)
   // miasta; jedno złoże = jeden bonus, wiele dróg go nie zwielokrotnia
@@ -187,8 +207,7 @@ function produce(playerId) {
   for (const row of state.tiles) for (const t of row) {
     if (!t.city || t.owner !== playerId) continue;
     if (!p.isHuman) aiAssignCityProject(t, playerId);
-    const base = (t.city.capitalOf === playerId ? 3 : 1) + (bonus.get(t) || 0);
-    const gain = Math.max(1, Math.round(base * mult));
+    const gain = cityGain(t, playerId, bonus.get(t) || 0);
     if (t.city.roadProject) {
       const proj = t.city.roadProject;
       proj.progress += gain;

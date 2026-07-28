@@ -46,7 +46,10 @@ zostaje czysty (wzorzec, nie log konkretnego przebiegu).
 - [ ] **12. Zmiana języka w trakcie partii** — sidebar, panele i menu w nowym
   języku (w tym etykieta „Kontynuuj" po powrocie do menu).
 - [ ] **13. Tooltipy**: morze, cudze pola, złoża (z drogą i bez), armie wroga,
-  podpowiedź wyboru imperium na starcie.
+  podpowiedź wyboru imperium na starcie, punkty ruchu własnej jednostki.
+- [ ] **13b. Produkcja w tooltipie miasta** — stolica pokazuje +3, zwykłe miasto +1,
+  a po podłączeniu złoża drogą wartość rośnie o 1 za każde zaopatrujące złoże.
+  Niczyje miasto nie pokazuje wiersza produkcji.
 - [ ] **14. Skróty**: Enter kończy turę, Esc czyści zaznaczenie/road-pick/panele.
 
 ## Sesja

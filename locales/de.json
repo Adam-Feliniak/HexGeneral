@@ -122,6 +122,7 @@
   "tooltip.capital": "★ Hauptstadt: <b>{{city}}</b>",
   "tooltip.city": "🏛 Stadt: <b>{{city}}</b>",
   "tooltip.portSuffix": " (Hafen ⚓)",
+  "tooltip.cityProduction": "Produktion: <b>+{{gain}}</b> Stärke / Zug",
   "tooltip.resourceOil": "🛢 Ölquelle",
   "tooltip.resourceFarm": "🌾 Ackerland",
   "tooltip.resourceMine": "⛏ Mine",

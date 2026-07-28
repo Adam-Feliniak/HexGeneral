@@ -2,6 +2,16 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.6.1] - 2026-07-28
+
+- Tooltip miasta pokazuje jego **produkcję na turę** (stolica +3, zwykłe miasto +1, plus
+  1 za każde złoże zaopatrujące to miasto drogą). Wcześniej gracz musiał tę wartość
+  odtwarzać z pamięci
+- Formuła produkcji wydzielona do `cityGain()` w `roads.js` — jedno miejsce prawdy dla
+  `produce()` i tooltipa, żeby pokazywana wartość nie mogła rozjechać się z faktycznie
+  doliczaną. Zachowanie `produce()` niezmienione (potwierdzone bitowo identyczną serią
+  300 gier)
+
 ## [0.6.0] - 2026-07-28
 
 - **Gra przestała być niema.** 8 efektów dźwiękowych (klik, marsz, wystrzał, eksplozja,

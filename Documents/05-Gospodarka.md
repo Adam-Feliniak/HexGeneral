@@ -11,6 +11,8 @@ gain = max(1, round(base * mult))
 
 `mult` to mnożnik ekonomii z presetu trudności AI (`AI_DIFFICULTY_PRESETS[...].economy`) — **ludzie zawsze mają `mult = 1`**, mnożnik dotyczy wyłącznie botów (np. Nightmare ma `economy: 1.725`, Easy `0.5`).
 
+Formuła siedzi w **`cityGain(cityTile, playerId, resourceBonus)`** (`roads.js`) i jest jednym miejscem prawdy: woła ją zarówno `produce()`, jak i tooltip miasta w `input.js`, żeby pokazywana graczowi wartość nie mogła rozjechać się z faktycznie doliczaną. Bonus ze złóż podaje wywołujący, bo `produce()` liczy go raz dla wszystkich miast (jedna pętla po planszy), a tooltip tylko dla jednego — do tego służy `cityResourceBonus(cityTile, playerId)`.
+
 ### Gdzie trafia wyprodukowana siła
 
 Najpierw sprawdzane jest, czy miasto ma aktywny **projekt drogi** (`t.city.roadProject`, patrz niżej) — jeśli tak, `gain` z tej tury dolicza się do jego postępu zamiast do jednostek, i tyle (miasto nie buduje wtedy żadnej armii). W przeciwnym razie zależy od tego, co stoi na polu miasta i jaki typ jednostki miasto ma aktualnie wybrany do budowy (`city.buildType`, domyślnie `'infantry'`):
