@@ -44,7 +44,7 @@ function updateUI() {
     div.innerHTML =
       `<span class="player-dot" style="background:${p.color}"></span>` +
       `<span class="player-name">${icon} ${p.name}${tyTag}${diffBadge}</span>` +
-      `<span class="player-stats">🏛 ${cities} ⛏ ${res} ⚔ ${str}</span>`;
+      `<span class="player-stats">🏛 ${cities} ⛏ ${res} ⚔ ${str} 💰 ${playerProduction(p.id)}</span>`;
     box.appendChild(div);
   }
 

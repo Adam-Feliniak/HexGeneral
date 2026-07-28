@@ -23,6 +23,20 @@ Legenda kosztu:
 - 🔴 **Mgła wojny (fog of war)** — widoczne tylko okolice własnych jednostek i miast.
   Mocno zmienia odczucie gry, ale dotyka renderu, AI (musi grać z niepełną informacją)
   i inputu. Otwiera realną rolę zwiadu i zasadzek.
+
+  **Uwaga na rozproszoną widoczność informacji o wrogu.** Dziś gra działa na pełnej
+  informacji i **każde miejsce decyduje samo za siebie**, co ujawnia: panel boczny
+  (`ui.js`) pokazuje dla wszystkich graczy liczbę miast, złóż, łączną siłę i produkcję;
+  tooltip armii podaje siłę i morale cudzych jednostek; tooltip miasta jego produkcję;
+  tooltip złoża — które miasto zaopatruje. Osobno tooltip punktów ruchu jest już
+  ograniczony do własnych jednostek (bo to informacja ulotna i niewyliczalna z planszy,
+  w odróżnieniu od reszty, którą da się policzyć z widocznego stanu).
+
+  Wprowadzenie mgły wymaga więc **jednego wspólnego predykatu** („czy gracz widzi
+  szczegóły tego pola/gracza") użytego przez wszystkie te miejsca. Inaczej logika
+  ujawniania rozlezie się po `input.js` i `ui.js`, i któreś miejsce na pewno zostanie
+  pominięte — co jest gorsze niż brak mgły, bo tworzy wyciek informacji trudny do
+  zauważenia.
 - 🟡 **Okopanie / fortyfikacje** — jednostka stojąca kilka tur w miejscu dostaje bonus
   obronny; miasta mogłyby mieć poziomy umocnień.
 - 🟡 **Typy terenu (koszt ruchu + modyfikatory walki)** — wzgórza/las = +obrona i droższe

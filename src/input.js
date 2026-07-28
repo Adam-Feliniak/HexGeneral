@@ -106,7 +106,7 @@ function tileTooltip(t) {
     // produkcja tylko dla miast, które mają właściciela — niczyje nic nie produkują
     if (t.owner >= 0) {
       lines.push(i18n.t('tooltip.cityProduction', {
-        gain: cityGain(t, t.owner, cityResourceBonus(t, t.owner)),
+        gain: cityGain(t, t.owner, resourceBonusMap(t.owner).get(t) || 0),
       }));
     }
   }

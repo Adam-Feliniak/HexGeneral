@@ -2,6 +2,21 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.6.2] - 2026-07-28
+
+- Panel boczny pokazuje **produkcję na turę przy każdym imperium** (💰), obok liczby
+  miast, złóż i łącznej siły. Wcześniej trzeba było najeżdżać na każde miasto po kolei
+  i sumować w głowie
+- Produkcja jest widoczna także dla przeciwników — świadomie, spójnie z resztą gry:
+  panel od zawsze pokazuje ich miasta, złoża i siłę, a tooltip cudzej armii jej siłę
+  i morale. Gra nie ma mgły wojny, a te wartości i tak dają się policzyć z widocznej
+  planszy. Zasada: pokazujemy to, co strukturalne i wyliczalne, ukrywamy to, co ulotne
+  i niewyliczalne (dlatego punkty ruchu widać tylko dla własnych jednostek)
+- Uporządkowane funkcje produkcji w `roads.js`: `resourceBonusMap()` (jedno przejście po
+  planszy), `cityGain()` (formuła) i nowe `playerProduction()` (suma dla panelu). Zastąpiły
+  `cityResourceBonus()` z 0.6.1 — mniej kodu i jedna ścieżka liczenia bonusu ze złóż
+  zamiast dwóch. Zachowanie `produce()` niezmienione (seria 300 gier bitowo identyczna)
+
 ## [0.6.1] - 2026-07-28
 
 - Tooltip miasta pokazuje jego **produkcję na turę** (stolica +3, zwykłe miasto +1, plus

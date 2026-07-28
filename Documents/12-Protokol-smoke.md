@@ -50,6 +50,9 @@ zostaje czysty (wzorzec, nie log konkretnego przebiegu).
 - [ ] **13b. Produkcja w tooltipie miasta** — stolica pokazuje +3, zwykłe miasto +1,
   a po podłączeniu złoża drogą wartość rośnie o 1 za każde zaopatrujące złoże.
   Niczyje miasto nie pokazuje wiersza produkcji.
+- [ ] **13c. Produkcja w panelu bocznym** — 💰 przy każdym imperium zgadza się z sumą
+  z tooltipów jego miast; rośnie po zdobyciu miasta i po podłączeniu złoża drogą;
+  u pokonanego imperium spada do zera.
 - [ ] **14. Skróty**: Enter kończy turę, Esc czyści zaznaczenie/road-pick/panele.
 
 ## Sesja

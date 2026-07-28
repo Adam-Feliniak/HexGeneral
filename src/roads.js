@@ -181,28 +181,34 @@ function cityGain(cityTile, playerId, resourceBonus) {
   return Math.max(1, Math.round(base * mult));
 }
 
-// bonus ze złóż dla JEDNEGO miasta — wersja dla tooltipa (produce() ma własną,
-// wsadową pętlę, żeby nie skanować planszy raz na każde miasto)
-function cityResourceBonus(cityTile, playerId) {
-  let n = 0;
-  for (const row of state.tiles) for (const t of row) {
-    if (!t.resource || t.owner !== playerId || !t.road) continue;
-    if (supplyCityFor(t, playerId) === cityTile) n++;
-  }
-  return n;
-}
-
-function produce(playerId) {
-  const p = state.players[playerId];
-
-  // każde własne złoże połączone z siecią daje +1 do jednego (wybranego lub najbliższego)
-  // miasta; jedno złoże = jeden bonus, wiele dróg go nie zwielokrotnia
+// Mapa: miasto -> ile złóż je zaopatruje. Każde własne złoże połączone z siecią daje
+// +1 do jednego (wybranego lub najbliższego) miasta; jedno złoże = jeden bonus, wiele
+// dróg go nie zwielokrotnia. Jedno przejście po planszy — woła to produce(),
+// playerProduction() i tooltip miasta, więc reguła jest zapisana raz.
+function resourceBonusMap(playerId) {
   const bonus = new Map();
   for (const row of state.tiles) for (const t of row) {
     if (!t.resource || t.owner !== playerId || !t.road) continue;
     const city = supplyCityFor(t, playerId);
     if (city) bonus.set(city, (bonus.get(city) || 0) + 1);
   }
+  return bonus;
+}
+
+// łączna produkcja gracza na turę — do podsumowania w panelu bocznym
+function playerProduction(playerId) {
+  const bonus = resourceBonusMap(playerId);
+  let sum = 0;
+  for (const row of state.tiles) for (const t of row) {
+    if (!t.city || t.owner !== playerId) continue;
+    sum += cityGain(t, playerId, bonus.get(t) || 0);
+  }
+  return sum;
+}
+
+function produce(playerId) {
+  const p = state.players[playerId];
+  const bonus = resourceBonusMap(playerId);
 
   for (const row of state.tiles) for (const t of row) {
     if (!t.city || t.owner !== playerId) continue;

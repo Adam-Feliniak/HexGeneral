@@ -37,7 +37,9 @@ Ograniczenia liczby graczy: multiplayer 2–6 graczy (`MP_PLAYER_COUNTS`), + do 
 
 - **`#turn-info`** — numer tury, licznik pozostałych ruchów (`5/5`), timer (tylko multi z limitem czasu, kolor `.low` gdy ≤10s).
 - **`#ai-speed-field`** — przełącznik tempa ruchów AI (1×/4×/16×, `state.aiSpeed` dzieli `thinkDelay` w `aiStep`); widoczny tylko gdy w grze są boty. `aiSpeed` to preferencja sesji — przeżywa „Nową mapę" i wczytanie zapisu, ale nie jest częścią samego zapisu.
-- **`#players`** — lista wszystkich imperiów: kropka w kolorze gracza, ikona 👤/🤖, nazwa (+ znacznik "(Ty)" w single, + odznaka trudności dla botów), statystyki `🏛 miasta ⛏ złoża ⚔ łączna siła`. Wiersz aktywnego gracza podświetlony (`.active`), martwi gracze przekreśleni i przygaszeni (`.dead`).
+- **`#players`** — lista wszystkich imperiów: kropka w kolorze gracza, ikona 👤/🤖, nazwa (+ znacznik "(Ty)" w single, + odznaka trudności dla botów), statystyki `🏛 miasta ⛏ złoża ⚔ łączna siła 💰 produkcja/turę` (produkcja przez `playerProduction()` z `roads.js`). Wiersz aktywnego gracza podświetlony (`.active`), martwi gracze przekreśleni i przygaszeni (`.dead`).
+
+Statystyki są pokazywane dla **wszystkich** imperiów, także wrogich — gra działa na pełnej informacji (nie ma mgły wojny), a te wartości i tak dają się policzyć z widocznej planszy. Konsekwencja świadoma: przy botach widoczna produkcja ujawnia mnożnik ekonomii z presetu trudności (stolica na Koszmarze pokaże więcej niż +3). Zasada, którą to porządkuje: **pokazujemy to, co strukturalne i wyliczalne z planszy, ukrywamy to, co ulotne i niewyliczalne** — dlatego punkty ruchu jednostki widać tylko dla własnych armii (patrz `tileTooltip` w `input.js`).
 - **`#log`** — ostatnie 10 komunikatów (`state.log`, max 40 trzymanych w pamięci), np. zdobycia miast, wyniki bitew, aneksje.
 - **`<details id="help">`** — zwijana lista zasad gry (identyczna treść co ekran samouczka w menu głównym — **treść jest zduplikowana w dwóch miejscach `index.html`**, każda zmiana kopii tekstu pomocy musi być wprowadzona w obu).
 - **`#seed-footer`** — numer seeda bieżącej mapy (+ trudność botów, jeśli są jacyś).

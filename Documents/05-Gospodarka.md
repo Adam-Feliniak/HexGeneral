@@ -11,7 +11,15 @@ gain = max(1, round(base * mult))
 
 `mult` to mnożnik ekonomii z presetu trudności AI (`AI_DIFFICULTY_PRESETS[...].economy`) — **ludzie zawsze mają `mult = 1`**, mnożnik dotyczy wyłącznie botów (np. Nightmare ma `economy: 1.725`, Easy `0.5`).
 
-Formuła siedzi w **`cityGain(cityTile, playerId, resourceBonus)`** (`roads.js`) i jest jednym miejscem prawdy: woła ją zarówno `produce()`, jak i tooltip miasta w `input.js`, żeby pokazywana graczowi wartość nie mogła rozjechać się z faktycznie doliczaną. Bonus ze złóż podaje wywołujący, bo `produce()` liczy go raz dla wszystkich miast (jedna pętla po planszy), a tooltip tylko dla jednego — do tego służy `cityResourceBonus(cityTile, playerId)`.
+Trzy funkcje w `roads.js` trzymają tę regułę w jednym miejscu, żeby wartość pokazywana graczowi nie mogła rozjechać się z faktycznie doliczaną:
+
+| Funkcja | Co robi | Kto woła |
+|---|---|---|
+| `resourceBonusMap(playerId)` | jedno przejście po planszy → mapa `miasto -> liczba zaopatrujących złóż` | `produce()`, `playerProduction()`, tooltip miasta |
+| `cityGain(cityTile, playerId, resourceBonus)` | sama formuła `max(1, round(base * mult))` | `produce()`, `playerProduction()`, tooltip miasta |
+| `playerProduction(playerId)` | suma `cityGain` po miastach gracza | panel boczny (`ui.js`) |
+
+Bonus ze złóż jest parametrem `cityGain`, a nie liczony w środku, bo `produce()` potrzebuje go dla wszystkich miast naraz — budowanie mapy raz zamiast raz na miasto trzyma koszt symulacji AI bez zmian.
 
 ### Gdzie trafia wyprodukowana siła
 
