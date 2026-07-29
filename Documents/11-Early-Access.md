@@ -54,6 +54,7 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 | Strona sklepu + opis EA + roadmapa | brak | Steam wymaga „czemu EA / jak długo / co dojdzie" | **P0 (Steam)** |
 | Kanał feedbacku (Discord/forum) | brak | Cały sens EA to feedback | **P0, tani** |
 | Tryb kooperacyjny (drużyny) | brak — każdy gra sam (FFA), więc hot-seat *z definicji* stawia dwie osoby przy jednym komputerze przeciw sobie | Dwoje ludzi musi móc zagrać **po tej samej stronie** przeciw botom | **P0 — bramka fali 0 testów, patrz nota niżej** |
+| Multiplayer sieciowy (Steam) | brak — tryb multi to hot-seat przy jednym komputerze | **Nie jest progiem EA**: na start wystarcza hot-seat + co-op przeciw botom | **Po EA — cel potwierdzony, patrz [sekcja niżej](#cel-potwierdzony-multiplayer-sieciowy-na-steam)** |
 | Testy zewnętrzne (przed publicznym playtestem) | ✅ **infrastruktura gotowa** (v0.4.1: `tools/pack-build.js`, `BUILD_TAG`, protokół w [13](13-Testy-zewnetrzne.md)) | Ktoś poza autorem musi zagrać przed EA | **P0 — narzędzia zamknięte, przebieg do wykonania** |
 | Onboarding / samouczek | statyczny tekst + tooltipy | Pierwsze 10 min decyduje o refundzie | **P1 — patrz nota niżej** |
 | Dźwięk / muzyka | ✅ **iteracja 1 zrobiona** (v0.6.0: 8 dźwięków + dwie pętle chiptune, wszystko syntezowane proceduralnie — patrz [14-Dzwiek.md](14-Dzwiek.md)) | Cisza = „niedokończona" dla wielu graczy | **P1 — zamknięte na poziomie „gra nie jest niema"** |
@@ -212,3 +213,40 @@ Uwaga: itch/web zachowuje filozofię „no build" (hostujesz te same pliki). Wra
 to pierwszy krok, który dokłada toolchain + ~150 MB runtime — świadoma decyzja dystrybucyjna,
 nie zmiana w grze.
 
+## Cel potwierdzony: multiplayer sieciowy na Steam
+
+Docelowo gra ma mieć **multiplayer sieciowy na Steam**. Zapisane tutaj, bo wcześniej
+dokumenty tego nie odzwierciedlały: co-op jest zaplanowany jako **hot-seat** (patrz
+[nota o co-opie](#nota-co-op-awansuje-z-roadmapy-do-rdzenia-bramka-fali-0)), a MP sieciowy
+figurował w backlogu jako jedna pozycja 🔴. Opis techniczny pozycji stoi
+w [10-Przyszle-plany.md](10-Przyszle-plany.md#narzędzia-i-meta); tutaj — konsekwencje
+dla sekwencji i dla wyboru silnika.
+
+**Sekwencja: po EA, nie przed.** Sens EA to zwalidowanie pętli na graczach, a do tego MP
+sieciowy nie jest potrzebny — bramką fali 0 jest co-op hot-seat, a P0 to zamykalność,
+zapis, stabilność i dystrybucja. Odwrotna kolejność (MP jako warunek premiery) oznaczałaby
+przesunięcie startu o duży, nieprzetestowany system.
+
+**Dwie rzeczy, nie jedna.** Warto je wyceniać osobno, bo mają różny ciężar:
+
+| Warstwa | Stan | Uwaga |
+|---|---|---|
+| Netcode (transport + autorytatywna walidacja ruchu + lobby) | do napisania | Gra turowa to najłatwiejszy przypadek: wyślij ruch, zwaliduj, rozgłoś. Kodek stanu (`serializeGame`) już jest. |
+| Integracja Steamworks (lobby, zaproszenia, P2P/SDR, osiągnięcia) | do napisania | Z wrappera Electron przez wiązania Node (`steamworks.js`) — czyli w tym samym kroku, który i tak jest w planie dystrybucji wyżej. |
+
+**Dlaczego to nie zmienia decyzji o silniku.** Pytanie „czy nie przenieść gry na Godota"
+wraca naturalnie przy słowach „Steam" i „multiplayer", więc warto mieć odpowiedź zapisaną:
+
+- Silnik z gotowym high-level multiplayerem (RPC, synchronizacja stanu) błyszczy przy grach
+  **w czasie rzeczywistym**. Przy turówce ta przewaga jest mała — nie ma czego interpolować.
+- Animacje terenu, drugi potwierdzony cel, też nie są argumentem: mieszczą się w istniejącej
+  pętli `frame()`/`anims`/`effects`, a plansza przerysowuje się cała i tak.
+- Cena portu to przepisanie **wszystkiego poza dokumentacją** — łącznie z logiką, którą
+  `tools/sim.js` i `tools/stress.js` już przetestowały. To zerowanie harmonogramu przed EA.
+- **Realny sufit weba to konsole**, nie Steam. Jeśli kiedyś pojawi się cel konsolowy, to
+  jest decyzja o osobnym projekcie/sequelu, nie o porcie tej gry.
+
+**Najtańsze ubezpieczenie:** pisać netcode i walidację ruchów po stronie logiki wolnej od
+DOM (`combat.js`, `empire.js`, `ai.js`, `save.js` już takie są — osłony
+`typeof document === 'undefined'`). Wtedy decyzja o pozostaniu przy obecnym stacku nie pali
+mostu: ewentualny port byłby tłumaczeniem czystej logiki, a nie archeologią.

@@ -309,10 +309,12 @@ poprawki grafiki to zmiany w generatorze + regeneracja + commit PNG-ów (patrz
   Rozbudowa funkcji malujących w `tools/gen-sprites.js`; koszt to głównie robota
   artystyczna, architektura już to udźwignie (rejestracja w `loadSprites()` w
   `src/sprites.js`).
-- 🟡 **Animacje jednostek i terenu** — sprite'y wieloklatkowe (chód, strzał, bezruch),
-  animowana woda/wybrzeże, dym z miast. Wymaga klatek w generatorze i pętli animacji
-  w renderze (istnieją już `anims`, `floaters`, `effects`, `lastFrame` w `state.js`
-  oraz `frame()`/`draw()` w `render.js`, więc jest na czym budować).
+- 🟡 **Animacje jednostek i terenu** — **cel potwierdzony** (animacje terenu w szczególności):
+  sprite'y wieloklatkowe (chód, strzał, bezruch), animowana woda/wybrzeże, dym z miast.
+  Wymaga klatek w generatorze i pętli animacji w renderze (istnieją już `anims`, `floaters`,
+  `effects`, `lastFrame` w `state.js` oraz `frame()`/`draw()` w `render.js`, więc jest na
+  czym budować) — plansza i tak przerysowuje się cała co klatkę, więc koszt to nie render,
+  a rozmiar `assets/` (uwaga na końcu tej sekcji).
 - 🟡 **Bogatsze efekty walki i ruchu** — animowane trafienia, eksplozje, ślady po
   drodze, płynne przesuwanie jednostek między heksami zamiast skoku. Nadbudowa nad
   istniejącym systemem `effects`/`floaters`.
@@ -384,8 +386,22 @@ naturalnie eksponuje wartość zwiadu.
   zachowaniem AI (stalemate wyżej).
 - 🟡 **Minimapa** — przy proceduralnych mapach szybko robi się przydatna, zwłaszcza
   z mgłą wojny.
-- 🔴 **Multiplayer sieciowy** — jeśli obecny tryb multi to hotseat, gra online to osobny,
-  duży kierunek (zależny od formatu zapisu stanu).
+- 🔴 **Multiplayer sieciowy (Steam)** — **cel potwierdzony**, nie kandydat: gra ma mieć
+  multiplayer na Steam. Wpisany tutaj, bo *kolejnościowo* jest po EA — sekwencja i skutki
+  dla wyboru silnika stoją w [11-Early-Access.md](11-Early-Access.md#cel-potwierdzony-multiplayer-sieciowy-na-steam).
+  Koszt zostaje 🔴, bo to nowa warstwa (transport + lobby + UI), ale **najtrudniejsza część
+  jest już zrobiona** — trzy uwagi, żeby nie wyceniać tej pozycji drożej, niż jest:
+  - **Zależność „od formatu zapisu stanu" jest już spełniona.** `serializeGame()`/
+    `deserializeGame()` ([save.js](../src/save.js)) to jawny kodek stanu, czyli gotowy
+    primitive do synchronizacji i wznawiania partii.
+  - **Gra turowa to najłatwiejszy przypadek netcode:** wyślij ruch, zwaliduj, rozgłoś.
+    Bez rollbacku, interpolacji i kompensacji opóźnień. Do napisania zostaje transport
+    (relay na WebSocketach — wzorem `tools/serve.js`, czysty Node bez zależności),
+    **autorytatywna walidacja ruchu** i warstwa lobby.
+  - **Walidację trzymać po stronie logiki, nie renderu.** `combat.js`, `empire.js`, `ai.js`
+    i `save.js` są już wolne od DOM (osłony `typeof document === 'undefined'`), więc netcode
+    napisany po tej samej stronie zostaje przenośny — to jednocześnie najtańsze
+    ubezpieczenie na wypadek kiedykolwiek rozważanego portu na inny silnik.
 
 ## Dwa tryby złożoności (prosty / złożony)
 
@@ -442,6 +458,10 @@ razem ze stanem gry — inaczej wczytana partia mogłaby zmienić reguły w loci
    (render + AI + input).
 5. Duże kierunki (rozwój morski, tryb złożony z budynkami/technologiami, lotnictwo)
    dopiero na fundamencie powyższych.
+6. **Multiplayer sieciowy (Steam)** — cel potwierdzony, ale świadomie **po wypuszczeniu EA**:
+   sens EA to zwalidowanie pętli na graczach, a MP sieciowy nie jest do tego potrzebny
+   (bramką fali 0 jest co-op hot-seat). Sekwencja w
+   [11-Early-Access.md](11-Early-Access.md#cel-potwierdzony-multiplayer-sieciowy-na-steam).
 
 Zasada przekrojowa: im więcej z powyższych systemów, tym większa wartość **systemu
 modułów** — warto wprowadzić go, zanim dołoży się drugi–trzeci opcjonalny system, żeby

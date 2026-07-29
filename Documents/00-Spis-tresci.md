@@ -16,7 +16,7 @@ Ten folder zawiera pełną, wyczerpującą dokumentację projektu, wygenerowaną
 8. [UI, menu i tłumaczenia](08-UI-menu-i18n.md) — ekrany menu, panel boczny gry, system i18n (PL/EN/DE)
 9. [Przewodnik developera](09-Przewodnik-developera.md) — jak uruchamiać, rozszerzać i testować projekt; konwencje i pułapki
 10. [Przyszłe plany](10-Przyszle-plany.md) — lista pomysłów na rozwój gry z orientacyjnym kosztem (uwaga: propozycje, nie opis istniejącego kodu); znacznik ⭐ oznacza pozycję awansowaną do rdzenia EA, czyli bieżący priorytet
-11. [Gotowość na Early Access](11-Early-Access.md) — analiza luk „rdzeń vs roadmapa", ścieżka krytyczna do wypuszczenia i sekwencja dystrybucji (web-first → Steam)
+11. [Gotowość na Early Access](11-Early-Access.md) — analiza luk „rdzeń vs roadmapa", ścieżka krytyczna do wypuszczenia, sekwencja dystrybucji (web-first → Steam) oraz cel multiplayera sieciowego na Steam wraz z zapisaną decyzją o silniku
 12. [Protokół smoke](12-Protokol-smoke.md) — 15-punktowa checklista ręcznych testów w przeglądarce przed każdym wydaniem (uzupełnienie headless: `tools/stress.js` + `tools/sim.js`)
 13. [Testy zewnętrzne](13-Testy-zewnetrzne.md) — wydawanie buildów testerom: fale dystrybucji, co zawiera build i czego celowo nie zawiera, znakowanie (`BUILD_TAG`), zbieranie zapisów jako raportów błędów
 14. [Dźwięk](14-Dzwiek.md) — dlaczego dźwięk jest generowany proceduralnie (argument licencyjny przy wydaniu komercyjnym), inwentarz dźwięków, strojenie przez `tools/gen-sounds.js`
