@@ -15,11 +15,15 @@ To odwraca perspektywę wobec backlogu: **`10-Przyszle-plany.md` jest w większo
 mniejsza lista „utwardzania produktu" — w dużej części nieefektowna robota, której
 w backlogu nie ma.
 
-**Stan dokumentu: aktualny na v0.4.1.** Od pierwszej wersji tej analizy doszły: tryb
+**Stan dokumentu: aktualny na v0.6.2.** Od pierwszej wersji tej analizy doszły: tryb
 obserwatora i regulacja tempa AI (v0.4.0 — przydatne przy pokazywaniu gry i przy zdalnej
 krytyce partii botów), narzędzie regresji wizualnej `visual-test.html` oraz infrastruktura
-buildów testerskich (v0.4.1). Żadna z tych rzeczy nie zamknęła bramki P0 poza testami
-zewnętrznymi, ale wszystkie obniżyły koszt kolejnych kroków.
+buildów testerskich (v0.4.1), punkty ruchu (v0.5.0), dźwięk i muzyka (v0.6.0 — zamyka P1
+„gra nie jest niema") oraz czytelna produkcja w tooltipie i panelu (v0.6.1–v0.6.2).
+
+**Zmiana priorytetów w tej wersji dokumentu:** do listy P0 dochodzi **tryb kooperacyjny
+(drużyny)** jako bramka fali 0 testów zewnętrznych — to obecnie priorytet nr 1. Uzasadnienie
+w [nocie o co-opie](#nota-co-op-awansuje-z-roadmapy-do-rdzenia-bramka-fali-0) niżej.
 
 ## Rdzeń EA vs roadmapa EA
 
@@ -49,6 +53,7 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 | Dystrybucja (wrapper + platforma) | brak | Musi *gdzieś* być (Steam/itch) | **P0 (launch)** |
 | Strona sklepu + opis EA + roadmapa | brak | Steam wymaga „czemu EA / jak długo / co dojdzie" | **P0 (Steam)** |
 | Kanał feedbacku (Discord/forum) | brak | Cały sens EA to feedback | **P0, tani** |
+| Tryb kooperacyjny (drużyny) | brak — każdy gra sam (FFA), więc hot-seat *z definicji* stawia dwie osoby przy jednym komputerze przeciw sobie | Dwoje ludzi musi móc zagrać **po tej samej stronie** przeciw botom | **P0 — bramka fali 0 testów, patrz nota niżej** |
 | Testy zewnętrzne (przed publicznym playtestem) | ✅ **infrastruktura gotowa** (v0.4.1: `tools/pack-build.js`, `BUILD_TAG`, protokół w [13](13-Testy-zewnetrzne.md)) | Ktoś poza autorem musi zagrać przed EA | **P0 — narzędzia zamknięte, przebieg do wykonania** |
 | Onboarding / samouczek | statyczny tekst + tooltipy | Pierwsze 10 min decyduje o refundzie | **P1 — patrz nota niżej** |
 | Dźwięk / muzyka | ✅ **iteracja 1 zrobiona** (v0.6.0: 8 dźwięków + dwie pętle chiptune, wszystko syntezowane proceduralnie — patrz [14-Dzwiek.md](14-Dzwiek.md)) | Cisza = „niedokończona" dla wielu graczy | **P1 — zamknięte na poziomie „gra nie jest niema"** |
@@ -68,16 +73,50 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
    legalnych akcji przez prawdziwe ścieżki gry + inwarianty stanu + soak sesyjny) —
    500 partii bez wyjątków i naruszeń; do powtarzania przed każdym wydaniem razem
    z protokołem smoke z `09-Przewodnik-developera.md`.
-4. **Testy zewnętrzne** — infrastruktura gotowa (v0.4.1): `node tools/pack-build.js --tag=...`
+4. **Tryb kooperacyjny (drużyny)** — **priorytet bieżący**. Nie jest to feature z roadmapy
+   wciśnięty przed premierę, tylko **narzędzie testowe**: bez niego punkt 5 (fala 0) nie ma
+   jak się odbyć w realnych warunkach domowych — uzasadnienie w nocie niżej. Zakres na tę
+   bramkę to sam **szkielet drużyn** opisany w [10-Przyszle-plany.md](10-Przyszle-plany.md):
+   drużyna w stanie gracza, brak friendly-fire i zajmowania pól sojusznika, warunek
+   zwycięstwa liczony na drużyny zamiast pojedynczych imperiów, AI traktujące sojuszników
+   jak swoich, przypisanie drużyn w lobby. **Super-wróg zostaje w roadmapie** — do testów
+   nie jest potrzebny, a kosztuje osobny kolor, sprite'y i strojenie mnożnika produkcji.
+5. **Testy zewnętrzne** — infrastruktura gotowa (v0.4.1): `node tools/pack-build.js --tag=...`
    produkuje czysty build (88 plików / ~196 KB, bez `.git`, `Documents/` i `tools/`), fale
    dystrybucji i protokół w [13-Testy-zewnetrzne.md](13-Testy-zewnetrzne.md). Do wykonania
    został sam **przebieg**: ktoś poza autorem musi dograć partie, zanim cokolwiek pójdzie
    publicznie.
-5. **Dystrybucja + strona sklepu** — Electron/NW.js wrapper, kapsułki, screeny, opis EA,
+6. **Dystrybucja + strona sklepu** — Electron/NW.js wrapper, kapsułki, screeny, opis EA,
    roadmapa. Robota ~dni, ale proces Steam to ~4–8 tygodni kalendarza (opłata $100,
    podatki, 30-dniowa karencja, recenzje). **Pierwsze realne złamanie „no build"** —
    w warstwie dystrybucji, nie w samej grze.
-6. **Kanał feedbacku** — Discord + wątek. Tani, ale bez niego EA nie ma sensu.
+7. **Kanał feedbacku** — Discord + wątek. Tani, ale bez niego EA nie ma sensu.
+
+### Nota: co-op awansuje z roadmapy do rdzenia (bramka fali 0)
+
+To **świadomy wyjątek** od zasady „roadmapy nie tykamy przed startem" z początku tego
+dokumentu. Wyjątek jest uzasadniony tym, że pozycja trafia tu **nie jako treść gry, tylko
+jako warunek wykonania innego P0**:
+
+- **Fala 0 to jedyny P0, który wymaga drugiego człowieka**, a dostępny człowiek to zwykle
+  domownik, nie fan gatunku. Dziś jedyny tryb dla dwóch osób przy jednym komputerze to
+  hot-seat FFA, czyli **pojedynek z autorem gry** — układ, w którym mniej wprawiona osoba
+  przegrywa szybko i sesja kończy się, zanim wyprodukuje jakiekolwiek dane.
+- **Co-op odwraca ten układ:** dwoje ludzi gra razem przeciw botom, a przeciwnikiem jest
+  trudność do wyregulowania suwakiem, nie druga osoba przy stole. To format, w którym
+  sesja trwa długo i sama z siebie generuje protokół „myśl na głos" — bo gracze *muszą*
+  rozmawiać o planie. Dokładnie ten materiał, po który się siada do fali 0.
+- **Nic nie tracimy z pierwotnego celu.** Checklista fali 0 wymagała hot-seatu po to, żeby
+  tryb wieloosobowy przeszedł test w naturalnych warunkach — a co-op jedzie **tą samą
+  ścieżką kodu** (kolejka tur hot-seat, timer tury, banery „twoja tura", panel boczny).
+  Test trybu multi zostaje wykonany, tylko w wariancie, w który da się realnie grać w domu.
+- **Efekt uboczny wart odnotowania:** pierwsza obserwacja, jak drabinka trudności zachowuje
+  się przy dwóch ludziach naraz (dziś presety są strojone `sim.js`-em wyłącznie 1v1/FFA).
+
+**Argument za „teraz, nie później":** szkielet drużyn dokłada pole do gracza, więc wymaga
+podbicia `SAVE_FORMAT` — a to unieważnia istniejące zapisy. Przed EA jest to bezkosztowe
+(świadomie brak migracji przed 1.0); po wypuszczeniu buildów testerskich każde takie
+podbicie kasuje partie testerów w trakcie ich sesji. Im wcześniej, tym taniej.
 
 ### Nota: audio i onboarding awansują przez testy zewnętrzne
 
@@ -172,3 +211,4 @@ Rekomendowana sekwencja (rozwinięcie wątku o Steam z rozmów projektowych):
 Uwaga: itch/web zachowuje filozofię „no build" (hostujesz te same pliki). Wrapper pod Steam
 to pierwszy krok, który dokłada toolchain + ~150 MB runtime — świadoma decyzja dystrybucyjna,
 nie zmiana w grze.
+

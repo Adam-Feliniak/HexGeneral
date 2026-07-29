@@ -17,7 +17,7 @@ sprite'ów, bo *to* jest realne IP.
 
 | Fala | Kto | Cel | Dlaczego tak |
 |---|---|---|---|
-| **0** | zaufana osoba, u autora, 1–2 sesje | pierwsze 10 minut + **hot-seat** | najrzadszy zasób; jedyna okazja na naturalny test trybu multi i jedyny sposób na obserwację onboardingu |
+| **0** | zaufana osoba, u autora, 1–2 sesje | pierwsze 10 minut + **hot-seat, w wariancie kooperacyjnym** | najrzadszy zasób; jedyna okazja na naturalny test trybu multi i jedyny sposób na obserwację onboardingu |
 | **1** | osoby zaufane | build, długie partie, balans i systemy | najwyższe zaufanie = pierwszy dostęp |
 | **2** | osoby neutralne i nieprzychylne | build, **po naprawach z fali 1** | patrz niżej |
 | **3** | publiczny playtest (itch/web) | crashe, onboarding, obcy gracze | naturalna data wygaśnięcia tajności |
@@ -78,10 +78,16 @@ Wyślij razem z buildem. Trzy rzeczy, które musi zawierać:
 
 1. **Na czym się skupić** — jedno, dwa pytania na falę, nie „powiedz co myślisz".
 2. **Lista znanych braków.** Uprzedzenie zarzutu odbiera mu siłę i wartość informacyjną:
-   zamienia „znalazłem wadę" w „tak, to jest na liście". Stan obecny:
-   *brak dźwięku i muzyki; samouczek to statyczny tekst, nie interaktywny; brak trybu
-   multiplayer online (multi jest hot-seat, na jednym komputerze); brak cofania ruchu;
-   rozmiar mapy na stałe; kolory graczy jeszcze nie sprawdzone pod daltonizm.*
+   zamienia „znalazłem wadę" w „tak, to jest na liście". Stan na **v0.6.2**:
+   *samouczek to statyczny tekst, nie interaktywny; dźwięk i muzyka w wersji minimalnej
+   (8 efektów + dwie pętle chiptune); brak trybu multiplayer online (multi jest hot-seat,
+   na jednym komputerze); brak cofania ruchu; rozmiar mapy na stałe; kolory graczy jeszcze
+   nie sprawdzone pod daltonizm.*
+
+   Listę **aktualizuj przy każdym wydaniu** i trzymaj przy niej numer wersji (stąd „stan na"
+   wyżej). Nieaktualna lista działa przeciw tobie w obie strony: wymienia braki, których już
+   nie ma (wygląda na nieuwagę), i milczy o tych, które doszły — czyli traci dokładnie tę
+   funkcję, dla której powstała.
 3. **Prośba o niepublikowanie** do ustalonego momentu + informacja, że buildy są znakowane.
    Nieegzekwowalne wobec hobbysty, ale ustawia normę — i od razu wiadomo, kto ją zignorował.
    To jest cała rola „NDA" w tym projekcie; nie ma sensu inwestować w nic więcej.
@@ -105,11 +111,23 @@ oczekiwałeś, co się stało, ile tur zagrałeś, czy dograłeś do końca.
 Twój najrzadszy zasób, więc nie marnuj go na to, co dostaniesz zdalnie. Dwie rzeczy,
 których **nie da się** wyciągnąć z raportów:
 
+> **Prerekwizyt: tryb kooperacyjny.** Fala 0 czeka na szkielet drużyn (P0 w
+> [11-Early-Access.md](11-Early-Access.md)). Powód jest praktyczny: w hot-seacie FFA
+> jedyny układ dla dwóch osób to **gra przeciw autorowi**, a mniej wprawiony tester
+> odpada z partii, zanim zdąży cokolwiek pokazać. Sesja co-op (dwoje ludzi w drużynie
+> przeciw botom) trwa długo, poziom przeciwnika reguluje suwak trudności, a wspólne
+> planowanie samo wymusza protokół „myśl na głos" z ostatniego punktu tej listy.
+
 - [ ] **Pierwsze 10 minut, bez podpowiedzi.** Siadasz obok, **nic nie tłumaczysz**, tylko
       notujesz, gdzie tester się gubi i o co pyta. To główne ryzyko refundowe (P1 onboarding)
       i jedyny sposób, żeby je zmierzyć.
-- [ ] **Hot-seat na dwóch graczy.** Jedyna okazja, żeby tryb multi przeszedł test w naturalnych
-      warunkach — zdalna grupa nie może go sprawdzić w ogóle.
+- [ ] **Hot-seat na dwóch graczy — sesja kooperacyjna.** Jedyna okazja, żeby tryb multi
+      przeszedł test w naturalnych warunkach (zdalna grupa nie może go sprawdzić w ogóle),
+      a przy okazji pierwsza obserwacja, czy drabinka trudności ma sens przy dwóch ludziach
+      naraz — dziś presety są strojone `sim.js`-em wyłącznie na partie bez sojuszy.
+- [ ] **Partia FFA na dwóch graczy — krótko, na koniec.** Co-op nie sprawdzi jednej rzeczy:
+      czy hot-seat *przeciw sobie* nie ma zgrzytów (kolejność tur, limit czasu, zasłanianie
+      informacji między turami). Wystarczy kilkanaście tur, ale nie pomijaj tego całkiem.
 - [ ] Protokół **„myśl na głos"** — poproś, żeby komentował decyzje; z tego wychodzi, czy
       morale i drogi są czytelne.
 - [ ] **Nie obronaj projektu w trakcie sesji.** Notuj, dyskutuj po. Tłumaczenie „to działa tak,

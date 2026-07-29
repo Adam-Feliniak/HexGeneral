@@ -11,6 +11,11 @@ Legenda kosztu:
 - 🟡 **średni** — dotyka kilku warstw (logika + render + UI), ale bez zmiany fundamentów.
 - 🔴 **wysoki** — nowa warstwa/fundament (format zapisu, mgła wojny) dotykająca renderu, AI i inputu naraz.
 
+Znacznik ⭐ oznacza pozycję **wyciągniętą z roadmapy do rdzenia EA** — czyli taką, która
+przestała być „kiedyś" i jest bieżącym priorytetem. Kolor obok niej dalej mówi o koszcie,
+nie o pilności; uzasadnienie awansu zawsze stoi w [11-Early-Access.md](11-Early-Access.md),
+nie tutaj.
+
 ---
 
 ## Mechanika walki i jednostek
@@ -165,9 +170,21 @@ Legenda kosztu:
 - 🟡 **Scenariusze / mapy z celami** — inne warunki zwycięstwa niż eliminacja (utrzymaj
   X tur, zdobądź konkretne miasto). Nadbudowa nad istniejącym generatorem i seedem.
 - 🔴 **Dyplomacja (multi / AI)** — sojusze, zawieszenie broni, wspólny wróg.
-- 🟡 **Tryb kooperacyjny (drużyny)** — ludzie (i/lub boty) w stałym sojuszu grający
-  przeciw wspólnemu wrogowi. Prostszy, „zamrożony" wariant dyplomacji (powyżej) — zamiast
-  dynamicznych paktów po prostu przypisanie drużyny przy zakładaniu gry.
+- ⭐ 🟡 **Tryb kooperacyjny (drużyny)** — **PRIORYTET NR 1**. Ludzie (i/lub boty) w stałym
+  sojuszu grający przeciw wspólnemu wrogowi. Prostszy, „zamrożony" wariant dyplomacji
+  (powyżej) — zamiast dynamicznych paktów po prostu przypisanie drużyny przy zakładaniu gry.
+
+  **Dlaczego to już nie jest pozycja z roadmapy.** Awansowała do rdzenia EA jako **bramka
+  fali 0 testów zewnętrznych**: dwie osoby przy jednym komputerze mogą dziś zagrać wyłącznie
+  *przeciw sobie* (hot-seat FFA), więc jedyna dostępna sesja testowa to pojedynek z autorem
+  gry — układ, który kończy się, zanim wyprodukuje dane. Co-op zamienia to na wspólną grę
+  przeciw botom, gdzie poziom przeciwnika reguluje suwak trudności, a gracze sami komentują
+  decyzje na głos. Pełne uzasadnienie i miejsce w ścieżce krytycznej:
+  [11-Early-Access.md](11-Early-Access.md); protokół sesji: [13-Testy-zewnetrzne.md](13-Testy-zewnetrzne.md).
+
+  **Zakres na tę bramkę: sam szkielet drużyn** (niżej), w wariancie „osobne imperia
+  w sojuszu, wspólne zwycięstwo". Super-wróg **nie** wchodzi do tej bramki — jest tańszy
+  dopiero, gdy szkielet stoi, a do testów niepotrzebny.
 
   Uwaga projektowa: to, co początkowo wyglądało na „dwa tryby", to naprawdę **dwie
   niezależne decyzje**, i lepiej trzymać je osobno:
