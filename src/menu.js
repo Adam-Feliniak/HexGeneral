@@ -157,18 +157,21 @@ const MP_SLOT_KINDS = ['human', 'bot', 'boss', 'closed'];
 // gotowe układy slotów. „Tryb bossa" nie jest osobnym trybem gry, tylko jednym z tych
 // układów — boss to wartość obsady slotu, więc obsługuje go ta sama tabela co resztę
 function mpPreset(key) {
-  if (key === 'coop') return defaultMpSlots();
+  // szybki układ nie zgaduje trudności — bierze domyślną z Opcji, tak jak lobby robiło
+  // to wcześniej jednym wspólnym wybornikiem
+  const d = (state.options && state.options.defaultDifficulty) || DEFAULT_AI_DIFFICULTY;
+  if (key === 'coop') return defaultMpSlots(d);
   if (key === 'boss') {
     return [
-      { kind: 'human', team: 0 }, { kind: 'human', team: 0 },
-      { kind: 'closed', team: 2 }, { kind: 'closed', team: 3 }, { kind: 'closed', team: 4 },
-      { kind: 'boss', team: 1 },
+      { kind: 'human', team: 0, difficulty: null }, { kind: 'human', team: 0, difficulty: null },
+      { kind: 'closed', team: 2, difficulty: d }, { kind: 'closed', team: 3, difficulty: d },
+      { kind: 'closed', team: 4, difficulty: d }, { kind: 'boss', team: 1, difficulty: d },
     ];
   }
   return [ // ffa — każdy przeciw każdemu, czyli układ sprzed drużyn
-    { kind: 'human', team: 0 }, { kind: 'human', team: 1 },
-    { kind: 'bot', team: 2 }, { kind: 'bot', team: 3 },
-    { kind: 'closed', team: 4 }, { kind: 'closed', team: 5 },
+    { kind: 'human', team: 0, difficulty: null }, { kind: 'human', team: 1, difficulty: null },
+    { kind: 'bot', team: 2, difficulty: d }, { kind: 'bot', team: 3, difficulty: d },
+    { kind: 'closed', team: 4, difficulty: d }, { kind: 'closed', team: 5, difficulty: d },
   ];
 }
 
@@ -227,6 +230,28 @@ function renderMpSlots(setup) {
     };
     row.appendChild(kindSel);
 
+    // trudność per slot: każdy bot (i boss) może być inny, więc nie ma już jednego
+    // wspólnego wybornika dla całej partii. U bossa preset jest bazą, na którą
+    // playerDifficulty() nakłada BOSS_MULT
+    const diffSel = document.createElement('select');
+    const aiSlot = slot.kind === 'bot' || slot.kind === 'boss';
+    if (aiSlot) {
+      for (const key of AI_DIFFICULTY_ORDER) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = difficultyLabel(AI_DIFFICULTY_PRESETS[key]);
+        diffSel.appendChild(opt);
+      }
+      diffSel.value = slot.difficulty || DEFAULT_AI_DIFFICULTY;
+      diffSel.onchange = () => { slot.difficulty = diffSel.value; renderMpSetup(); };
+    } else {
+      const opt = document.createElement('option');
+      opt.textContent = i18n.t('lobby.mp.noDifficulty');
+      diffSel.appendChild(opt);
+      diffSel.disabled = true;
+    }
+    row.appendChild(diffSel);
+
     const teamSel = document.createElement('select');
     for (let t = 0; t < MAX_PLAYERS; t++) {
       const opt = document.createElement('option');
@@ -262,12 +287,6 @@ function renderMpSetup() {
   if (problem) warn.textContent = i18n.t(problem);
   document.getElementById('mp-start').disabled = !!problem;
 
-  const hasAi = open.some(s => s.kind !== 'human');
-  document.getElementById('mp-diff-field').hidden = !hasAi;
-  if (hasAi) {
-    renderDifficultyGroup('mp-diff-group', 'mp-diff-custom-wrap', 'mp-diff-slider', 'mp-diff-slider-val', setup, renderMpSetup);
-  }
-
   renderSeedGroup('mp-seed-group', 'mp-seed-input', 'mp-seed-preview', setup, renderMpSetup);
 
   const timeBox = document.getElementById('mp-time-group');
@@ -285,8 +304,12 @@ function renderMpSetup() {
 // żeby przy kolejnym wejściu w submenu były już ustawione
 function applyOptionsToSetups() {
   const opt = state.options;
+  state.spSetup.difficulty = opt.defaultDifficulty;
+  // w multi trudność jest per slot, więc domyślna z Opcji spływa na wszystkie sloty AI
+  for (const s of state.mpSetup.slots || []) {
+    if (s.kind !== 'human') s.difficulty = opt.defaultDifficulty;
+  }
   for (const setup of [state.spSetup, state.mpSetup]) {
-    setup.difficulty = opt.defaultDifficulty;
     if (opt.defaultSeed != null) { setup.seedMode = 'custom'; setup.seedValue = opt.defaultSeed; }
     else { setup.seedMode = 'random'; setup.seedValue = randomSeed(); }
   }
@@ -414,10 +437,8 @@ function initMenu() {
   });
   document.getElementById('mp-start').addEventListener('click', () => {
     const s = state.mpSetup;
-    newGame({
-      slots: s.slots, aiDifficulty: effectiveDifficulty(s),
-      seed: s.seedValue, timeLimit: s.time, transport: s.transport,
-    });
+    // trudność jedzie w slotach (per gracz), więc lobby nie podaje już jednej wspólnej
+    newGame({ slots: s.slots, seed: s.seedValue, timeLimit: s.time, transport: s.transport });
     // pierwszy slot może być botem albo bossem — wtedy partię trzeba ruszyć jawnie
     kickOffAiGame();
   });

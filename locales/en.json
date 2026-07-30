@@ -44,6 +44,11 @@
   "lobby.mp.presetCoop": "Humans vs Bots",
   "lobby.mp.presetBoss": "Boss Mode",
   "lobby.mp.slots": "Player Slots",
+  "lobby.mp.colEmpire": "Empire",
+  "lobby.mp.colKind": "Slot",
+  "lobby.mp.colDifficulty": "Difficulty",
+  "lobby.mp.colTeam": "Team",
+  "lobby.mp.noDifficulty": "—",
   "lobby.mp.slot.human": "Human",
   "lobby.mp.slot.bot": "Bot",
   "lobby.mp.slot.boss": "Boss (black)",
@@ -164,6 +169,7 @@
   "help.support": "Adjacent friendly armies give <b>support</b> in battle; a city strengthens the defender.",
   "help.ports": "From a <b>port</b> (⚓), an army can sail out to sea and land on any shore. Embarking and landing use up <b>all</b> movement points, and at sea every unit sails 3 tiles.",
   "help.annex": "Capturing an enemy capital <b>annexes</b> their entire empire.",
-  "help.teams": "In multiplayer, slots can form <b>teams</b>: allies never fight each other or take each other's tiles, and victory counts for the whole team.",
+  "help.teams": "In multiplayer, slots can form <b>teams</b>: allies never fight each other, never take each other's tiles, drive on each other's roads as if they were their own, and victory counts for the whole team.",
+  "help.boss": "The <b>boss</b> (black empire) plays unlike a bot: it loses no morale with distance from its cities, and moves across its own territory as if on a road. Fight it near its borders, not in your own backyard.",
   "help.shortcuts": "Shortcuts: <b>Enter</b> — end turn, <b>Esc</b> — deselect."
 }

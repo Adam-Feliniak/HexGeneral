@@ -8,7 +8,7 @@ Cała nawigacja steruje się jednym polem `state.screen`, a `applyScreen()` (`me
 |---|---|---|
 | `'menu'` | `#menu-main` | Ekran startowy: Kontynuuj (gdy istnieje autozapis; dynamiczna etykieta z numerem tury przez `refreshMainMenu`) / Pojedynczy gracz / Gra wieloosobowa / Samouczek / Zapis gry / Opcje / Wyjście + wybór języka |
 | `'sp-setup'` | `#menu-sp-setup` | Lobby single-player: **tryb Gram/Oglądam** (`setup.spectate`), liczba botów, trudność, seed mapy. „Oglądam" startuje `newGame({ humanCount: 0, ... })` — sami botowie; `kickOffAiGame()` (menu.js) odpala pierwszą turę AI, bo nie ma tury człowieka, która by ją napędziła |
-| `'mp-setup'` | `#menu-mp-setup` | Lobby multiplayer: połączenie (hot-seat / internet — nieaktywny), szybkie układy, **tabela slotów** (obsada + drużyna na slot), trudność, seed, limit czasu na turę |
+| `'mp-setup'` | `#menu-mp-setup` | Lobby multiplayer: połączenie (hot-seat / internet — nieaktywny), szybkie układy, **tabela slotów** (obsada + trudność + drużyna na slot), seed, limit czasu na turę |
 | `'tutorial'` | `#menu-tutorial` | Statyczny ekran "Jak grać?" — pełna lista zasad (ta sama treść co zwijana pomoc w grze, patrz niżej) |
 | `'save'` | `#menu-save` | Ekran „Zapis gry": pole tekstowe do skopiowania zapisu (Pokaż zapis → Ctrl+C) lub wklejenia i wczytania (Ctrl+V → Wczytaj); logika w `save.js`, obsługa w `menu.js` |
 | `'options'` | `#menu-options` | Domyślny seed i domyślna trudność botów dla przyszłych gier; wyciszenie i trzy suwaki głośności (ogólna / muzyka / efekty) — patrz [Dźwięk](14-Dzwiek.md). Uwaga na niespójność utrwalania: głośność idzie do `localStorage` (`hexgeneral.audio`), a seed i trudność żyją tylko w `state.options` na czas sesji |
@@ -36,9 +36,20 @@ Ograniczenia liczby graczy: multiplayer to `MAX_PLAYERS = 6` slotów, z których
 ### Tabela slotów w lobby multiplayer
 
 Skład partii ustawia się jak w potyczce z serii Command & Conquer: sześć wierszy, w każdym
-dwie listy rozwijane — **obsada** (Człowiek / Bot / Boss / Zamknięty) i **drużyna** (A–F).
+trzy listy rozwijane — **obsada** (Człowiek / Bot / Boss / Zamknięty), **trudność**
+(Łatwy / Normalny / Trudny / Koszmar) i **drużyna** (A–F).
 Renderują ją `renderMpSlots` / `renderMpTransport` / `renderMpPresets` (`menu.js`), a stan
 siedzi w `state.mpSetup.slots` (przeżywa między grami jak reszta ustawień lobby).
+
+**Trudność jest per slot, nie per partia.** Osobnego pola „Trudność botów" w tym lobby
+już nie ma: każdy bot (i boss) może mieć własny poziom, więc jeden wspólny wybornik byłby
+kłamstwem. Kolumna jest wyłączona dla slotów Człowiek i Zamknięty (pokazuje „—"). Skutek
+uboczny: **w lobby multi nie ma trudności „Custom" z suwakiem** — procent zostaje w lobby
+single i w Opcjach (jako domyślny poziom, który spływa na sloty AI przez `applyOptionsToSetups`).
+Silnik obsługiwał trudność per gracz od zawsze (`player.difficulty`, `resolveDifficulty`),
+więc zmiana dotyczy lobby, nie mechaniki. Stopka paska bocznego pokazuje teraz trudność
+tylko wtedy, gdy wszystkie boty mają tę samą — inaczej zostaje sam seed, bo poziom stoi
+i tak przy każdym graczu na liście.
 
 Trzy rzeczy warto tu wiedzieć:
 

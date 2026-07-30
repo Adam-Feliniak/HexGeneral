@@ -14,13 +14,36 @@ Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemV
   Zmierzone na 30 partiach, samotnik kontra dwa boty Normal w drużynie: **23% wygranych
   bez premii → 97% z premią**. Liczba graczy zostaje ograniczona do **6 imperiów** —
   boss zajmuje slot, a nie dokłada siódmego
+- **Boss łamie dwie zasady, które obowiązują wszystkich innych** — bo bot z samymi
+  większymi mnożnikami zostaje botem, tylko bogatszym:
+  - **„Legion nie zna zaplecza"** — morale bossa nie spada z odległością od jego miast
+    (zawsze 100 na lądzie, 85 na morzu). Uderzenie w głąb twojego kraju jest dla niego
+    tak samo silne jak obrona własnej stolicy; dla ciebie w jego głębi — dalej nie jest
+  - **Linie wewnętrzne** — całe własne terytorium jest dla bossa drogą (koszt ruchu 1
+    zamiast 2), bez budowania czegokolwiek. To jego odpowiedź na przewagę liczebną
+    drużyny: wspólna pula rozkazów rośnie z liczbą graczy, jego nie, więc zamiast
+    dostać więcej rozkazów, marnuje mniej na sam marsz
+  - Zmierzone na 30 partiach na wariant (te same seedy): przy **dwóch** przeciwnikach
+    reguły dokładają tylko 3 punkty (97% → 100%), ale przy **pięciu** podbijają wygrane
+    z 30% na **83%**. Same reguły, bez premii ekonomicznej, dają 43% przy dwóch
+    przeciwnikach i 3% przy pięciu. Dopiero **oba składniki razem** dają płaską trudność
+    83–100% w zakresie 2–5 przeciwników — czyli sesję co-op tak samo trudną niezależnie
+    od tego, ile osób usiądzie do stołu
 - **Lobby wieloosobowe to teraz tabela slotów** w stylu potyczki: każdy slot ma obsadę
-  (człowiek / bot / boss / zamknięty) i drużynę. Boss **nie jest osobnym trybem gry**,
+  (człowiek / bot / boss / zamknięty), **własną trudność** i drużynę. Wspólne pole
+  „Trudność botów" zniknęło — jeden bot może być Łatwy, a drugi Koszmarny w tej samej
+  partii. Silnik trzymał trudność per gracz (`player.difficulty`) od zawsze, więc lobby
+  wreszcie z tego korzysta; `state.aiDifficulty` zostaje tylko jako poziom dla imperium,
+  które przechodzi pod AI w trakcie gry. Cena: w tym lobby nie ma już trudności „Custom"
+  z suwakiem procentowym — zostaje w lobby single i w Opcjach. Boss **nie jest osobnym trybem gry**,
   tylko wartością obsady — dzięki temu jedna tabela obsługuje FFA, co-op przeciw botom,
   2v2 i partię z bossem. Trzy przyciski szybkiego układu ustawiają ją jednym kliknięciem
-- Reguły sojuszu: sojusznicy nie walczą ze sobą i nie zabierają sobie pól, ale imperia
-  zostają osobne (produkcja, morale, drogi, limity armii dalej per gracz). Koniec gry
-  liczy się na **drużyny**, nie na pojedyncze imperia
+- Reguły sojuszu: sojusznicy nie walczą ze sobą i nie zabierają sobie pól, a **drogi
+  drużyny są wspólne** — po sieci sojusznika jedzie się za 1 punkt ruchu jak po własnej.
+  Poza tym imperia zostają osobne (produkcja, morale, limity armii per gracz), a
+  zaopatrzenie jest jawnie wyłączone ze współdzielenia: złoże sojusznika **nie** zasili
+  twojego miasta, nawet gdy łańcuch dróg fizycznie je łączy. Dzielimy przejezdność,
+  nie dochody. Koniec gry liczy się na **drużyny**, nie na pojedyncze imperia
 - **Sojusznicy startują obok siebie.** Kolejność `CAPITAL_SPOTS` jest dobrana pod
   maksymalny rozrzut, co w drużynach działałoby przeciw graczom: dwie osoby z jednej
   drużyny lądowały w przeciwległych rogach — najdalej od siebie i najbliżej wroga,

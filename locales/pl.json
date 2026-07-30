@@ -44,6 +44,11 @@
   "lobby.mp.presetCoop": "Ludzie kontra boty",
   "lobby.mp.presetBoss": "Tryb bossa",
   "lobby.mp.slots": "Sloty graczy",
+  "lobby.mp.colEmpire": "Imperium",
+  "lobby.mp.colKind": "Obsada",
+  "lobby.mp.colDifficulty": "Trudność",
+  "lobby.mp.colTeam": "Drużyna",
+  "lobby.mp.noDifficulty": "—",
   "lobby.mp.slot.human": "Człowiek",
   "lobby.mp.slot.bot": "Bot",
   "lobby.mp.slot.boss": "Boss (czarny)",
@@ -164,6 +169,7 @@
   "help.support": "Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.",
   "help.ports": "Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu. Zaokrętowanie i desant zużywają <b>wszystkie</b> punkty ruchu, a na morzu każda jednostka płynie 3 pola.",
   "help.annex": "Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.",
-  "help.teams": "W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą ani nie zajmują sobie pól, a zwycięstwo liczy się dla całej drużyny.",
+  "help.teams": "W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą, nie zajmują sobie pól, jeżdżą po swoich drogach jak po własnych, a zwycięstwo liczy się dla całej drużyny.",
+  "help.boss": "<b>Boss</b> (czarne imperium) gra inaczej niż bot: nie traci morale z odległości od swoich miast, a po własnym terenie porusza się jak po drodze. Bij go blisko jego granic, nie na swoim zapleczu.",
   "help.shortcuts": "Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz."
 }

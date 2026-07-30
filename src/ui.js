@@ -64,9 +64,13 @@ function updateUI() {
 
   const footer = document.getElementById('seed-footer');
   if (footer) {
-    const hasBots = state.players.some(p => !p.isHuman);
-    footer.textContent = hasBots
-      ? i18n.t('game.seedFooterWithDifficulty', { seed: state.mapSeed, difficulty: difficultyLabel(resolveDifficulty(state.aiDifficulty)) })
+    // trudność jest per gracz (sloty lobby), więc w stopce pokazujemy ją tylko wtedy,
+    // gdy wszystkie boty mają tę samą — inaczej byłaby to nieprawda, a i tak stoi
+    // przy każdym graczu na liście wyżej
+    const bots = state.players.filter(p => !p.isHuman);
+    const uniform = bots.length && bots.every(p => p.difficulty === bots[0].difficulty);
+    footer.textContent = uniform
+      ? i18n.t('game.seedFooterWithDifficulty', { seed: state.mapSeed, difficulty: difficultyLabel(resolveDifficulty(bots[0].difficulty)) })
       : i18n.t('game.seedFooter', { seed: state.mapSeed });
   }
 }

@@ -66,16 +66,14 @@
     </div>
     <div class="menu-field">
       <span data-i18n="lobby.mp.slots">Sloty graczy</span>
+      <div class="slot-head">
+        <span class="slot-name" data-i18n="lobby.mp.colEmpire">Imperium</span>
+        <span data-i18n="lobby.mp.colKind">Obsada</span>
+        <span data-i18n="lobby.mp.colDifficulty">Trudność</span>
+        <span data-i18n="lobby.mp.colTeam">Drużyna</span>
+      </div>
       <div id="mp-slots"></div>
       <div id="mp-slots-warning" class="lobby-warning" hidden></div>
-    </div>
-    <div class="menu-field" id="mp-diff-field">
-      <span data-i18n="lobby.common.difficulty">Trudność botów</span>
-      <div id="mp-diff-group" class="choice-group"></div>
-      <div id="mp-diff-custom-wrap" class="custom-diff" hidden>
-        <input type="range" id="mp-diff-slider" min="0" max="100" step="5">
-        <span id="mp-diff-slider-val"></span>
-      </div>
     </div>
     <div class="menu-field">
       <span data-i18n="lobby.common.seed">Seed mapy</span>
@@ -110,7 +108,8 @@
       <li data-i18n-html="help.support">Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.</li>
       <li data-i18n-html="help.ports">Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu.</li>
       <li data-i18n-html="help.annex">Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
-      <li data-i18n-html="help.teams">W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą ani nie zajmują sobie pól, a zwycięstwo liczy się dla całej drużyny.</li>
+      <li data-i18n-html="help.teams">W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą, nie zajmują sobie pól, jeżdżą po swoich drogach jak po własnych, a zwycięstwo liczy się dla całej drużyny.</li>
+      <li data-i18n-html="help.boss"><b>Boss</b> (czarne imperium) gra inaczej niż bot: nie traci morale z odległości od swoich miast, a po własnym terenie porusza się jak po drodze. Bij go blisko jego granic, nie na swoim zapleczu.</li>
       <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
     </ul>
     <button id="tutorial-back" data-i18n="lobby.common.back">Wróć</button>
@@ -216,7 +215,8 @@
         <li data-i18n-html="help.support">Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.</li>
         <li data-i18n-html="help.ports">Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu.</li>
         <li data-i18n-html="help.annex">Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
-        <li data-i18n-html="help.teams">W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą ani nie zajmują sobie pól, a zwycięstwo liczy się dla całej drużyny.</li>
+        <li data-i18n-html="help.teams">W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą, nie zajmują sobie pól, jeżdżą po swoich drogach jak po własnych, a zwycięstwo liczy się dla całej drużyny.</li>
+        <li data-i18n-html="help.boss"><b>Boss</b> (czarne imperium) gra inaczej niż bot: nie traci morale z odległości od swoich miast, a po własnym terenie porusza się jak po drodze. Bij go blisko jego granic, nie na swoim zapleczu.</li>
         <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
       </ul>
     </details>

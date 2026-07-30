@@ -108,8 +108,15 @@ Skład partii ustala **tabela slotów** z lobby wieloosobowego (wzorem potyczki 
 każdy slot ma obsadę i drużynę.
 
 ```js
-{ kind: 'human' | 'bot' | 'boss' | 'closed', team: 0..5 }
+{ kind: 'human' | 'bot' | 'boss' | 'closed', team: 0..5, difficulty: preset | null }
 ```
+
+`difficulty` jest **per slot** (`null` = człowiek albo „użyj wspólnej trudności gry",
+czym posługują się harnessy wołające `newGame({ humanCount, botCount, aiDifficulty })`).
+Trafia wprost do `player.difficulty`, które silnik obsługiwał od zawsze. `state.aiDifficulty`
+przestało więc sterować rozgrywką — zostaje jako wartość domyślna dla imperium, które
+dopiero przechodzi pod AI (`switchHuman` w `input.js`), i jest liczone jako najczęstsza
+trudność botów (`dominantDifficulty`).
 
 Ta tabela jest jedynym źródłem prawdy o składzie. **„Tryb bossa" nie jest osobnym trybem
 gry ani osobnym polem stanu** — to slot o obsadzie `'boss'` (najwyżej jeden na partię).
@@ -127,8 +134,12 @@ i wybalansowania. `newGame({ slots })` zamienia tabelę na `state.players[]`:
 Reguły sojuszu (`sameTeam()` w `state.js`): sojusznicy **nie walczą** (`canStep`
 nie wpuszcza na pole ich armii — nie ma tam ani bitwy, ani scalania stosów) i **nie
 zabierają sobie pól** (`captureTile` pomija pole sojusznika; skutkiem ubocznym, zamierzonym,
-jest to, że stolica sojusznika nie może paść z naszej ręki). Poza tym imperia zostają
-osobne: produkcja, morale, drogi i limity armii dalej liczą się per gracz. Koniec gry
+jest to, że stolica sojusznika nie może paść z naszej ręki). Drużyna **dzieli drogi**:
+`tileOnRoad` uznaje drogę sojusznika za własną, więc po sieci sojuszu jedzie się za
+1 punkt ruchu. Poza tym imperia zostają osobne — produkcja, morale i limity armii dalej
+liczą się per gracz, a **zaopatrzenie jest jawnie wyłączone ze współdzielenia**:
+`connectedCities()` chodzi wyłącznie po polach `owner === playerId`, więc złoże
+sojusznika nie zasili twojego miasta (dzielimy przejezdność, nie dochody). Koniec gry
 liczy `checkGameOver()` na **drużyny**, nie na pojedyncze imperia.
 
 Liczba imperiów jest ograniczona do `MAX_PLAYERS = 6` (tyle jest pozycji w `CAPITAL_SPOTS`);
@@ -139,6 +150,12 @@ Boss to nie osobny poziom trudności, tylko mnożniki `BOSS_MULT` nałożone na 
 preset (`playerDifficulty()` w `config.js`) — suwak trudności dalej reguluje partię.
 Premia ekonomiczna idzie w parze z agresją świadomie: sam mnożnik produkcji daje wroga
 *bogatszego*, niekoniecznie *groźniejszego* (bot potrafi okopać się z jednym stosem).
+
+Do tego boss ma **dwie reguły, których nie ma nikt inny** (obie przez `isBossPlayer()`
+w `state.js`): morale bez kary za dystans (`moraleAt`) i własne terytorium w cenie drogi
+(`moveCostStep`). To jedyne miejsca w warstwie logiki, gdzie `kind` wpływa na rozgrywkę —
+`aiPickMove` w ogóle nie wie, że gra bossem. Uzasadnienie i pomiary:
+[06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md).
 
 Poza `state` istnieją jeszcze osobne, niezależnie resetowane tablice modułowe: `anims` (animacje ruchu — tween pozycji), `floaters` (unoszące się napisy strat), `effects` (eksplozje), `hoverTile`, `lastFrame` — wszystkie w `state.js`.
 

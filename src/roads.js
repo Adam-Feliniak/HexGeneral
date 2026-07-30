@@ -166,8 +166,15 @@ function failRoadProject(fromCityTile) {
 }
 
 // czy pole daje zniżkę ruchu — dowolny własny heks drogi (patrz moveCostStep w combat.js)
+// Czy da się TU jechać po drodze. Drużyna dzieli drogi: sojusznik pokonuje cudzą drogę
+// tak samo tanio jak własną, bo wspólna sieć to naturalna korzyść z sojuszu i jedyna
+// rzecz, której nie da się „przewieźć" — droga leży tam, gdzie leży.
+//
+// GOSPODARKA zostaje osobna i to jest świadome: zaopatrzenie złóż i produkcja liczą się
+// przez connectedCities(), które chodzi wyłącznie po polach `owner === playerId`, więc
+// złoże sojusznika NIE zasili twojego miasta. Dzielimy przejezdność, nie dochody.
 function tileOnRoad(t, playerId) {
-  return !!(t.road && t.road.owner === playerId && t.owner === playerId);
+  return !!(t.road && sameTeam(t.road.owner, playerId) && sameTeam(t.owner, playerId));
 }
 
 // Ile punktów produkcji daje miasto w jednej turze. Jedno miejsce prawdy — woła to

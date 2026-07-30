@@ -44,6 +44,11 @@
   "lobby.mp.presetCoop": "Menschen gegen Bots",
   "lobby.mp.presetBoss": "Boss-Modus",
   "lobby.mp.slots": "Spieler-Slots",
+  "lobby.mp.colEmpire": "Reich",
+  "lobby.mp.colKind": "Besetzung",
+  "lobby.mp.colDifficulty": "Schwierigkeit",
+  "lobby.mp.colTeam": "Team",
+  "lobby.mp.noDifficulty": "—",
   "lobby.mp.slot.human": "Mensch",
   "lobby.mp.slot.bot": "Bot",
   "lobby.mp.slot.boss": "Boss (schwarz)",
@@ -164,6 +169,7 @@
   "help.support": "Benachbarte eigene Armeen geben <b>Unterstützung</b> im Kampf; eine Stadt stärkt den Verteidiger.",
   "help.ports": "Von einem <b>Hafen</b> (⚓) aus kann eine Armee aufs Meer fahren und an jeder Küste landen. Einschiffung und Landung verbrauchen <b>alle</b> Bewegungspunkte, und auf dem Meer fährt jede Einheit 3 Felder.",
   "help.annex": "Die Eroberung einer feindlichen Hauptstadt <b>annektiert</b> ihr gesamtes Reich.",
-  "help.teams": "Im Mehrspielermodus können Slots <b>Teams</b> bilden: Verbündete kämpfen nicht gegeneinander und nehmen sich keine Felder, und der Sieg zählt für das ganze Team.",
+  "help.teams": "Im Mehrspielermodus können Slots <b>Teams</b> bilden: Verbündete kämpfen nicht gegeneinander, nehmen sich keine Felder, nutzen die Straßen der anderen wie eigene, und der Sieg zählt für das ganze Team.",
+  "help.boss": "Der <b>Boss</b> (schwarzes Reich) spielt anders als ein Bot: Er verliert keine Moral mit der Entfernung zu seinen Städten und bewegt sich auf eigenem Gebiet wie auf einer Straße. Schlage ihn nahe seiner Grenzen, nicht im eigenen Hinterland.",
   "help.shortcuts": "Tastenkürzel: <b>Enter</b> — Zug beenden, <b>Esc</b> — Auswahl aufheben."
 }

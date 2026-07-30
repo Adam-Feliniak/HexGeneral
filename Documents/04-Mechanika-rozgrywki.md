@@ -43,7 +43,8 @@ Ruch ma **dwa niezależne limity**, których nie należy mylić:
 
 | Wejście na | Koszt |
 |---|---|
-| własną drogę (`tileOnRoad`) | `MOVE_COST_ROAD = 1` |
+| drogę własną **lub sojusznika** (`tileOnRoad`) | `MOVE_COST_ROAD = 1` |
+| **własne terytorium — tylko boss** („linie wewnętrzne") | `MOVE_COST_ROAD = 1` |
 | każde inne pole (ląd, morze, miasto) | `MOVE_COST_DEFAULT = 2` |
 | przejście ląd↔woda | **cała pozostała pula** |
 
@@ -58,7 +59,7 @@ Jednostka z **pełną** pulą może zawsze wejść na jedno sąsiednie pole, cho
 Pojedynczy krok z pola `from` na sąsiednie pole `to` jest legalny, jeśli:
 - pola są rzeczywiście sąsiadami (`hexDist === 1`),
 - na docelowym polu **nie stoi pełny własny stos** (`str >= MAX_ARMY = 99`) **ani armia innego typu tego samego gracza** — różne typy nie mogą się łączyć, więc pole zajęte przez inny typ jest dla ruszającej się armii nieprzejezdne (blokada identyczna jak przy pełnym stosie, funkcja `blockedByFriendly`),
-- na docelowym polu **nie stoi armia sojusznika** (innego imperium z tej samej drużyny) — imperia w sojuszu zostają osobne, więc nie ma tam ani bitwy, ani scalania stosów; pole jest po prostu nieprzejezdne,
+- na docelowym polu **nie stoi armia sojusznika** (innego imperium z tej samej drużyny) — imperia w sojuszu zostają osobne, więc nie ma tam ani bitwy, ani scalania stosów; pole jest po prostu nieprzejezdne (samo terytorium sojusznika jest natomiast w pełni przejezdne, a jego **drogi liczą się jak własne** — patrz tabela kosztów wyżej),
 - wejście na wodę wymaga, by pole startowe było morzem **albo własnym portem** — każdy typ lądowy może wypłynąć z portu, nie ma osobnych jednostek desantowych/morskich.
 
 ### Wielokrokowa ścieżka (`reachableMoves`)
@@ -74,6 +75,10 @@ Reguły trasy:
 Wejście na pole z własną armią **tego samego typu** sumuje siły (`str`, ograniczone do `MAX_ARMY = 99`) i bierze **wyższy** z dwóch poziomów weterancji (`Math.max`, nie sumę). Połączona armia dostaje `mp = 0` i `activated = true` — bez tego dostałaby w tej turze ruch „za darmo", cudzymi punktami. Różne typy nigdy się nie łączą (blokowane już na etapie `canStep`, więc pole zajęte przez inny typ w ogóle nie pojawia się jako legalny ruch).
 
 ## Morale
+
+> **Wyjątek: boss.** Imperium bossa (tryb drużynowy) nie podlega karze za dystans —
+> jego morale to zawsze 100 na lądzie i 85 na morzu. To jedna z dwóch reguł, które
+> ma tylko on; opis i pomiary w [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md).
 
 ```js
 function moraleAt(playerId, t) {

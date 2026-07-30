@@ -250,7 +250,9 @@ Co pokrywa:
 - **Koniec gry na drużyny** — łącznie z porażką w single dopiero po śmierci **całej**
   drużyny człowieka.
 - **Boss** — jeden na partię, własny skin i barwa, mnożniki nałożone NA preset (sprawdzane
-  przez porównanie easy < normal < hard, żeby suwak trudności nie przestał działać).
+  przez porównanie easy < normal < hard, żeby suwak trudności nie przestał działać) oraz
+  jego dwie reguły: pełne morale na lądzie (i tylko u niego), własne terytorium w cenie
+  drogi (i tylko u niego), przy zachowaniu terminalnego kroku ląd↔woda.
 - **Rozstawienie stolic** — sojusznik nie może startować dalej niż najbliższy wróg,
   a FFA musi dawać **dokładnie** `CAPITAL_SPOTS[0..n-1]`; ta druga asercja pilnuje, żeby
   wyniki `sim.js`/`stress.js` zostały porównywalne z historycznymi pomiarami.

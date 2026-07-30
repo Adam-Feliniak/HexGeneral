@@ -46,6 +46,11 @@ const I18N_DATA = {
     "lobby.mp.presetCoop": "Ludzie kontra boty",
     "lobby.mp.presetBoss": "Tryb bossa",
     "lobby.mp.slots": "Sloty graczy",
+    "lobby.mp.colEmpire": "Imperium",
+    "lobby.mp.colKind": "Obsada",
+    "lobby.mp.colDifficulty": "Trudność",
+    "lobby.mp.colTeam": "Drużyna",
+    "lobby.mp.noDifficulty": "—",
     "lobby.mp.slot.human": "Człowiek",
     "lobby.mp.slot.bot": "Bot",
     "lobby.mp.slot.boss": "Boss (czarny)",
@@ -157,7 +162,8 @@ const I18N_DATA = {
     "help.support": "Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.",
     "help.ports": "Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu. Zaokrętowanie i desant zużywają <b>wszystkie</b> punkty ruchu, a na morzu każda jednostka płynie 3 pola.",
     "help.annex": "Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.",
-    "help.teams": "W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą ani nie zajmują sobie pól, a zwycięstwo liczy się dla całej drużyny.",
+    "help.teams": "W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą, nie zajmują sobie pól, jeżdżą po swoich drogach jak po własnych, a zwycięstwo liczy się dla całej drużyny.",
+    "help.boss": "<b>Boss</b> (czarne imperium) gra inaczej niż bot: nie traci morale z odległości od swoich miast, a po własnym terenie porusza się jak po drodze. Bij go blisko jego granic, nie na swoim zapleczu.",
     "help.shortcuts": "Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz."
   },
   "en": {
@@ -200,6 +206,11 @@ const I18N_DATA = {
     "lobby.mp.presetCoop": "Humans vs Bots",
     "lobby.mp.presetBoss": "Boss Mode",
     "lobby.mp.slots": "Player Slots",
+    "lobby.mp.colEmpire": "Empire",
+    "lobby.mp.colKind": "Slot",
+    "lobby.mp.colDifficulty": "Difficulty",
+    "lobby.mp.colTeam": "Team",
+    "lobby.mp.noDifficulty": "—",
     "lobby.mp.slot.human": "Human",
     "lobby.mp.slot.bot": "Bot",
     "lobby.mp.slot.boss": "Boss (black)",
@@ -311,7 +322,8 @@ const I18N_DATA = {
     "help.support": "Adjacent friendly armies give <b>support</b> in battle; a city strengthens the defender.",
     "help.ports": "From a <b>port</b> (⚓), an army can sail out to sea and land on any shore. Embarking and landing use up <b>all</b> movement points, and at sea every unit sails 3 tiles.",
     "help.annex": "Capturing an enemy capital <b>annexes</b> their entire empire.",
-    "help.teams": "In multiplayer, slots can form <b>teams</b>: allies never fight each other or take each other's tiles, and victory counts for the whole team.",
+    "help.teams": "In multiplayer, slots can form <b>teams</b>: allies never fight each other, never take each other's tiles, drive on each other's roads as if they were their own, and victory counts for the whole team.",
+    "help.boss": "The <b>boss</b> (black empire) plays unlike a bot: it loses no morale with distance from its cities, and moves across its own territory as if on a road. Fight it near its borders, not in your own backyard.",
     "help.shortcuts": "Shortcuts: <b>Enter</b> — end turn, <b>Esc</b> — deselect."
   },
   "de": {
@@ -354,6 +366,11 @@ const I18N_DATA = {
     "lobby.mp.presetCoop": "Menschen gegen Bots",
     "lobby.mp.presetBoss": "Boss-Modus",
     "lobby.mp.slots": "Spieler-Slots",
+    "lobby.mp.colEmpire": "Reich",
+    "lobby.mp.colKind": "Besetzung",
+    "lobby.mp.colDifficulty": "Schwierigkeit",
+    "lobby.mp.colTeam": "Team",
+    "lobby.mp.noDifficulty": "—",
     "lobby.mp.slot.human": "Mensch",
     "lobby.mp.slot.bot": "Bot",
     "lobby.mp.slot.boss": "Boss (schwarz)",
@@ -465,7 +482,8 @@ const I18N_DATA = {
     "help.support": "Benachbarte eigene Armeen geben <b>Unterstützung</b> im Kampf; eine Stadt stärkt den Verteidiger.",
     "help.ports": "Von einem <b>Hafen</b> (⚓) aus kann eine Armee aufs Meer fahren und an jeder Küste landen. Einschiffung und Landung verbrauchen <b>alle</b> Bewegungspunkte, und auf dem Meer fährt jede Einheit 3 Felder.",
     "help.annex": "Die Eroberung einer feindlichen Hauptstadt <b>annektiert</b> ihr gesamtes Reich.",
-    "help.teams": "Im Mehrspielermodus können Slots <b>Teams</b> bilden: Verbündete kämpfen nicht gegeneinander und nehmen sich keine Felder, und der Sieg zählt für das ganze Team.",
+    "help.teams": "Im Mehrspielermodus können Slots <b>Teams</b> bilden: Verbündete kämpfen nicht gegeneinander, nehmen sich keine Felder, nutzen die Straßen der anderen wie eigene, und der Sieg zählt für das ganze Team.",
+    "help.boss": "Der <b>Boss</b> (schwarzes Reich) spielt anders als ein Bot: Er verliert keine Moral mit der Entfernung zu seinen Städten und bewegt sich auf eigenem Gebiet wie auf einer Straße. Schlage ihn nahe seiner Grenzen, nicht im eigenen Hinterland.",
     "help.shortcuts": "Tastenkürzel: <b>Enter</b> — Zug beenden, <b>Esc</b> — Auswahl aufheben."
   }
 };

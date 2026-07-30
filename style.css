@@ -516,22 +516,39 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
   vertical-align: middle;
 }
 
-/* tabela slotów w lobby wieloosobowym (obsada + drużyna na slot) */
-.slot-row {
-  display: flex;
+/* Tabela slotów w lobby wieloosobowym: imperium + obsada + trudność + drużyna.
+   Cztery kolumny nie mieszczą się w domyślnej szerokości .menu-box, więc ten jeden
+   ekran dostaje własną — reszta menu zostaje wąska */
+#menu-mp-setup .menu-box { max-width: 600px; }
+
+.slot-row, .slot-head {
+  display: grid;
+  grid-template-columns: 14px minmax(80px, 1fr) 104px 104px 92px;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
 }
 
-.slot-row .slot-name { flex: 1; font-weight: 700; font-size: 13px; }
+.slot-row { margin-bottom: 6px; }
+.slot-row .slot-name { font-weight: 700; font-size: 13px; text-align: left; }
 .slot-row.slot-closed { opacity: 0.45; }
+
+/* nagłówek kolumn — pierwsza etykieta obejmuje kropkę koloru i nazwę */
+.slot-head {
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8d8a68;
+}
+
+.slot-head .slot-name { grid-column: 1 / 3; text-align: left; }
 
 .slot-row select {
   font: inherit;
   font-size: 12.5px;
   padding: 5px 6px;
-  min-width: 108px;
+  width: 100%;
   background: #1a1d10;
   color: #f2e9c8;
   border: 2px solid #16140c;

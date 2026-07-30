@@ -23,6 +23,12 @@ function moraleCityList(playerId) {
 }
 
 function moraleAt(playerId, t) {
+  // BOSS: „legion nie zna zaplecza" — jedyny gracz bez kary za dystans, więc bije
+  // pełną siłą także 10 pól w głębi cudzego kraju. To jest ta różnica, która robi
+  // z niego przeciwnika innego RODZAJU, a nie tylko bogatszego bota: rajd na
+  // zaplecze przestaje być dla niego samobójstwem, choć dla obrońców nadal jest.
+  // Skanu miast wtedy w ogóle nie robimy (moraleAt jest wołane setki razy na turę)
+  if (isBossPlayer(playerId)) return t.land ? 100 : 85;
   // morale zależy od odległości do najbliższego własnego miasta —
   // podbijanie miast przesuwa front morale do przodu
   let d = Infinity;
@@ -94,6 +100,12 @@ function isEmbarkStep(from, to) {
 // canStep (na wodę tylko z morza albo własnego portu), tu liczy się wyłącznie koszt.
 function moveCostStep(from, to, playerId) {
   if (isEmbarkStep(from, to)) return Infinity;
+  // BOSS: linie wewnętrzne — całe własne terytorium jest dla niego drogą, bez
+  // budowania czegokolwiek. Przerzuca siły między frontami dwa razy szybciej, co
+  // jest jego odpowiedzią na przewagę liczebną drużyny (wspólna pula aktywacji
+  // rośnie z liczbą graczy, jego nie). Pola morza mają owner -1, więc reguła sama
+  // ogranicza się do lądu
+  if (to.owner === playerId && isBossPlayer(playerId)) return MOVE_COST_ROAD;
   return tileOnRoad(to, playerId) ? MOVE_COST_ROAD : MOVE_COST_DEFAULT;
 }
 

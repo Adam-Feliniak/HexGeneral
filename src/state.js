@@ -22,9 +22,26 @@ function slotsFromCounts(humanCount, botCount) {
   const total = Math.max(2, Math.min(MAX_PLAYERS, Math.max(0, humanCount) + Math.max(0, botCount)));
   const humans = Math.min(Math.max(0, humanCount), total);
   const slots = [];
-  // każdy w osobnej drużynie = FFA, czyli dokładne zachowanie sprzed drużyn
-  for (let i = 0; i < total; i++) slots.push({ kind: i < humans ? 'human' : 'bot', team: i, skin: i });
+  // każdy w osobnej drużynie = FFA, czyli dokładne zachowanie sprzed drużyn;
+  // difficulty null = wspólna trudność gry (tak działały humanCount/botCount od zawsze)
+  for (let i = 0; i < total; i++) {
+    slots.push({ kind: i < humans ? 'human' : 'bot', team: i, skin: i, difficulty: null });
+  }
   return slots;
+}
+
+// Trudność „gry" przy trudnościach per slot: najczęstsza wśród botów. Nie steruje już
+// rozgrywką (tę wyznacza player.difficulty), ale zostaje jako wartość domyślna dla
+// imperium, które dopiero przechodzi pod AI (switchHuman w input.js)
+function dominantDifficulty(slots, fallback) {
+  const counts = new Map();
+  for (const s of slots) {
+    if (s.kind === 'human' || s.difficulty == null) continue;
+    counts.set(s.difficulty, (counts.get(s.difficulty) || 0) + 1);
+  }
+  let best = fallback, bestN = 0;
+  for (const [diff, n] of counts) if (n > bestN) { bestN = n; best = diff; }
+  return best;
 }
 
 function normalizeSlots(raw) {
@@ -36,6 +53,9 @@ function normalizeSlots(raw) {
       kind,
       team: Number.isFinite(s.team) ? s.team : i,
       skin: kind === 'boss' ? BOSS_SKIN : (Number.isFinite(s.skin) ? s.skin : i),
+      // trudność jest per slot; brak wartości (harnessy, stare wywołania) oznacza
+      // „weź wspólną trudność gry" — rozstrzyga to newGame
+      difficulty: s.difficulty !== undefined ? s.difficulty : null,
     });
   });
   // partia z jednym imperium albo jedną drużyną nie miałaby warunku końca — lobby
@@ -88,6 +108,15 @@ function assignTeamPositions(slots) {
   };
   walk(0, 0);
   return best || slots;
+}
+
+// Czy to imperium jest bossem. Boss różni się od zwykłego bota nie tylko liczbami
+// (BOSS_MULT w config.js), ale DWIEMA REGUŁAMI, których nie ma nikt inny:
+// morale bez kary za dystans (combat.js/moraleAt) i ruch po własnym terytorium
+// w cenie drogi (combat.js/moveCostStep). Patrz Documents/06-Sztuczna-inteligencja.md
+function isBossPlayer(playerId) {
+  const p = state.players[playerId];
+  return !!p && p.kind === 'boss';
 }
 
 // czy dwa imperia grają po tej samej stronie (to samo imperium też "jest sojusznikiem")
@@ -159,7 +188,9 @@ function newGame(opts = {}) {
     transport: opts.transport === 'net' ? 'net' : 'local',
     human: firstHumanSlot >= 0 ? firstHumanSlot : 0, // id imperium "Twojego" (tylko tryb single)
     humanPlayerCount: actualHumanCount,
-    aiDifficulty,          // preset ('easy'..'nightmare') albo liczba 0-100 (custom) — wspólna dla botów tej gry
+    // trudność bota siedzi w player.difficulty (per gracz, ustawiana w slotach lobby);
+    // to pole jest tylko wartością domyślną dla imperium przechodzącego pod AI w trakcie gry
+    aiDifficulty: dominantDifficulty(slots, aiDifficulty),
     currentPlayerIndex: 0,
     turnStartTime: performance.now(),
     timeLimit: mode === 'multi' && actualHumanCount > 0 ? timeLimit : Infinity,
@@ -175,7 +206,7 @@ function newGame(opts = {}) {
       ...PLAYERS_DEF[s.skin], id: i, skin: s.skin, kind: s.kind, team: s.team,
       alive: true, capital: CAPITAL_SPOTS[i],
       isHuman: s.kind === 'human',
-      difficulty: s.kind === 'human' ? null : aiDifficulty,
+      difficulty: s.kind === 'human' ? null : (s.difficulty != null ? s.difficulty : aiDifficulty),
     })),
     log: [],
   };
@@ -213,17 +244,18 @@ function defaultSpSetup() {
 }
 function defaultMpSetup() {
   return {
-    transport: 'local', slots: defaultMpSlots(), difficulty: 'normal', customDiff: 50,
+    transport: 'local', slots: defaultMpSlots(),
     seedMode: 'random', seedValue: randomSeed(), time: TURN_TIME_LIMIT_DEFAULT,
   };
 }
 // domyślnie dwoje ludzi w jednej drużynie przeciw dwóm botom — układ, po który sięga
 // sesja testowa (Documents/11-Early-Access.md): hot-seat, w którym gracze grają RAZEM
-function defaultMpSlots() {
+function defaultMpSlots(difficulty) {
+  const d = difficulty || DEFAULT_AI_DIFFICULTY;
   return [
-    { kind: 'human', team: 0 }, { kind: 'human', team: 0 },
-    { kind: 'bot', team: 1 }, { kind: 'bot', team: 1 },
-    { kind: 'closed', team: 2 }, { kind: 'closed', team: 3 },
+    { kind: 'human', team: 0, difficulty: null }, { kind: 'human', team: 0, difficulty: null },
+    { kind: 'bot', team: 1, difficulty: d }, { kind: 'bot', team: 1, difficulty: d },
+    { kind: 'closed', team: 2, difficulty: d }, { kind: 'closed', team: 3, difficulty: d },
   ];
 }
 function defaultOptions() {

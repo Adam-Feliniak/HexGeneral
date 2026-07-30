@@ -16,13 +16,64 @@ Cała logika botów mieszka w `src/ai.js`. AI nie ma żadnego "wglądu" niedost�
 - **`aggressionThreshold` (AT)** — mnożnik progów stosunku sił wymaganych do zaakceptowania ataku. **Niższy = atakuje przy gorszym stosunku sił** (Nightmare zaatakuje nawet przy przewadze przeciwnika, Easy potrzebuje wyraźnej przewagi).
 - **`thinkDelay`** — opóźnienie (ms) między kolejnymi ruchami bota w tej samej turze (czysto kosmetyczne, żeby ruchy AI były widoczne, a nie natychmiastowe).
 
-Trudność "Custom" (suwak 0–100% w lobby) interpoluje liniowo (`resolveDifficulty`) między presetami Easy i Nightmare dla wszystkich czterech parametrów naraz.
+Trudność "Custom" (suwak 0–100%) interpoluje liniowo (`resolveDifficulty`) między presetami Easy i Nightmare dla wszystkich czterech parametrów naraz. Dostępna jest w lobby single i w Opcjach; lobby wieloosobowe ustawia **trudność osobno dla każdego slotu** (cztery presety), więc jeden bot może być Łatwy, a drugi Koszmarny w tej samej partii — `player.difficulty` był per gracz od zawsze, zmieniło się tylko to, że lobby wreszcie z tego korzysta.
 
-### Boss (`BOSS_MULT`)
+### Boss — dwie reguły, których nie ma nikt inny
 
-Boss to **nie** kolejny wiersz w tej tabeli, tylko mnożniki nałożone na wybrany preset
-(`playerDifficulty(p)` w `config.js` — jedno miejsce prawdy, bo wołają je i produkcja,
-i pętla decyzji AI):
+Zanim liczby: najważniejsze w bossie jest to, że **łamie dwie zasady obowiązujące
+wszystkich pozostałych**. To jest różnica gatunkowa, a nie skala — bot z samymi
+większymi mnożnikami zostaje botem, tylko bogatszym.
+
+| Reguła | Gdzie | Co robi |
+|---|---|---|
+| **„Legion nie zna zaplecza"** | `moraleAt` (`combat.js`) | Morale bossa **nie spada z odległością** od jego miast: zawsze 100 na lądzie (85 na morzu — środowisko zostaje). Rajd 10 pól w głębi cudzego kraju jest dla niego tak samo skuteczny jak obrona własnej stolicy, choć dla obrońców robiących to samo nadal jest samobójstwem |
+| **Linie wewnętrzne** | `moveCostStep` (`combat.js`) | Całe **własne terytorium** jest dla bossa drogą (koszt 1 zamiast 2), bez budowania czegokolwiek. Przerzuca siły między frontami dwa razy szybciej |
+
+Obie wpięte przez `isBossPlayer()` (`state.js`), obie po jednej gałęzi. Uzasadnienie
+doboru: to są odpowiedzi na dwa mechanizmy, które w tej grze najmocniej **hamują
+ofensywę i karzą samotnego gracza** — kara morale za dystans (dlatego fronty zastygają)
+oraz wspólna pula aktywacji, która rośnie z liczbą graczy w drużynie, a bossowi nie
+(`ACTIVATIONS_PER_TURN = 5` ma każdy, więc dwoje ludzi wydaje 10 rozkazów na rundę).
+Linie wewnętrzne nie dają mu więcej rozkazów, tylko sprawiają, że mniej ich marnuje
+na marsz.
+
+**Zmierzony rozkład zasług** (30 partii na wariant, te same seedy, boss przeciw drużynie
+botów Normal). Cztery warianty tego samego przeciwnika: same mnożniki bez reguł, same
+reguły bez mnożników, reguły z złagodzonymi mnożnikami (×1,25) i stan gry:
+
+| Scenariusz | same liczby | same reguły | reguły + ×1,25 | **stan gry** |
+|---|---|---|---|---|
+| boss Easy vs 2 boty | 7% | 23% | 30% | **27%** |
+| boss Normal vs 2 boty | 97% | 43% | 77% | **100%** |
+| boss Normal vs 3 boty | 83% | 37% | 33% | **97%** |
+| boss Normal vs 4 boty | 63% | 23% | 30% | **93%** |
+| boss Normal vs 5 botów | 30% | 3% | 7% | **83%** |
+
+Trzy wnioski, z których każdy zmienia decyzje projektowe:
+
+1. **Mnożniki i reguły działają w innych miejscach skali.** Przy parze przeciwników
+   wystarczają same liczby (97%), a reguły dokładają tylko 3 punkty. Przy pięciu jest
+   odwrotnie: liczby dają 30%, a reguły podbijają to do 83% — **+53 punkty**. Reguły są
+   ubezpieczeniem od bycia w mniejszości, nie ogólnym wzmocnieniem.
+2. **Same reguły to za mało.** Bez premii ekonomicznej boss ma 43% przy dwóch
+   przeciwnikach i 3% przy pięciu — nie nadrabiają one tego, że pięć imperiów ma pięć
+   stolic, a on jedną.
+3. **Dopiero razem dają płaską trudność 83–100% w zakresie 2–5 przeciwników.** Żaden
+   składnik osobno tego nie robi (liczby lecą 97→30, reguły 43→3). To jest realnie
+   najcenniejsza właściwość: sesja co-op zostaje **tak samo trudna niezależnie od tego,
+   ile osób usiądzie do stołu** — a właśnie tego nie wiadomo z góry przy testach domowych.
+
+Kolumna „reguły + ×1,25" tłumaczy, czemu nie ma tu prostego pokrętła pośredniego:
+mnożnik 1,25 wpada **pod próg zaokrąglenia** (`Math.round(1 × 1,25) = 1`), więc zwykłe
+miasta bossa produkują tyle co u każdego bota i wariant osuwa się z powrotem w okolice
+„samych reguł". Sensowne wartości `economy` są w praktyce trzy: poniżej 1,5, w przedziale
+1,5–2,49 i od 2,5 — a skalę reguluje się presetem trudności, nie `BOSS_MULT`.
+
+### Mnożniki (`BOSS_MULT`)
+
+Boss to **nie** kolejny wiersz w tabeli presetów, tylko mnożniki nałożone na wybrany
+preset (`playerDifficulty(p)` w `config.js` — jedno miejsce prawdy, bo wołają je
+i produkcja, i pętla decyzji AI):
 
 | Parametr | Mnożnik | Po co |
 |---|---|---|
@@ -43,10 +94,12 @@ zwykłych miast, a różnica 1,4 → 1,5 podwaja gospodarkę. Zmierzony efekt: b
 od Normal głównie stolicą (3 → 4), a Nightmare (1,725) skacze na całej mapie. Przy
 strojeniu patrz na **wynikową produkcję**, a nie na sam mnożnik.
 
-Domyślny boss (preset Normal × `BOSS_MULT`) jest **mocny**: wygrywa 97% partii z dwoma
-botami Normal. Do pierwszej sesji z żywymi graczami warto zejść na Easy — boty
-sojusznicze nie koordynują planów, więc dwoje ludzi rozmawiających przy stole gra
-inaczej niż ta próbka.
+Domyślny boss (preset Normal × `BOSS_MULT` + obie reguły) jest **bardzo mocny**: wygrywa
+100% partii z dwoma botami Normal i 83% przeciw pięciu. Do pierwszej sesji z żywymi
+graczami warto zejść na **Easy** — tam boss wygrywa 27% i jest realnie do pokonania,
+a jego ekonomia (0,5 × 1,6 = 0,8) jest nawet słabsza niż zwykłego bota na Normalnym,
+więc groźny robi się wyłącznie regułami. Uwaga przy czytaniu tych liczb: boty sojusznicze
+niczego nie uzgadniają, a dwoje ludzi rozmawiających przy stole to inny przeciwnik.
 
 ### Drużyny a decyzje AI
 

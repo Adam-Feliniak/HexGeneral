@@ -111,12 +111,21 @@ jeden +1). AI nie rusza wyboru (zostaje domyślne najbliższe).
 
 ### Zniżka ruchu i przecięcie
 
-`tileOnRoad(t, playerId)` = pole jest własnym heksem drogi (`t.road.owner === playerId &&
-t.owner === playerId`). Wejście na takie pole kosztuje `MOVE_COST_ROAD = 1` punkt ruchu zamiast `MOVE_COST_DEFAULT = 2`
+`tileOnRoad(t, playerId)` = pole jest heksem drogi **własnej albo sojusznika z tej samej
+drużyny** (`sameTeam` na właścicielu drogi i właścicielu pola). Wejście na takie pole kosztuje
+`MOVE_COST_ROAD = 1` punkt ruchu zamiast `MOVE_COST_DEFAULT = 2`
 (`moveCostStep` — patrz [Mechanika rozgrywki](04-Mechanika-rozgrywki.md)). Zniżka dotyczy
 **wejścia na drogę**, więc premiuje jazdę wzdłuż sieci, a nie samo stanie na niej: czołg
 przejedzie drogą 4 pola, ale zjeżdżając z niej w czyste pole tylko 2. Obejmuje całą sieć,
 także odcinki jeszcze w budowie.
+
+**Drużyna dzieli drogi, ale nie dochody.** To jedyna infrastruktura wspólna dla sojuszu:
+jego sieć jest dla ciebie przejezdna tak samo jak twoja (droga leży tam, gdzie leży —
+nie da się jej „przewieźć"). Zaopatrzenie zostaje jawnie osobne, bo `connectedCities()`
+chodzi wyłącznie po polach `owner === playerId`: **złoże sojusznika nigdy nie zasili
+twojego miasta**, nawet gdy łańcuch dróg fizycznie je łączy. Rozdział jest celowy —
+wspólna przejezdność nagradza sojusz taktycznie, wspólna gospodarka zlałaby dwa imperia
+w jedno i wymagałaby przebalansowania produkcji.
 
 Przecięcie sieci = **wróg zajmuje heks drogi**: `captureTile` kasuje `t.road` na tym polu,
 więc sieć się rozspójnia (`connectedCities`/`supplyCityFor` liczą połączenia na bieżąco).

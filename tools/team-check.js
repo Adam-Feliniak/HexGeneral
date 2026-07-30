@@ -205,6 +205,27 @@ check('aiTargets widzi złoże wroga',
 check('aiFrontDistance ignoruje teren sojusznika',
   run(`aiFrontDistance(A[0], state.tiles[7][7]) > 0`) === true);
 
+// drogi są wspólne dla drużyny — ale tylko do jazdy, nie do zaopatrzenia
+run(`var rA = state.tiles[9][9], rB = state.tiles[9][10];
+     rA.land = true; rB.land = true; rA.army = null; rB.army = null;
+     rB.owner = A[1]; rB.road = { owner: A[1] };`);
+check('droga sojusznika jest przejezdna jak własna',
+  run(`moveCostStep(rA, rB, A[0])`) === run('MOVE_COST_ROAD'));
+check('droga wroga nie daje zniżki',
+  run(`(function () { rB.owner = B[0]; rB.road = { owner: B[0] };
+       return moveCostStep(rA, rB, A[0]); })()`) === run('MOVE_COST_DEFAULT'));
+check('pole sojusznika BEZ drogi kosztuje normalnie (nie ma linii wewnętrznych poza bossem)',
+  run(`(function () { rB.owner = A[1]; rB.road = null;
+       return moveCostStep(rA, rB, A[0]); })()`) === run('MOVE_COST_DEFAULT'));
+check('złoże sojusznika NIE zasila mojego miasta (gospodarka zostaje osobna)', run(`
+  (function () {
+    // pełny łańcuch: moje miasto — droga sojusznika — złoże sojusznika
+    var res = state.tiles[9][11];
+    res.land = true; res.owner = A[1]; res.resource = 'oil'; res.road = { owner: A[1] };
+    var mine = connectedCities(res, A[0]);
+    return mine.length === 0;
+  })()`) === true);
+
 /* ---------------- 3. koniec gry na drużyny ---------------- */
 
 section('Koniec gry liczony na drużyny');
@@ -261,6 +282,125 @@ check('zwykły gracz bez premii bossa', run(`
     newGame({ slots: ${SLOTS.coop2v2}, aiDifficulty: 'normal', seed: 5, timeLimit: Infinity });
     var p = state.players.find(function (q) { return q.kind === 'bot'; });
     return playerDifficulty(p).economy === resolveDifficulty(p.difficulty).economy;
+  })()`) === true);
+
+/* ---------------- 4a. zdolności bossa (reguły, nie liczby) ---------------- */
+
+section('Zdolności bossa');
+newTeamGame(SLOTS.boss, 4242);
+run(`var boss = state.players.find(p => p.kind === 'boss');
+     var hum = state.players.find(p => p.kind === 'human');
+     // pole daleko od czyichkolwiek miast — tam kara za dystans jest największa
+     var far = null, farD = -1;
+     for (var r = 0; r < MAP_H; r++) for (var c = 0; c < MAP_W; c++) {
+       var t = state.tiles[r][c];
+       if (!t.land) continue;
+       var d = Math.min(hexDist(t.c, t.r, boss.capital[0], boss.capital[1]),
+                        hexDist(t.c, t.r, hum.capital[0], hum.capital[1]));
+       if (d > farD) { farD = d; far = t; }
+     }
+     var sea = null;
+     for (var r2 = 0; r2 < MAP_H && !sea; r2++) for (var c2 = 0; c2 < MAP_W && !sea; c2++) {
+       if (!state.tiles[r2][c2].land) sea = state.tiles[r2][c2];
+     }`);
+
+check('boss ma pełne morale wszędzie na lądzie', run('moraleAt(boss.id, far)') === 100,
+  run('moraleAt(boss.id, far)'));
+check('nie-boss dostaje karę za dystans na tym samym polu',
+  run('moraleAt(hum.id, far) < 100') === true, run('moraleAt(hum.id, far)'));
+check('boss nadal traci morale na morzu', run('sea ? moraleAt(boss.id, sea) === 85 : true') === true,
+  run('sea ? moraleAt(boss.id, sea) : "brak morza"'));
+check('reguła morale dotyczy WYŁĄCZNIE bossa', run(`
+  state.players.filter(function (p) { return p.kind !== 'boss'; })
+    .every(function (p) { return moraleAt(p.id, far) < 100; })`) === true);
+
+// linie wewnętrzne: własne terytorium w cenie drogi
+run(`var a = null, b = null;
+     for (var r = 1; r < MAP_H - 1 && !b; r++) for (var c = 1; c < MAP_W - 1 && !b; c++) {
+       var t = state.tiles[r][c];
+       if (!t.land) continue;
+       var n = neighborsOf(t).filter(function (o) { return o.land; })[0];
+       if (n) { a = t; b = n; }
+     }
+     b.road = null; b.owner = boss.id;`);
+check('boss: wejście na własne pole kosztuje jak droga',
+  run('moveCostStep(a, b, boss.id)') === run('MOVE_COST_ROAD'));
+run(`b.owner = hum.id;`);
+check('boss: cudze pole kosztuje normalnie',
+  run('moveCostStep(a, b, boss.id)') === run('MOVE_COST_DEFAULT'));
+check('zwykły gracz nie ma linii wewnętrznych',
+  run('moveCostStep(a, b, hum.id)') === run('MOVE_COST_DEFAULT'));
+check('reguła ruchu nie omija zaokrętowania (krok ląd<->woda dalej terminalny)',
+  run(`sea ? moveCostStep(a, sea, boss.id) === Infinity : true`) === true);
+
+// całościowo: na tym samym terenie boss dojeżdża dalej niż identyczny bot
+check('boss przemieszcza się po swoim terenie dalej niż zwykły bot', run(`
+  (function () {
+    function reach(kind) {
+      newGame({ slots: [
+        { kind: kind, team: 1, difficulty: 'normal' },
+        { kind: 'bot', team: 0, difficulty: 'normal' },
+        { kind: 'closed', team: 2, difficulty: 'normal' }, { kind: 'closed', team: 3, difficulty: 'normal' },
+        { kind: 'closed', team: 4, difficulty: 'normal' }, { kind: 'closed', team: 5, difficulty: 'normal' },
+      ], seed: 4242, timeLimit: Infinity });
+      var me = state.players[0];
+      // całe otoczenie stolicy staje się terytorium testowanego gracza
+      var cap = state.tiles[me.capital[1]][me.capital[0]];
+      for (var r = 0; r < MAP_H; r++) for (var c = 0; c < MAP_W; c++) {
+        var t = state.tiles[r][c];
+        if (t.land && hexDist(t.c, t.r, cap.c, cap.r) <= 5) t.owner = me.id;
+      }
+      cap.army.type = 'tank';
+      cap.army.mp = UNIT_TYPES.tank.mp;
+      return validMoves(cap).length;
+    }
+    return reach('boss') > reach('bot');
+  })()`) === true);
+
+/* ---------------- 4b. trudność per slot ---------------- */
+
+section('Trudność per slot');
+run(`newGame({ slots: [
+  { kind: 'human', team: 0, difficulty: null },
+  { kind: 'bot', team: 1, difficulty: 'easy' },
+  { kind: 'bot', team: 1, difficulty: 'nightmare' },
+  { kind: 'boss', team: 2, difficulty: 'hard' },
+  { kind: 'closed', team: 4, difficulty: 'normal' },
+  { kind: 'closed', team: 5, difficulty: 'normal' },
+], seed: 31, timeLimit: Infinity });`);
+check('każdy bot dostaje SWOJĄ trudność ze slotu', run(`
+  JSON.stringify(state.players.map(function (p) { return p.difficulty; }).slice().sort())`)
+  === JSON.stringify([null, 'easy', 'hard', 'nightmare'].sort()),
+  run('JSON.stringify(state.players.map(p => [p.kind, p.difficulty]))'));
+check('człowiek nie dostaje trudności', run(`state.players.find(p => p.kind === 'human').difficulty`) === null);
+check('różne sloty => różna realna siła botów', run(`
+  (function () {
+    var easy = state.players.find(function (p) { return p.difficulty === 'easy'; });
+    var night = state.players.find(function (p) { return p.difficulty === 'nightmare'; });
+    // brak któregokolwiek = poprzednie sprawdzenie już zgłosiło błąd; tu tylko nie wywalamy się
+    if (!easy || !night) return false;
+    return playerDifficulty(easy).economy < playerDifficulty(night).economy;
+  })()`) === true);
+check('boss liczy premię od SWOJEGO presetu', run(`
+  (function () {
+    var b = state.players.find(function (p) { return p.kind === 'boss'; });
+    if (!b) return false;
+    return b.difficulty === 'hard' &&
+      playerDifficulty(b).economy > resolveDifficulty('hard').economy;
+  })()`) === true);
+check('state.aiDifficulty = najczęstsza trudność botów (fallback dla switchHuman)',
+  run('state.aiDifficulty') === 'easy' || run('state.aiDifficulty') === 'hard' ||
+  run('state.aiDifficulty') === 'nightmare', run('state.aiDifficulty'));
+check('trudności per slot przeżywają zapis', run(`
+  (function () {
+    var before = JSON.stringify(state.players.map(function (p) { return p.difficulty; }));
+    deserializeGame(JSON.parse(JSON.stringify(serializeGame())));
+    return JSON.stringify(state.players.map(function (p) { return p.difficulty; })) === before;
+  })()`) === true);
+check('brak trudności w slocie => wspólna trudność gry (zgodność wsteczna)', run(`
+  (function () {
+    newGame({ humanCount: 0, botCount: 3, aiDifficulty: 'hard', seed: 9, timeLimit: Infinity });
+    return state.players.every(function (p) { return p.difficulty === 'hard'; });
   })()`) === true);
 
 /* ---------------- 5. rozstawienie stolic ---------------- */
@@ -332,6 +472,30 @@ check('renderMpSetup nie wywala się (wszystkie id są w index.html)',
   (() => { try { runDom('renderMpSetup()'); return ''; } catch (e) { return e.message; } })());
 check('tabela ma MAX_PLAYERS wierszy',
   runDom(`document.getElementById('mp-slots').children.length`) === runDom('MAX_PLAYERS'));
+// obsada + trudność + drużyna = trzy wyborniki w każdym wierszu
+check('każdy wiersz ma trzy wyborniki (obsada, trudność, drużyna)',
+  runDom(`document.getElementById('mp-slots').children
+            .every(function (r) { return r.children.length === 3; })`) === true,
+  runDom(`document.getElementById('mp-slots').children.map(function (r) { return r.children.length; }).join()`));
+check('trudność wyłączona dla slotów bez AI, włączona dla botów i bossa', runDom(`
+  (function () {
+    state.mpSetup.slots = mpPreset('boss');
+    renderMpSetup();
+    var rows = document.getElementById('mp-slots').children;
+    return state.mpSetup.slots.every(function (s, i) {
+      var ai = s.kind === 'bot' || s.kind === 'boss';
+      return rows[i].children[1].disabled === !ai;
+    });
+  })()`) === true);
+check('zmiana trudności w slocie trafia do gracza', runDom(`
+  (function () {
+    state.mpSetup.slots = mpPreset('coop');
+    state.mpSetup.slots[2].difficulty = 'nightmare';
+    state.mpSetup.slots[3].difficulty = 'easy';
+    newGame({ slots: state.mpSetup.slots, seed: 3, timeLimit: 120 });
+    var diffs = state.players.map(function (p) { return p.difficulty; }).filter(Boolean).sort();
+    return diffs.join() === 'easy,nightmare';
+  })()`) === true, runDom(`state.players.map(function (p) { return p.kind + ':' + p.difficulty; }).join()`));
 check('domyślny układ (co-op) pozwala wystartować',
   runDom(`document.getElementById('mp-start').disabled`) === false);
 

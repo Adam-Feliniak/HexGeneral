@@ -70,6 +70,7 @@ const AI_DIFFICULTY_PRESETS = {
   nightmare: { key: 'nightmare', economy: 1.725, aggression: 1.7, aggressionThreshold: 0.7,  thinkDelay: 70 },
 };
 const AI_DIFFICULTY_ORDER = ['easy', 'normal', 'hard', 'nightmare'];
+const DEFAULT_AI_DIFFICULTY = 'normal';
 
 // eskalacja przełamująca pat: progi opłacalności ataku AI maleją liniowo z długością
 // partii — po AI_ESC_TURNS rundach próg jest niższy o AI_ESC_MAX (ułamek). Bez tego
