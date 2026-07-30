@@ -1,13 +1,13 @@
 'use strict';
 /* Generator sprite'ów pixel-art (styl Metal Slug) -> assets/*.png
    Uruchomienie: node tools/gen-sprites.js
-   Bez zależności — własny enkoder PNG (zlib + CRC32).
+   Bez zależności — własny enkoder PNG (wspólny moduł tools/png.js).
    Jednostki i budynki rysowane w dużej rozdzielczości "painterem"
    (prostokąty/elipsy + automatyczny kontur), drobiazgi jako siatki ASCII. */
 
-const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
+const { encodePNG } = require('./png.js');
 
 const OUT_DIR = path.join(__dirname, '..', 'assets');
 
@@ -28,6 +28,15 @@ function hexToRGB(hex) {
 function lighten(hex, k) {
   const [r, g, b] = hexToRGB(hex).map(v => Math.round(v + (255 - v) * k));
   return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+/* Cień z przesunięciem odcienia w zimne barwy. Samo przyciemnienie koloru gracza
+   (dawne `B: p.dark`) czyta się jak brud, nie jak brak światła — dlatego cień jest
+   mieszany z chłodnym granatem, a nie liczony mnożnikiem. */
+function coolShade(hex, k) {
+  const tint = [42, 36, 72];
+  const px = hexToRGB(hex).map((v, i) => Math.round(v * (1 - k) + tint[i] * k));
+  return '#' + px.map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
 const BASE_PAL = {
@@ -86,6 +95,103 @@ function outline(g) {
       }
     }
   }
+}
+
+// ---------- PROTOTYP: czołg rysowany ręcznie w 24x14, skalowany 2x ----------
+/* Autorstwo w niższej rozdzielczości i skalowanie całą liczbą: piksel staje się
+   blokiem 2x2, więc sylwetka czyta się z odległości i nie konkuruje z 1-pikselowym
+   szumem kafli terenu. Kolejność jest wymuszona: outline() PRZED upscale (inaczej
+   kontur zostaje 1 px na blokach 2x2 i wygląda na uszkodzony), dropShadow PO.
+   Litery: h/b/m/B to rampa barwy gracza (światło -> baza -> cień -> głęboki cień),
+   G/g metal działa, t/T gąsienica, W koła. */
+const TANK_PROTO_ROWS = [
+  '........hhhhhh..........',
+  '......hhhhhhhhhh........',
+  '.....bhhbbbbbbbbbWWWWWW.',
+  '.....bbbbbbbbbbbbWWWWWW.',
+  '.....mmmmmmmmmmmmwwwwww.',
+  '......BBBBBBBBBB.wwwwww.',
+  '..GGGGGGGGGGGGGGGee.....',
+  '..ggbbbbbggggggggggg....',
+  '..gggggggggggggggggg....',
+  '..tttttttttttttttttt....',
+  '..ttwwttwwtwwtttwwtt....',
+  '..tweewtewtewttweewt....',
+  '..ttwwttwwtwwtttwwtt....',
+  '...tttttttttttttttt.....',
+];
+
+function gridFromRows(rows) { return rows.map(r => r.split('')); }
+
+function upscale(rows, k) {
+  const out = [];
+  for (const row of rows) {
+    const wide = [...row].map(ch => ch.repeat(k)).join('');
+    for (let i = 0; i < k; i++) out.push(wide);
+  }
+  return out;
+}
+
+function tankProtoGrid() {
+  const g = gridFromRows(TANK_PROTO_ROWS);
+  outline(g);
+  return upscale(toRows(g), 2);
+}
+
+// ---------- PROTOTYP alternatywny: ten sam projekt, ale rysowany wprost w 48x28 ----------
+/* Wariant do porównania z wersją 2x. Ta sama dyscyplina (rozdzielona wieża/kadłub/
+   gąsienica, rampa h->b->m->B, budżet barwy gracza), ale w pełnej rozdzielczości —
+   więc drobny detal jest osiągalny: koła są *okrągłe*, bieżnik widoczny, wylot lufy
+   rozszerzony. Elipsa jest tu użyta świadomie i tylko tam, gdzie kształt naprawdę jest
+   kołem; sylwetka i bryły są stawiane prostokątami, nie jedną elipsą jak w tank_*. */
+function tankProto1xGrid() {
+  const g = makeGrid(48, 28);
+
+  // kadłub z pochyłym nosem (glacis)
+  rect(g, 4, 13, 34, 6, 'g');
+  rect(g, 4, 13, 34, 2, 'G');
+  rect(g, 38, 15, 2, 4, 'g');
+  rect(g, 40, 16, 2, 3, 'g');
+
+  // panel w barwie gracza — ta sama „wspólna mowa" dla wszystkich typów jednostek
+  rect(g, 9, 15, 9, 3, 'b');
+  rect(g, 9, 17, 9, 1, 'm');
+
+  // gąsienica z bieżnikiem
+  rect(g, 4, 19, 36, 8, 't');
+  rect(g, 3, 20, 38, 6, 't');
+  for (let x = 5; x <= 38; x += 3) P(g, x, 26, 'T');
+
+  // koła napędowe + jezdne
+  const wheel = (cx, cy, r) => {
+    ellipseFill(g, cx, cy, r, r, 'w');
+    ellipseFill(g, cx - r * 0.25, cy - r * 0.25, r * 0.55, r * 0.55, 'W');
+    ellipseFill(g, cx, cy, r * 0.32, r * 0.32, 'e');
+  };
+  wheel(10, 22.5, 3.4);
+  wheel(34, 22.5, 3.4);
+  wheel(18, 23.5, 2.3);
+  wheel(24, 23.5, 2.3);
+  wheel(30, 23.5, 2.3);
+
+  // wieża: kopuła wyraźnie węższa od kadłuba (w tank_* wieża i kadłub były jedną bryłą)
+  ellipseFill(g, 21, 8, 11, 5.2, 'b');
+  ellipseFill(g, 18, 5.5, 7, 2, 'h');
+  for (let y = 10; y <= 11; y++) for (let x = 0; x < 48; x++) if (g[y][x] === 'b') g[y][x] = 'm';
+  for (let y = 12; y <= 13; y++) for (let x = 0; x < 48; x++) if (g[y][x] === 'b') g[y][x] = 'B';
+  rect(g, 24, 3, 5, 1, 'h');
+
+  // armata w jaśniejszym metalu niż kadłub, żeby się z nim nie zlewała
+  rect(g, 31, 7, 12, 3, 'W');
+  rect(g, 31, 10, 12, 2, 'w');
+  rect(g, 42, 6, 4, 4, 'W');
+  rect(g, 42, 10, 4, 3, 'w');
+
+  // cień pod lufą — oddziela ją od kadłuba
+  rect(g, 32, 12, 9, 1, 'e');
+
+  outline(g);
+  return toRows(g);
 }
 
 // ---------- czołg 48x28 w duchu SV-001 z Metal Sluga ----------
@@ -823,52 +929,6 @@ function shallowTile() {
 }
 
 // ---------- enkoder PNG ----------
-const CRC_TABLE = (() => {
-  const t = new Uint32Array(256);
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = (c & 1) ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    t[n] = c >>> 0;
-  }
-  return t;
-})();
-
-function crc32(buf) {
-  let c = 0xffffffff;
-  for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
-
-function chunk(type, data) {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length, 0);
-  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(body), 0);
-  return Buffer.concat([len, body, crc]);
-}
-
-// pixels: Uint8Array RGBA (w*h*4)
-function encodePNG(w, h, pixels) {
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(w, 0);
-  ihdr.writeUInt32BE(h, 4);
-  ihdr[8] = 8;  // bit depth
-  ihdr[9] = 6;  // RGBA
-  const raw = Buffer.alloc(h * (1 + w * 4));
-  for (let y = 0; y < h; y++) {
-    raw[y * (1 + w * 4)] = 0; // filtr: none
-    pixels.subarray(y * w * 4, (y + 1) * w * 4)
-      .forEach((v, i) => { raw[y * (1 + w * 4) + 1 + i] = v; });
-  }
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk('IHDR', ihdr),
-    chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0)),
-  ]);
-}
-
 // ---------- rysowanie ----------
 function gridToPixels(rows, palette) {
   const h = rows.length, w = rows[0].length;
@@ -1009,6 +1069,15 @@ function save(name, { w, h, px }) {
 
 const hq = img => dropShadow(img);
 
+/* Prototypy lądują w dist/proto/ (gitignorowane), nie w assets/ — gra ich nie zna,
+   więc można je regenerować bez ruszania rozgrywki, dopóki nie zastąpią oryginału. */
+const PROTO_DIR = path.join(__dirname, '..', 'dist', 'proto');
+function saveProto(name, { w, h, px }) {
+  fs.mkdirSync(PROTO_DIR, { recursive: true });
+  fs.writeFileSync(path.join(PROTO_DIR, name + '.png'), encodePNG(w, h, px));
+  console.log(`dist/proto/${name}.png (${w}x${h})`);
+}
+
 [city0(), city1(), city2()].forEach((rows, i) => save('city_' + i, hq(gridToPixels(rows, BASE_PAL))));
 save('city_port', hq(gridToPixels(cityPort(), BASE_PAL)));
 save('crane', hq(gridToPixels(craneGrid(), BASE_PAL)));
@@ -1026,7 +1095,14 @@ save('hex_shallow', shallowTile());
 save('explosion', explosionSheet());
 save('bg', bgTile());
 PLAYERS.forEach((p, i) => {
-  const pal = { ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4) };
+  // `m` to nowa, czwarta szczebelka rampy (cień z hue shiftem) — istniejące sprite'y
+  // jej nie używają, więc dopisanie jej niczego nie zmienia w assets/
+  const pal = {
+    ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4),
+    m: coolShade(p.color, 0.28),
+  };
+  saveProto('tank2x_' + i, hq(gridToPixels(tankProtoGrid(), pal)));
+  saveProto('tank1x_' + i, hq(gridToPixels(tankProto1xGrid(), pal)));
   save('tank_' + i, hq(gridToPixels(tankGrid(), pal)));
   save('artillery_' + i, hq(gridToPixels(artilleryGrid(), pal)));
   const top = soldierTop();

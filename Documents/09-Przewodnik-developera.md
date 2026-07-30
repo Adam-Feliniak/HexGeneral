@@ -2,7 +2,9 @@
 
 ## Uruchomienie
 
-Brak builda, brak serwera, brak `npm install`. Wystarczy otworzyć `index.html` bezpośrednio w przeglądarce. Do skryptów pomocniczych w `tools/` wystarczy zwykły Node.js (bez żadnych zależności npm — cały projekt, łącznie z enkoderem PNG, jest napisany na czystym `fs`/`zlib`/`path`).
+Brak builda, brak serwera, brak `npm install`. Wystarczy otworzyć `index.html` bezpośrednio w przeglądarce. Do skryptów pomocniczych w `tools/` wystarczy zwykły Node.js (bez żadnych zależności npm — cały projekt, łącznie z enkoderem i dekoderem PNG w `tools/png.js`, jest napisany na czystym `fs`/`zlib`/`path`).
+
+`tools/png.js` to jedyne miejsce z obsługą formatu PNG — korzystają z niego generator sprite'ów, audyt dźwięku i import PNG → siatka znaków. To moduł CommonJS z `module.exports`; zasada „bez modułów" dotyczy wyłącznie `src/*.js`, które przeglądarka wczytuje przez `<script>` z `file://`.
 
 ## Typowe zadania
 
@@ -31,19 +33,30 @@ działa od razu po odświeżeniu strony.
 
 1. Edytuj przepis w `SFX_RECIPES` (`src/audio.js`) — jedna funkcja `(rate) => Float32Array`
    na dźwięk, wzorem `explosion()`/`shot()`. Do dyspozycji `addTone()` (oscylator
-   z przemiataniem wysokości), `addNoise()` (szum z filtrem dolnoprzepustowym)
-   i `finishBuffer()` (normalizacja + wygaszenie ogona).
-2. **Odsłuchaj:** `node tools/gen-sounds.js --only=explosion` renderuje dźwięk do
+   z przemiataniem wysokości; opcjonalny ostatni argument to czas ataku — dla dźwięków
+   perkusyjnych podaje się ~0, bo domyślne 4 ms zmiękcza właśnie to, co ma być uderzeniem),
+   `addNoise()` (szum z filtrem dolnoprzepustowym) i `finishBuffer(buf, rate, level)`,
+   gdzie `level` to **docelowy RMS**, czyli miejsce dźwięku w miksie (patrz
+   [14-Dzwiek.md](14-Dzwiek.md)).
+2. **Zmierz:** `node tools/audit-sounds.js` — tabela (szczyt, RMS, crest, atak, centroida
+   widmowa, DC, klipowanie) plus przebiegi PNG w `dist/audit/`. Przed większą zmianą
+   `--save=przed`, po niej `--diff=przed` pokaże różnice w dB. To wyłapuje rzeczy
+   niesłyszalne na pierwszy rzut ucha — np. że dźwięk interfejsu jest głośniejszy
+   od wystrzału.
+3. **Odsłuchaj:** `node tools/gen-sounds.js --only=explosion` renderuje dźwięk do
    `dist/sfx/explosion.wav` — otwórz go w edytorze audio, żeby zobaczyć przebieg
    i porównać wersje przed/po. `--rate=44100` daje podglądowo wyższą jakość.
    Gra tych plików **nie wczytuje**, `dist/` jest gitignorowane.
-3. Powtarzaj 1-2, aż zabrzmi dobrze.
-4. Nowy dźwięk: dodaj klucz do `SFX_RECIPES`, potem wywołaj go z kodu **zawsze przez
+4. Powtarzaj 1-3, aż zabrzmi dobrze. Kolejność ma znaczenie: najpierw napraw to, co
+   widać w liczbach, dopiero potem sięgaj po odsłuch — rund odsłuchowych będzie mniej.
+5. Nowy dźwięk: dodaj klucz do `SFX_RECIPES`, potem wywołaj go z kodu **zawsze przez
    osłonę** `if (typeof playSfx === 'function') playSfx('nazwa');` — harnessy
    (`stress.js`, `sim.js`) i `visual-test.html` ładują logikę bez `audio.js`.
-5. Rozważ wpis w `SFX_MIN_GAP` (odstęp między powtórzeniami) i `SFX_ALWAYS` (czy dźwięk
+6. Rozważ wpis w `SFX_MIN_GAP` (odstęp między powtórzeniami) i `SFX_ALWAYS` (czy dźwięk
    ma przechodzić przy przyspieszonym AI) — bez tego dźwięk częstego zdarzenia zamienia
-   się w karabin maszynowy w trybie obserwatora.
+   się w karabin maszynowy w trybie obserwatora. Jeśli dźwięk jest **niemelodyczny**,
+   dopisz go też do `SFX_VARY` (losowe rozstrojenie ±kilka %), żeby powtórzenia nie
+   brzmiały bajt w bajt tak samo — melodycznych fraz tam nie wpisuj.
 
 Muzyka to partytury `MUSIC_TRACKS` (tabela `[ćwierćnuta, długość, MIDI, instrument]`),
 grane oscylatorami — nie da się ich odsłuchać generatorem, trzeba uruchomić grę.

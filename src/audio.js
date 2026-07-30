@@ -44,8 +44,12 @@ function waveAt(kind, phase) {
 }
 
 // ton z przemiataniem wysokości i wykładniczym zanikiem
-function addTone(buf, rate, at, dur, f0, f1, kind, amp, decay) {
+// attackSec: domyślne 4 ms zdejmuje trzask na początku nuty melodycznej, ale dla
+// dźwięków perkusyjnych (wystrzał, eksplozja) właśnie ten trzask JEST uderzeniem —
+// tam podaje się wartość bliską zeru
+function addTone(buf, rate, at, dur, f0, f1, kind, amp, decay, attackSec) {
   const start = Math.floor(at * rate), n = Math.floor(dur * rate);
+  const atk = attackSec === undefined ? 0.004 : attackSec;
   let phase = 0;
   for (let i = 0; i < n; i++) {
     const k = start + i;
@@ -53,8 +57,7 @@ function addTone(buf, rate, at, dur, f0, f1, kind, amp, decay) {
     const u = i / n;
     const f = f0 + (f1 - f0) * u;
     phase += f / rate;
-    // krótki atak zdejmuje trzask na początku nuty
-    const attack = Math.min(1, i / (rate * 0.004));
+    const attack = atk > 0 ? Math.min(1, i / (rate * atk)) : 1;
     buf[k] += waveAt(kind, phase) * amp * attack * Math.exp(-decay * u);
   }
 }
@@ -74,12 +77,28 @@ function addNoise(buf, rate, at, dur, amp, decay, lp0, lp1, rng) {
   }
 }
 
-// normalizacja do zadanego szczytu + wygaszenie ogona (bez tego plik/bufor
-// kończy się trzaskiem na nagłym odcięciu)
-function finishBuffer(buf, rate, peak) {
-  let max = 0;
-  for (let i = 0; i < buf.length; i++) max = Math.max(max, Math.abs(buf[i]));
-  const g = max > 0 ? (peak || 0.85) / max : 1;
+/* Ustawienie poziomu na RMS (nie na szczycie) + wygaszenie ogona (bez tego bufor
+   kończy się trzaskiem na nagłym odcięciu).
+
+   Dlaczego RMS, a nie szczyt: normalizacja do szczytu daje poprawną hierarchię
+   *szczytów*, ale ucho słyszy energię. Przy poprzedniej wersji `click` wychodził
+   głośniej niż `shot` i równo z `explosion` — czyli kliknięcie w przycisk było
+   głośniejsze od wystrzału. Poziomy poniżej to jawna tabela miksu, mierzalna
+   przez `node tools/audit-sounds.js`.
+
+   Sufit szczytu jest twardy: dźwięk o dużym crest factorze (eksplozja ~17 dB)
+   nie zmieści się w zakresie przy dopasowaniu RMS, więc wtedy wygrywa
+   bezpieczeństwo i to szczyt ogranicza głośność. Podniesienie takiego dźwięku
+   wymaga zmniejszenia crest factora (saturacja), a nie większego wzmocnienia. */
+function finishBuffer(buf, rate, level) {
+  let sumSq = 0, max = 0;
+  for (let i = 0; i < buf.length; i++) {
+    sumSq += buf[i] * buf[i];
+    max = Math.max(max, Math.abs(buf[i]));
+  }
+  const rms = Math.sqrt(sumSq / buf.length);
+  let g = rms > 0 ? (level || 0.12) / rms : 1;
+  if (max * g > 0.98) g = 0.98 / max;
   const fade = Math.min(buf.length, Math.floor(rate * 0.02));
   for (let i = 0; i < buf.length; i++) {
     let v = buf[i] * g;
@@ -97,11 +116,11 @@ function newBuffer(rate, seconds) { return new Float32Array(Math.floor(rate * se
    sprite'ów: da się dostroić jeden dźwięk bez ruszania pozostałych. */
 
 const SFX_RECIPES = {
-  // krótki blip interfejsu
+  // krótki blip interfejsu — najczęstszy dźwięk w grze, więc siedzi najniżej w miksie
   click(rate) {
     const b = newBuffer(rate, 0.06);
     addTone(b, rate, 0, 0.05, 1050, 760, 'square', 0.5, 6);
-    return finishBuffer(b, rate, 0.42);
+    return finishBuffer(b, rate, 0.05);
   },
 
   // marsz/silnik: stłumiony szum plus niski rumor
@@ -110,16 +129,17 @@ const SFX_RECIPES = {
     const rng = audioRng(7);
     addNoise(b, rate, 0, 0.2, 0.7, 2.4, 1400, 420, rng);
     addTone(b, rate, 0, 0.2, 120, 82, 'tri', 0.4, 3);
-    return finishBuffer(b, rate, 0.5);
+    return finishBuffer(b, rate, 0.063);
   },
 
-  // wystrzał: trzask szumu plus zjeżdżający ton
+  // wystrzał: trzask szumu plus zjeżdżający ton (ton bez narastania — 4 ms rampy
+  // zmiękczały właśnie to, co ma być uderzeniem)
   shot(rate) {
     const b = newBuffer(rate, 0.26);
     const rng = audioRng(11);
     addNoise(b, rate, 0, 0.22, 1.0, 7, 5200, 900, rng);
-    addTone(b, rate, 0, 0.16, 420, 130, 'square', 0.5, 7);
-    return finishBuffer(b, rate, 0.8);
+    addTone(b, rate, 0, 0.16, 420, 130, 'square', 0.5, 7, 0.0003);
+    return finishBuffer(b, rate, 0.30);
   },
 
   // trafienie/eksplozja: szeroki szum z opadającym filtrem
@@ -127,9 +147,9 @@ const SFX_RECIPES = {
     const b = newBuffer(rate, 0.7);
     const rng = audioRng(23);
     addNoise(b, rate, 0, 0.68, 1.0, 4.2, 3800, 180, rng);
-    addTone(b, rate, 0, 0.4, 150, 48, 'tri', 0.55, 4);
-    addTone(b, rate, 0, 0.08, 90, 60, 'square', 0.3, 5);
-    return finishBuffer(b, rate, 0.95);
+    addTone(b, rate, 0, 0.4, 150, 48, 'tri', 0.55, 4, 0.0003);
+    addTone(b, rate, 0, 0.08, 90, 60, 'square', 0.3, 5, 0);
+    return finishBuffer(b, rate, 0.30);
   },
 
   // zdobycie miasta: trzy wznoszące nuty
@@ -137,7 +157,7 @@ const SFX_RECIPES = {
     const b = newBuffer(rate, 0.42);
     const seq = [69, 73, 76];
     seq.forEach((n, i) => addTone(b, rate, i * 0.09, 0.2, midiFreq(n), midiFreq(n), 'tri', 0.5, 4));
-    return finishBuffer(b, rate, 0.6);
+    return finishBuffer(b, rate, 0.12);
   },
 
   // aneksja imperium: dłuższy, cięższy motyw
@@ -149,7 +169,7 @@ const SFX_RECIPES = {
       addTone(b, rate, i * 0.16, 0.55, midiFreq(n - 12), midiFreq(n - 12), 'tri', 0.26, 2);
     });
     addNoise(b, rate, 0.62, 0.6, 0.3, 3.4, 2200, 220, audioRng(31));
-    return finishBuffer(b, rate, 0.8);
+    return finishBuffer(b, rate, 0.16);
   },
 
   // zwycięstwo: wznoszące arpeggio durowe
@@ -158,7 +178,7 @@ const SFX_RECIPES = {
     const seq = [60, 64, 67, 72, 76, 79];
     seq.forEach((n, i) => addTone(b, rate, i * 0.12, 0.5, midiFreq(n), midiFreq(n), 'square', 0.3, 2.2));
     addTone(b, rate, 0.72, 0.85, midiFreq(84), midiFreq(84), 'tri', 0.36, 1.6);
-    return finishBuffer(b, rate, 0.75);
+    return finishBuffer(b, rate, 0.17);
   },
 
   // porażka: opadający motyw molowy
@@ -169,9 +189,16 @@ const SFX_RECIPES = {
       addTone(b, rate, i * 0.22, 0.7, midiFreq(n), midiFreq(n) * 0.985, 'tri', 0.42, 1.8);
     });
     addTone(b, rate, 0.9, 0.8, midiFreq(41), midiFreq(40), 'square', 0.24, 1.4);
-    return finishBuffer(b, rate, 0.7);
+    return finishBuffer(b, rate, 0.15);
   },
 };
+
+/* Losowe rozstrojenie przy odtwarzaniu. Bufor jest liczony raz i odtwarzany
+   bajt w bajt, a ucho wyłapuje dokładne powtórzenie natychmiast — przy dźwiękach
+   powtarzanych dziesiątki razy na turę to główne źródło zmęczenia.
+   Tylko dźwięki NIEmelodyczne: `city`, `annex`, `victory` i `defeat` to frazy
+   nutowe, a ±6% to blisko półtonu, więc rozjechałyby się z muzyką. */
+const SFX_VARY = { click: 0.05, move: 0.08, shot: 0.06, explosion: 0.06 };
 
 // dźwięki, które przechodzą nawet przy przyspieszonym AI (ważne zdarzenia)
 const SFX_ALWAYS = { city: 1, annex: 1, victory: 1, defeat: 1, click: 1 };
@@ -356,6 +383,8 @@ function playSfx(name) {
   if (!a || !a.buffers[name]) return;
   const src = a.ctx.createBufferSource();
   src.buffer = a.buffers[name];
+  const vary = SFX_VARY[name];
+  if (vary) src.playbackRate.value = 1 + (Math.random() * 2 - 1) * vary;
   src.connect(a.sfxGain);
   a.voices++;
   src.onended = () => { a.voices = Math.max(0, a.voices - 1); };

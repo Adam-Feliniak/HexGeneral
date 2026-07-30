@@ -26,7 +26,7 @@ This is the single decision that shapes the whole codebase:
   - Translations: source of truth is `locales/*.json`, but the game actually loads `src/locales-data.js`, a generated JS copy.
   - Sprites: PNGs in `assets/`, generated once by a Node script and **committed to the repo** (no build step exists to produce them at runtime).
 - Never hand-edit `src/locales-data.js` — it's generated and will be overwritten/inconsistent.
-- `tools/*.js` are plain Node scripts with zero npm dependencies (including a hand-rolled PNG encoder) — run with plain `node`, no install step.
+- `tools/*.js` are plain Node scripts with zero npm dependencies (including a hand-rolled PNG encoder/decoder in `tools/png.js`) — run with plain `node`, no install step. They are CommonJS and may `require()` each other; the no-modules rule applies only to `src/*.js`.
 
 ## Running / building
 
@@ -43,6 +43,9 @@ After `gen-sprites.js` changes, commit the regenerated `assets/*.png` files too 
 
 ```
 node tools/gen-sounds.js      # optional — renders SFX recipes to dist/sfx/*.wav for auditioning
+node tools/audit-sounds.js    # optional — measures every SFX (peak/RMS/crest/attack/centroid) + waveform PNGs
+node tools/png-to-grid.js x.png   # optional — converts a PNG into a char grid to paste into gen-sprites.js
+node tools/png-to-grid.js --selftest   # verifies the decoder against a committed asset
 ```
 
 Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes every SFX into an `AudioBuffer` at runtime and plays music from a note table. `gen-sounds.js` exists only so you can hear a recipe in an audio editor while tuning it — its output goes to gitignored `dist/` and the game never loads it. See [14-Dzwiek.md](Documents/14-Dzwiek.md).
@@ -62,10 +65,10 @@ Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes 
 
 ### Adding/changing a sound
 Unlike sprites, **sounds are not files** — they're synthesized at runtime, so there is nothing to regenerate or commit.
-1. Edit the recipe in `SFX_RECIPES` (`src/audio.js`) — one `(rate) => Float32Array` function per sound. Helpers: `addTone()` (oscillator with pitch sweep), `addNoise()` (noise + one-pole lowpass), `finishBuffer()` (normalize + fade tail).
+1. Edit the recipe in `SFX_RECIPES` (`src/audio.js`) — one `(rate) => Float32Array` function per sound. Helpers: `addTone()` (oscillator with pitch sweep; optional last arg is attack time — pass ~0 for percussive sounds), `addNoise()` (noise + one-pole lowpass), `finishBuffer(buf, rate, level)` where `level` is the target **RMS**, i.e. the sound's slot in the mix (a hard peak ceiling still applies — see `Documents/14-Dzwiek.md`).
 2. Audition it: `node tools/gen-sounds.js --only=explosion` renders `dist/sfx/explosion.wav` so you can hear it and inspect the waveform in an audio editor. The game never loads these files; `dist/` is gitignored.
 3. New sound: add the key to `SFX_RECIPES`, then call it **always** via `if (typeof playSfx === 'function') playSfx('name');` — `stress.js`, `sim.js` and `visual-test.html` load the game logic without `audio.js`.
-4. Consider entries in `SFX_MIN_GAP` (retrigger spacing) and `SFX_ALWAYS` (does it survive fast-forwarded AI) — a frequent event without them machine-guns in observer mode.
+4. Consider entries in `SFX_MIN_GAP` (retrigger spacing), `SFX_ALWAYS` (does it survive fast-forwarded AI) — a frequent event without them machine-guns in observer mode — and `SFX_VARY` (random detune per playback, **non-melodic sounds only**; detuning a note phrase clashes with the music).
 
 Music lives in `MUSIC_TRACKS` as note tables played by oscillators; the generator can't render it, so audition music in the game. Full rationale and inventory: `Documents/14-Dzwiek.md`.
 
