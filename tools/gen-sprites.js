@@ -97,30 +97,6 @@ function outline(g) {
   }
 }
 
-// ---------- PROTOTYP: czołg rysowany ręcznie w 24x14, skalowany 2x ----------
-/* Autorstwo w niższej rozdzielczości i skalowanie całą liczbą: piksel staje się
-   blokiem 2x2, więc sylwetka czyta się z odległości i nie konkuruje z 1-pikselowym
-   szumem kafli terenu. Kolejność jest wymuszona: outline() PRZED upscale (inaczej
-   kontur zostaje 1 px na blokach 2x2 i wygląda na uszkodzony), dropShadow PO.
-   Litery: h/b/m/B to rampa barwy gracza (światło -> baza -> cień -> głęboki cień),
-   G/g metal działa, t/T gąsienica, W koła. */
-const TANK_PROTO_ROWS = [
-  '........hhhhhh..........',
-  '......hhhhhhhhhh........',
-  '.....bhhbbbbbbbbbWWWWWW.',
-  '.....bbbbbbbbbbbbWWWWWW.',
-  '.....mmmmmmmmmmmmwwwwww.',
-  '......BBBBBBBBBB.wwwwww.',
-  '..GGGGGGGGGGGGGGGee.....',
-  '..ggbbbbbggggggggggg....',
-  '..gggggggggggggggggg....',
-  '..tttttttttttttttttt....',
-  '..ttwwttwwtwwtttwwtt....',
-  '..tweewtewtewttweewt....',
-  '..ttwwttwwtwwtttwwtt....',
-  '...tttttttttttttttt.....',
-];
-
 /* Armata polowa: mapa 22x13 skalowana 2x = 44x26 (rozmiar oczekiwany przez drawArmy).
    Poprzednia wersja składana z elips czytała się jako „kula z patykiem": tarcza była
    elipsą, lufa cienkimi schodkami, a laweta jasną kreską jak zadrapanie. Tu sylwetka
@@ -150,6 +126,14 @@ const ARTILLERY_ROWS = [
 
 function gridFromRows(rows) { return rows.map(r => r.split('')); }
 
+/* Powiększenie całkowite: piksel staje się blokiem k×k. To decyzja stylistyczna,
+   nie oszczędność — sylwetka czyta się z odległości i nie konkuruje z jednopikselowym
+   szumem kafli terenu, a przy skalowaniu planszy do okna traci znacznie mniej detalu.
+
+   KOLEJNOŚĆ JEST WYMUSZONA:  mapa znaków -> outline() -> upscale() -> gridToPixels()
+   -> dropShadow().  outline() musi lecieć PRZED skalowaniem, żeby kontur miał 2 px;
+   po skalowaniu dałby kontur 1 px na blokach 2×2 i sprite wyglądałby na uszkodzony.
+   dropShadow() (czyli hq()) odwrotnie — PO. */
 function upscale(rows, k) {
   const out = [];
   for (const row of rows) {
@@ -163,68 +147,6 @@ function artilleryGrid() {
   const g = gridFromRows(ARTILLERY_ROWS);
   outline(g);
   return upscale(toRows(g), 2);
-}
-
-function tankProtoGrid() {
-  const g = gridFromRows(TANK_PROTO_ROWS);
-  outline(g);
-  return upscale(toRows(g), 2);
-}
-
-// ---------- PROTOTYP alternatywny: ten sam projekt, ale rysowany wprost w 48x28 ----------
-/* Wariant do porównania z wersją 2x. Ta sama dyscyplina (rozdzielona wieża/kadłub/
-   gąsienica, rampa h->b->m->B, budżet barwy gracza), ale w pełnej rozdzielczości —
-   więc drobny detal jest osiągalny: koła są *okrągłe*, bieżnik widoczny, wylot lufy
-   rozszerzony. Elipsa jest tu użyta świadomie i tylko tam, gdzie kształt naprawdę jest
-   kołem; sylwetka i bryły są stawiane prostokątami, nie jedną elipsą jak w tank_*. */
-function tankProto1xGrid() {
-  const g = makeGrid(48, 28);
-
-  // kadłub z pochyłym nosem (glacis)
-  rect(g, 4, 13, 34, 6, 'g');
-  rect(g, 4, 13, 34, 2, 'G');
-  rect(g, 38, 15, 2, 4, 'g');
-  rect(g, 40, 16, 2, 3, 'g');
-
-  // panel w barwie gracza — ta sama „wspólna mowa" dla wszystkich typów jednostek
-  rect(g, 9, 15, 9, 3, 'b');
-  rect(g, 9, 17, 9, 1, 'm');
-
-  // gąsienica z bieżnikiem
-  rect(g, 4, 19, 36, 8, 't');
-  rect(g, 3, 20, 38, 6, 't');
-  for (let x = 5; x <= 38; x += 3) P(g, x, 26, 'T');
-
-  // koła napędowe + jezdne
-  const wheel = (cx, cy, r) => {
-    ellipseFill(g, cx, cy, r, r, 'w');
-    ellipseFill(g, cx - r * 0.25, cy - r * 0.25, r * 0.55, r * 0.55, 'W');
-    ellipseFill(g, cx, cy, r * 0.32, r * 0.32, 'e');
-  };
-  wheel(10, 22.5, 3.4);
-  wheel(34, 22.5, 3.4);
-  wheel(18, 23.5, 2.3);
-  wheel(24, 23.5, 2.3);
-  wheel(30, 23.5, 2.3);
-
-  // wieża: kopuła wyraźnie węższa od kadłuba (w tank_* wieża i kadłub były jedną bryłą)
-  ellipseFill(g, 21, 8, 11, 5.2, 'b');
-  ellipseFill(g, 18, 5.5, 7, 2, 'h');
-  for (let y = 10; y <= 11; y++) for (let x = 0; x < 48; x++) if (g[y][x] === 'b') g[y][x] = 'm';
-  for (let y = 12; y <= 13; y++) for (let x = 0; x < 48; x++) if (g[y][x] === 'b') g[y][x] = 'B';
-  rect(g, 24, 3, 5, 1, 'h');
-
-  // armata w jaśniejszym metalu niż kadłub, żeby się z nim nie zlewała
-  rect(g, 31, 7, 12, 3, 'W');
-  rect(g, 31, 10, 12, 2, 'w');
-  rect(g, 42, 6, 4, 4, 'W');
-  rect(g, 42, 10, 4, 3, 'w');
-
-  // cień pod lufą — oddziela ją od kadłuba
-  rect(g, 32, 12, 9, 1, 'e');
-
-  outline(g);
-  return toRows(g);
 }
 
 // ---------- czołg 48x28 w duchu SV-001 z Metal Sluga ----------
@@ -1060,14 +982,6 @@ function save(name, { w, h, px }) {
 
 const hq = img => dropShadow(img);
 
-/* Prototypy lądują w dist/proto/ (gitignorowane), nie w assets/ — gra ich nie zna,
-   więc można je regenerować bez ruszania rozgrywki, dopóki nie zastąpią oryginału. */
-const PROTO_DIR = path.join(__dirname, '..', 'dist', 'proto');
-function saveProto(name, { w, h, px }) {
-  fs.mkdirSync(PROTO_DIR, { recursive: true });
-  fs.writeFileSync(path.join(PROTO_DIR, name + '.png'), encodePNG(w, h, px));
-  console.log(`dist/proto/${name}.png (${w}x${h})`);
-}
 
 [city0(), city1(), city2()].forEach((rows, i) => save('city_' + i, hq(gridToPixels(rows, BASE_PAL))));
 save('city_port', hq(gridToPixels(cityPort(), BASE_PAL)));
@@ -1092,8 +1006,6 @@ PLAYERS.forEach((p, i) => {
     ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4),
     m: coolShade(p.color, 0.28),
   };
-  saveProto('tank2x_' + i, hq(gridToPixels(tankProtoGrid(), pal)));
-  saveProto('tank1x_' + i, hq(gridToPixels(tankProto1xGrid(), pal)));
   save('tank_' + i, hq(gridToPixels(tankGrid(), pal)));
   save('artillery_' + i, hq(gridToPixels(artilleryGrid(), pal)));
   const top = soldierTop();
