@@ -118,6 +118,37 @@ run(`(() => {
 })()`);
 ```
 
+## Strażnik przenośności (`tools/check-portability.js`)
+
+Osłony `typeof document === 'undefined'` z sekcji wyżej to nie kosmetyka — to one
+pozwalają grać pełne partie w czystym Node i one utrzymują otwartą, tanią drogę do
+ewentualnej zmiany silnika (uzasadnienie i zmierzony bilans w
+[15-Silnik-i-przenosnosc.md](15-Silnik-i-przenosnosc.md)). Ta czystość nie utrzyma się
+sama: wystarczy jedno „tylko odświeżę panel z poziomu `combat.js`" i przepada.
+
+```
+node tools/check-portability.js            # kod 0 = czysto
+node tools/check-portability.js --verbose  # pokaż odwołania dopuszczone przez osłonę
+```
+
+Reguła, której skrypt pilnuje, to **nie** „zero odwołań do przeglądarki", tylko dokładnie
+konwencja opisana wyżej:
+
+> Odwołanie do API przeglądarki jest dozwolone **wyłącznie** wewnątrz funkcji, która
+> wcześniej sprawdza `typeof <to samo API> === 'undefined'` i wychodzi.
+
+Osłona na inny globals niż faktyczne użycie (np. `typeof document` przy sięganiu po
+`localStorage`) **nie przechodzi**. Komentarze są pomijane, więc wzmianka w opisie nie
+wywoła fałszywego alarmu. Nie ma listy grandfatherowanych wyjątków — jest reguła.
+
+Sprawdzane są pliki warstwy logiki: `config`, `geometry`, `utils`, `mapgen`, `state`,
+`combat`, `roads`, `empire`, `turns`, `ai`, `save`. Pliki z definicji żyjące
+w przeglądarce (`render`, `ui`, `input`, `menu`, `sprites`, `audio`, `i18n`, `main`)
+są świadomie poza listą. Dodając nowy plik logiki, dopisz go do `LOGIC_FILES` w skrypcie.
+
+Stan na dziś: 11 plików, 4 odwołania — wszystkie osłonięte (`addLog()` w `state.js`
+i trzy operacje `localStorage` w autozapisie).
+
 ## Wsadowy runner balansu (`tools/sim.js`)
 
 Nadbudowa nad powyższym harnessem: `node tools/sim.js` rozgrywa **N pełnych partii

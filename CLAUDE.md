@@ -46,6 +46,7 @@ node tools/gen-sounds.js      # optional — renders SFX recipes to dist/sfx/*.w
 node tools/audit-sounds.js    # optional — measures every SFX (peak/RMS/crest/attack/centroid) + waveform PNGs
 node tools/png-to-grid.js x.png   # optional — converts a PNG into a char grid to paste into gen-sprites.js
 node tools/png-to-grid.js --selftest   # verifies the decoder against a committed asset
+node tools/check-portability.js   # enforces "logic layer stays browser-free" — run after touching src/
 ```
 
 Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes every SFX into an `AudioBuffer` at runtime and plays music from a note table. `gen-sounds.js` exists only so you can hear a recipe in an audio editor while tuning it — its output goes to gitignored `dist/` and the game never loads it. See [14-Dzwiek.md](Documents/14-Dzwiek.md).
@@ -79,6 +80,8 @@ The repo has never had a formal test suite. Instead, DOM-touching functions acro
 if (typeof document === 'undefined') return;
 ```
 This lets pure game logic run in plain Node via `vm.createContext`, without a browser — useful for verifying combat/movement/AI changes don't throw. See `Documents/09-Przewodnik-developera.md` for a full harness example (load files in `index.html` script order into a `vm` sandbox, call `newGame({ humanCount, botCount, aiDifficulty, seed, timeLimit })` — note it takes one options object and mutates the global `state`, returning nothing — then drive turns via `aiPickMove`/`executeMove`/`produce`/`resetMoved`).
+
+**This guard is a hard rule in the logic layer, not a style preference.** `config`, `geometry`, `utils`, `mapgen`, `state`, `combat`, `roads`, `empire`, `turns`, `ai` and `save` may touch a browser API *only* inside a function that first checks `typeof <that same API> === 'undefined'` and returns. Anything needing unguarded DOM access belongs in `render`/`ui`/`input`/`menu`. Run `node tools/check-portability.js` after touching `src/` — it enforces exactly this (a guard on a *different* global than the one used does not pass). Rationale and the measured engine-port ledger: `Documents/15-Silnik-i-przenosnosc.md`.
 
 For UI/CSS/canvas rendering changes, verify manually by opening `index.html` in a browser; hard-refresh (`Ctrl+F5`) since browsers aggressively cache local files.
 

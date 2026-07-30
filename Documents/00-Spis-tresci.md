@@ -20,6 +20,7 @@ Ten folder zawiera pełną, wyczerpującą dokumentację projektu, wygenerowaną
 12. [Protokół smoke](12-Protokol-smoke.md) — 15-punktowa checklista ręcznych testów w przeglądarce przed każdym wydaniem (uzupełnienie headless: `tools/stress.js` + `tools/sim.js`)
 13. [Testy zewnętrzne](13-Testy-zewnetrzne.md) — wydawanie buildów testerom: fale dystrybucji, co zawiera build i czego celowo nie zawiera, znakowanie (`BUILD_TAG`), zbieranie zapisów jako raportów błędów
 14. [Dźwięk](14-Dzwiek.md) — dlaczego dźwięk jest generowany proceduralnie (argument licencyjny przy wydaniu komercyjnym), inwentarz dźwięków, strojenie przez `tools/gen-sounds.js`
+15. [Silnik i przenośność](15-Silnik-i-przenosnosc.md) — zapisana decyzja o pozostaniu przy JS + Canvas 2D wraz ze zmierzonym bilansem ewentualnego portu, reguła „logika wolna od przeglądarki" pilnowana przez `tools/check-portability.js` i warunki powrotu do tematu
 
 ## Najważniejsze fakty w skrócie
 

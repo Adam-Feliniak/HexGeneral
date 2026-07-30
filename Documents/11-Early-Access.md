@@ -234,19 +234,15 @@ przesunięcie startu o duży, nieprzetestowany system.
 | Netcode (transport + autorytatywna walidacja ruchu + lobby) | do napisania | Gra turowa to najłatwiejszy przypadek: wyślij ruch, zwaliduj, rozgłoś. Kodek stanu (`serializeGame`) już jest. |
 | Integracja Steamworks (lobby, zaproszenia, P2P/SDR, osiągnięcia) | do napisania | Z wrappera Electron przez wiązania Node (`steamworks.js`) — czyli w tym samym kroku, który i tak jest w planie dystrybucji wyżej. |
 
-**Dlaczego to nie zmienia decyzji o silniku.** Pytanie „czy nie przenieść gry na Godota"
-wraca naturalnie przy słowach „Steam" i „multiplayer", więc warto mieć odpowiedź zapisaną:
+**Decyzja o silniku jest zapisana osobno.** Pytanie „czy nie przenieść gry na Godota"
+wraca naturalnie przy słowach „Steam" i „multiplayer", więc odpowiedź — wraz ze zmierzonym
+bilansem portu i warunkami jej odwrócenia — mieszka w
+[15-Silnik-i-przenosnosc.md](15-Silnik-i-przenosnosc.md). Skrót: **zostajemy na obecnym
+stacku**, bo przy celach „PC/Steam, bez konsol, solo, MP w gronie znajomych" port nie
+kupuje żadnej potrzebnej zdolności.
 
-- Silnik z gotowym high-level multiplayerem (RPC, synchronizacja stanu) błyszczy przy grach
-  **w czasie rzeczywistym**. Przy turówce ta przewaga jest mała — nie ma czego interpolować.
-- Animacje terenu, drugi potwierdzony cel, też nie są argumentem: mieszczą się w istniejącej
-  pętli `frame()`/`anims`/`effects`, a plansza przerysowuje się cała i tak.
-- Cena portu to przepisanie **wszystkiego poza dokumentacją** — łącznie z logiką, którą
-  `tools/sim.js` i `tools/stress.js` już przetestowały. To zerowanie harmonogramu przed EA.
-- **Realny sufit weba to konsole**, nie Steam. Jeśli kiedyś pojawi się cel konsolowy, to
-  jest decyzja o osobnym projekcie/sequelu, nie o porcie tej gry.
-
-**Najtańsze ubezpieczenie:** pisać netcode i walidację ruchów po stronie logiki wolnej od
-DOM (`combat.js`, `empire.js`, `ai.js`, `save.js` już takie są — osłony
-`typeof document === 'undefined'`). Wtedy decyzja o pozostaniu przy obecnym stacku nie pali
-mostu: ewentualny port byłby tłumaczeniem czystej logiki, a nie archeologią.
+Dla tego dokumentu istotny jest jeden skutek: **walidacja ruchu ma być osobną warstwą,
+która nie wie, czy działa u hosta-gracza, czy na serwerze** — siada obok `combat.js`
+i `empire.js`, nigdy w `input.js` ani `ui.js`. To daje darmową drogę do autorytatywnego
+serwera, gdyby multiplayer wyszedł poza grono zaproszonych. Reguła jest pilnowana
+maszynowo przez `node tools/check-portability.js`.
