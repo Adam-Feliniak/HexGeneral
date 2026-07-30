@@ -2,6 +2,32 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.6.3] - 2026-07-30
+
+- **Nowy sprite armaty polowej.** Poprzednia wersja, składana z elips, czytała się jako
+  „kula z patykiem": tarcza była elipsą, lufa cienkimi schodkami, a laweta jasną kreską
+  jak zadrapanie. Nowa jest rysowana ręcznie jako mapa znaków 22×13 i skalowana 2× —
+  piksel staje się blokiem 2×2, więc sylwetka czyta się z odległości i nie konkuruje
+  z jednopikselowym szumem kafli terenu
+- **Poprawiony miks dźwięku.** `finishBuffer()` ustawia teraz poziom na RMS, a nie na
+  szczycie. Poprzednio hierarchia głośności była **odwrócona**: kliknięcie w przycisk
+  (−17,6 dB RMS) było głośniejsze od wystrzału (−19,2 dB) i równe eksplozji. Dziś
+  interfejs siedzi 8 dB pod walką (`click` −26,0, `shot` −18,0, `explosion` −18,2),
+  nigdzie nie ma klipowania
+- **Dźwięki nie powtarzają się bajt w bajt.** `SFX_VARY` losuje `playbackRate` przy każdym
+  zagraniu — celowo tylko dla dźwięków niemelodycznych, bo ±6% to blisko półtonu
+  i rozstroiłoby frazy nutowe względem muzyki w tle
+- `addTone()` przyjmuje czas ataku; wystrzał dostał ~0 zamiast 4 ms, przez co jego atak
+  skrócił się z 2,8 do 1,2 ms. To domyślne 4 ms zmiękczało dotąd właśnie to, co ma być
+  uderzeniem
+- Trzy nowe narzędzia: `tools/audit-sounds.js` (pomiar dźwięku + przebiegi PNG),
+  `tools/png-to-grid.js` (PNG → mapa znaków dla generatora, z testem poprawności na
+  commitowanym asset'cie) i `tools/check-portability.js` (pilnuje, żeby warstwa logiki
+  została wolna od przeglądarki). Enkoder i dekoder PNG wyciągnięte do wspólnego
+  `tools/png.js`
+- Zapisana decyzja o silniku wraz ze zmierzonym bilansem ewentualnego portu —
+  [Documents/15-Silnik-i-przenosnosc.md](Documents/15-Silnik-i-przenosnosc.md)
+
 ## [0.6.2] - 2026-07-28
 
 - Panel boczny pokazuje **produkcję na turę przy każdym imperium** (💰), obok liczby

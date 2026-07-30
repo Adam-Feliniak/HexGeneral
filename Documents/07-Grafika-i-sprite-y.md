@@ -14,7 +14,7 @@ Prosty system: `makeGrid(w,h)` tworzy 2D tablicę znaków wypełnioną `.` (prze
 
 Tym mechanizmem namalowane są m.in.:
 - `tankGrid()` — czołg 48×28
-- `artilleryGrid()` — armata polowa 44×26 (koła, laweta, tarcza w kolorze gracza, ukośna lufa rysowana schodkowo małymi prostokątami)
+- `artilleryGrid()` — armata polowa 44×26, **rysowana inaczej niż reszta**: nie kodem malującym, tylko ręcznie ułożoną mapą znaków 22×13, skalowaną 2× (patrz niżej)
 - `soldierTop()` + `legsGrid(phase)` — piechur 24×30/klatkę, głowa+tułów stałe, animują się tylko nogi (4 fazy chodu)
 - `capitalGrid()` — stolica (kwatera główna) 48×34
 - `city0/1/2()` — 3 warianty zwykłego miasta 46×38
@@ -23,6 +23,49 @@ Tym mechanizmem namalowane są m.in.:
 - `ship0/1/2()` — 3 klasy okrętów: barka desantowa, pancernik, lotniskowiec
 - `resOil/resFarm/resMine()` — złoża surowców
 - drzewa i skały (po 2 warianty każde)
+
+### 1b. Ręczna mapa znaków skalowana 2× (armata polowa, docelowo reszta jednostek)
+
+Sprite'y składane z `ellipseFill()` dają bryły organiczne, a nie maszyny — stara armata
+czytała się jako „kula z patykiem". Dlatego armata jest dziś **ułożona ręcznie piksel po
+pikselu** jako tablica 13 stringów po 22 znaki (`ARTILLERY_ROWS`), a potem powiększona
+całą liczbą przez `upscale(rows, 2)` do 44×26.
+
+Powiększenie całkowite nie jest oszczędnością, tylko decyzją stylistyczną: piksel staje się
+blokiem 2×2, więc sylwetka czyta się z odległości i **nie konkuruje z jednopikselowym
+szumem kafli terenu**. Przy okazji znosi znacznie lepiej skalowanie planszy do okna,
+gdzie przeglądarka wyrzuca całe rzędy pikseli.
+
+**Kolejność jest wymuszona i łatwa do zepsucia:**
+
+```
+mapa znaków -> outline() -> upscale(2) -> gridToPixels() -> dropShadow()
+```
+
+`outline()` musi lecieć **przed** skalowaniem, żeby kontur miał 2 px. Po skalowaniu dałby
+kontur 1 px na blokach 2×2 i sprite wyglądałby na uszkodzony. `dropShadow()` (czyli `hq()`)
+odwrotnie — **po**.
+
+**Dwie reguły wynikające z pipeline'u, sprawdzone empirycznie:**
+
+- **Każdy wystający element potrzebuje ≥3 pikseli grubości**, bo `outline()` zabiera cały
+  zewnętrzny pierścień. Laweta na dwóch wierszach znika w całości pod konturem.
+- **Skosów przy 2× nie ma.** Przekątna o grubości 3 zostawia po konturze jeden widoczny
+  piksel i zamienia się w czarny patyk. Dlatego lufa armaty jest pozioma, choć w starej
+  wersji była uniesiona. Przy autorstwie 1× skos przeżywa — i to jest granica metody:
+  **2× nadaje się do jednostek, których tożsamością jest masa** (czołg: wieża, kadłub,
+  gąsienica), a **utrudnia te, których tożsamością jest struktura** (armata: długa lufa,
+  rozstawiona laweta, szprychy).
+
+Rampa barwy gracza ma cztery szczeble: `h` (światło) → `b` (baza) → `m` (cień) → `B`
+(cień głęboki). `m` liczy `coolShade()` — miesza kolor gracza z chłodnym granatem zamiast
+go po prostu przyciemniać, bo samo przyciemnienie czyta się jak brud, a nie jak brak
+światła.
+
+Udział barwy gracza w sylwetce mierzy `node tools/png-to-grid.js <plik.png>` — wypisuje go
+w pierwszej linii wraz z celem 25–35%. Warto sprawdzać, bo oko myli się tu bardzo łatwo:
+przy pierwszym pomiarze okazało się, że jednostki lądowe (30/31/32%) od dawna są w normie,
+a odstają **okręty** (15/12/8%) i **stolica** (4%).
 
 ### 2. Painter per-piksel (teren)
 

@@ -121,6 +121,33 @@ const TANK_PROTO_ROWS = [
   '...tttttttttttttttt.....',
 ];
 
+/* Armata polowa: mapa 22x13 skalowana 2x = 44x26 (rozmiar oczekiwany przez drawArmy).
+   Poprzednia wersja składana z elips czytała się jako „kula z patykiem": tarcza była
+   elipsą, lufa cienkimi schodkami, a laweta jasną kreską jak zadrapanie. Tu sylwetka
+   to cztery rozdzielone bryły — koło, laweta, tarcza, lufa.
+
+   Dwie rzeczy wymuszone przez pipeline, łatwe do zepsucia przy edycji:
+   - Każdy wystający element musi mieć >=3 piksele grubości, bo outline() zabiera cały
+     zewnętrzny pierścień. Laweta na dwóch wierszach zniknęłaby w całości pod konturem.
+   - Skosów tu nie ma celowo. Przekątna o grubości 3 zostawia po konturze jeden widoczny
+     piksel i zamienia się w czarny patyk — dlatego lufa jest pozioma, a nie uniesiona
+     jak w starej wersji. Przy autorstwie 1x skos przeżywa; przy 2x nie. */
+const ARTILLERY_ROWS = [
+  '......bbbbb...........',
+  '......hhhhh......GGG..',
+  '......bbbbbGGGGGGGGG..',
+  '......bbbbbGGGGGGGGG..',
+  '......bbbbbggggggggg..',
+  '......mmmmmggggggggg..',
+  '......wwwwgg.....ggg..',
+  '.....wwwwwwgg.........',
+  'ggggwwwwwwww..........',
+  'gbbgwwwewwww..........',
+  'ggggwwwwwww...........',
+  '......wwww............',
+  '.......ww.............',
+];
+
 function gridFromRows(rows) { return rows.map(r => r.split('')); }
 
 function upscale(rows, k) {
@@ -130,6 +157,12 @@ function upscale(rows, k) {
     for (let i = 0; i < k; i++) out.push(wide);
   }
   return out;
+}
+
+function artilleryGrid() {
+  const g = gridFromRows(ARTILLERY_ROWS);
+  outline(g);
+  return upscale(toRows(g), 2);
 }
 
 function tankProtoGrid() {
@@ -255,48 +288,6 @@ function tankGrid() {
   return toRows(g);
 }
 
-// ---------- armata polowa 44x26 (dwa koła, tarcza w kolorze gracza, ukośna lufa) ----------
-
-function artilleryGrid() {
-  const g = makeGrid(44, 26);
-
-  const wheel = (cx, cy, r) => {
-    ellipseFill(g, cx, cy, r, r, 'o');
-    ellipseFill(g, cx, cy, r - 1, r - 1, 'w');
-    ellipseFill(g, cx - r * 0.3, cy - r * 0.3, (r - 1) * 0.5, (r - 1) * 0.5, 'W');
-    ellipseFill(g, cx, cy, r * 0.3, r * 0.3, 'e');
-  };
-  wheel(9, 19, 4.5);
-  wheel(19, 19, 4.5);
-
-  // oś łącząca koła
-  rect(g, 9, 17, 11, 2, 'g');
-
-  // rozstawiona laweta z tyłu
-  rect(g, 19, 18, 20, 2, 'r');
-  rect(g, 22, 12, 2, 8, 'r');
-  rect(g, 34, 10, 2, 10, 'r');
-
-  // tarcza osłonowa (kolor gracza)
-  ellipseFill(g, 13, 10, 8, 7, 'b');
-  ellipseFill(g, 10, 7, 3.5, 2, 'h');
-  for (let y = 13; y <= 16; y++) {
-    for (let x = 0; x < 44; x++) if (g[y][x] === 'b') g[y][x] = 'B';
-  }
-
-  // zamek działa
-  rect(g, 16, 8, 5, 4, 'g');
-
-  // lufa uniesiona ukośnie do góry-w prawo (schodkowo)
-  let bx = 20, by = 9;
-  for (let i = 0; i < 9; i++) {
-    rect(g, bx, by, 3, 3, i % 3 === 0 ? 'G' : 'g');
-    bx += 2; if (i % 2 === 0) by -= 1;
-  }
-
-  outline(g);
-  return toRows(g);
-}
 
 // ---------- piechur 24x30, cztery klatki chodu (painter, jak czołg/miasta) ----------
 
