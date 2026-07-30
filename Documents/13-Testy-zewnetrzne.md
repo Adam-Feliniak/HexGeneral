@@ -111,12 +111,14 @@ oczekiwałeś, co się stało, ile tur zagrałeś, czy dograłeś do końca.
 Twój najrzadszy zasób, więc nie marnuj go na to, co dostaniesz zdalnie. Dwie rzeczy,
 których **nie da się** wyciągnąć z raportów:
 
-> **Prerekwizyt: tryb kooperacyjny.** Fala 0 czeka na szkielet drużyn (P0 w
-> [11-Early-Access.md](11-Early-Access.md)). Powód jest praktyczny: w hot-seacie FFA
-> jedyny układ dla dwóch osób to **gra przeciw autorowi**, a mniej wprawiony tester
-> odpada z partii, zanim zdąży cokolwiek pokazać. Sesja co-op (dwoje ludzi w drużynie
-> przeciw botom) trwa długo, poziom przeciwnika reguluje suwak trudności, a wspólne
-> planowanie samo wymusza protokół „myśl na głos" z ostatniego punktu tej listy.
+> **Prerekwizyt: tryb kooperacyjny — ✅ gotowy (v0.7.0).** Fala 0 czekała na szkielet
+> drużyn. Powód był praktyczny: w hot-seacie FFA jedyny układ dla dwóch osób to **gra
+> przeciw autorowi**, a mniej wprawiony tester odpada z partii, zanim zdąży cokolwiek
+> pokazać. Sesja co-op (dwoje ludzi w drużynie przeciw botom) trwa długo, poziom
+> przeciwnika reguluje suwak trudności, a wspólne planowanie samo wymusza protokół
+> „myśl na głos" z ostatniego punktu tej listy. W lobby ustawia się to przyciskiem
+> szybkiego układu **„Ludzie kontra boty"**; jest też **„Tryb bossa"**, jeśli sesja ma
+> sprawdzić wariant przeciw jednemu, mocniejszemu wrogowi.
 
 - [ ] **Pierwsze 10 minut, bez podpowiedzi.** Siadasz obok, **nic nie tłumaczysz**, tylko
       notujesz, gdzie tester się gubi i o co pyta. To główne ryzyko refundowe (P1 onboarding)

@@ -10,7 +10,103 @@ let effects = [];      // eksplozje na polach bitew
 let hoverTile = null;
 let lastFrame = 0;
 
-// opts: { humanCount, botCount, aiDifficulty, seed, timeLimit }
+/* ------------------- sloty graczy (obsada + drużyna) -------------------
+   Jedno źródło prawdy o składzie partii: lista slotów z lobby. Boss NIE jest osobnym
+   trybem, tylko wartością `kind` slotu — dzięki temu ten sam mechanizm obsługuje FFA,
+   co-op przeciw botom, 2v2 i tryb bossa (patrz renderMpSetup w menu.js).
+   `skin` to indeks zestawu sprite'ów/barw z PLAYERS_DEF i służy WYŁĄCZNIE grafice —
+   tożsamość gracza to zawsze `id` (owner, army.player, city.capitalOf). Rozjazd bierze
+   się stąd, że zamknięty slot nie tworzy imperium, więc id są ciągłe, a skiny nie. */
+
+function slotsFromCounts(humanCount, botCount) {
+  const total = Math.max(2, Math.min(MAX_PLAYERS, Math.max(0, humanCount) + Math.max(0, botCount)));
+  const humans = Math.min(Math.max(0, humanCount), total);
+  const slots = [];
+  // każdy w osobnej drużynie = FFA, czyli dokładne zachowanie sprzed drużyn
+  for (let i = 0; i < total; i++) slots.push({ kind: i < humans ? 'human' : 'bot', team: i, skin: i });
+  return slots;
+}
+
+function normalizeSlots(raw) {
+  const open = [];
+  (raw || []).forEach((s, i) => {
+    if (!s || s.kind === 'closed' || open.length >= MAX_PLAYERS) return;
+    const kind = (s.kind === 'human' || s.kind === 'boss') ? s.kind : 'bot';
+    open.push({
+      kind,
+      team: Number.isFinite(s.team) ? s.team : i,
+      skin: kind === 'boss' ? BOSS_SKIN : (Number.isFinite(s.skin) ? s.skin : i),
+    });
+  });
+  // partia z jednym imperium albo jedną drużyną nie miałaby warunku końca — lobby
+  // tego nie dopuszcza, ale import/harness mógłby, więc awaryjnie rozbijamy na FFA
+  if (open.length < 2) return slotsFromCounts(1, 1);
+  if (new Set(open.map(s => s.team)).size < 2) open.forEach((s, i) => { s.team = i; });
+  return open;
+}
+
+// Rozstawienie na mapie: pozycja stolicy wynika z `id` (`CAPITAL_SPOTS[id]`), więc to
+// kolejność slotów decyduje, kto z kim sąsiaduje. W FFA zostaje dokładnie dzisiejsza
+// (maksymalny rozrzut), ale przy realnym sojuszu byłaby sabotażem — dwoje ludzi z jednej
+// drużyny startowałoby w przeciwległych rogach, więc nie mogliby ani się wspierać, ani
+// wspólnie planować, a `moraleAt` (liczone od WŁASNYCH miast) karałoby marsz ku sojusznikowi.
+// Dlatego przy drużynach sloty rozdajemy wzdłuż obwodu mapy, drużyna po drużynie: każda
+// dostaje spójny łuk sąsiadujących pozycji. Zbiór użytych pozycji się nie zmienia, więc
+// mapa (generateMap) jest identyczna
+function assignTeamPositions(slots) {
+  const allied = slots.some((s, i) => slots.some((o, j) => j !== i && o.team === s.team));
+  if (!allied) return slots;
+  const n = slots.length;
+  const dist = [];
+  for (let i = 0; i < n; i++) {
+    dist.push([]);
+    for (let j = 0; j < n; j++) {
+      const [ac, ar] = CAPITAL_SPOTS[i], [bc, br] = CAPITAL_SPOTS[j];
+      dist[i].push(hexDist(ac, ar, bc, br));
+    }
+  }
+  // Szukamy przypisania minimalizującego sumę dystansów WEWNĄTRZ drużyn. Suma po
+  // wszystkich parach pozycji jest stała, więc zbliżenie sojuszników automatycznie
+  // oddala wrogów — jedno kryterium wystarcza. Liczymy przeglądem zupełnym, bo
+  // pozycji jest najwyżej MAX_PLAYERS (720 permutacji, raz na partię); ręcznie
+  // wpisana kolejność byłaby wróżeniem z proporcji mapy (23×14: rogi w tym samym
+  // rzędzie dzieli 18 pól, a w tej samej kolumnie 9), a rozmiary i kształty map
+  // są w planach
+  const cur = new Array(n), used = new Array(n).fill(false);
+  let best = null, bestCost = Infinity;
+  const walk = (k, cost) => {
+    if (cost >= bestCost) return; // gałąź już gorsza od najlepszej — nie ma po co schodzić
+    if (k === n) { bestCost = cost; best = cur.slice(); return; }
+    for (let i = 0; i < n; i++) {
+      if (used[i]) continue;
+      let add = 0;
+      for (let j = 0; j < k; j++) if (cur[j].team === slots[i].team) add += dist[j][k];
+      used[i] = true; cur[k] = slots[i];
+      walk(k + 1, cost + add);
+      used[i] = false;
+    }
+  };
+  walk(0, 0);
+  return best || slots;
+}
+
+// czy dwa imperia grają po tej samej stronie (to samo imperium też "jest sojusznikiem")
+function sameTeam(aId, bId) {
+  if (aId === bId) return true;
+  const a = state.players[aId], b = state.players[bId];
+  return !!a && !!b && a.team === b.team;
+}
+
+// czy drużyna tego gracza jeszcze żyje (choćby przez sojusznika) — warunek porażki
+// liczy się na drużyny, nie na pojedyncze imperia
+function teamHasAlive(playerId) {
+  const p = state.players[playerId];
+  return !!p && state.players.some(o => o.alive && o.team === p.team);
+}
+
+// opts: { slots, humanCount, botCount, aiDifficulty, seed, timeLimit }
+// `slots` (lobby) ma pierwszeństwo; humanCount/botCount to starsza, dalej wspierana
+// droga (tools/sim.js, tools/stress.js, harness z 09-Przewodnik-developera.md) dająca FFA.
 // pominięte pola (przyciski "Nowa mapa"/"Nowa gra") -> powtarzają ustawienia bieżącej gry;
 // seed pominięty zawsze losuje nową mapę (nawet przy powtórce reszty ustawień)
 function newGame(opts = {}) {
@@ -20,10 +116,6 @@ function newGame(opts = {}) {
   const gameId = (state && state.gameId || 0) + 1;
   const hadGame = !!(state && state.players);
 
-  const humanCount = opts.humanCount !== undefined ? opts.humanCount
-    : hadGame ? state.humanPlayerCount : 1;
-  const botCount = opts.botCount !== undefined ? opts.botCount
-    : hadGame ? (state.players.length - state.humanPlayerCount) : 3;
   const aiDifficulty = opts.aiDifficulty !== undefined ? opts.aiDifficulty
     : hadGame ? state.aiDifficulty
     : (prevOptions ? prevOptions.defaultDifficulty : 'normal');
@@ -31,12 +123,23 @@ function newGame(opts = {}) {
     : hadGame ? state.timeLimit : Infinity;
   const mapSeed = opts.seed != null ? opts.seed : randomSeed();
 
-  // humanCount 0 = tryb obserwatora (sami botowie); zawsze min. 2 imperia,
-  // inaczej partia nie miałaby warunku końca
-  const playerCount = Math.max(2, Math.min(6, Math.max(0, humanCount) + Math.max(0, botCount)));
-  const actualHumanCount = Math.min(Math.max(0, humanCount), playerCount);
-  // 0 ludzi -> 'multi' (koniec gry = ostatnie żywe imperium, nie upadek slota 0)
+  // skład partii: sloty z lobby > jawne humanCount/botCount > powtórka bieżącej gry
+  // ("Nowa mapa" zachowuje obsadę i drużyny) > domyślne 1 człowiek + 3 boty.
+  // humanCount 0 = tryb obserwatora (sami botowie); normalizeSlots pilnuje min. 2 imperiów
+  const rawSlots = opts.slots ? normalizeSlots(opts.slots)
+    : (opts.humanCount !== undefined || opts.botCount !== undefined)
+      ? slotsFromCounts(opts.humanCount !== undefined ? opts.humanCount : 1,
+                        opts.botCount !== undefined ? opts.botCount : 0)
+    : hadGame ? normalizeSlots(state.players.map(p => ({ kind: p.kind, team: p.team, skin: p.skin })))
+    : slotsFromCounts(1, 3);
+  // przy drużynach sojusznicy startują obok siebie, w FFA bez zmian
+  const slots = assignTeamPositions(rawSlots);
+
+  const playerCount = slots.length;
+  const actualHumanCount = slots.filter(s => s.kind === 'human').length;
+  // 0 ludzi -> 'multi' (koniec gry = ostatnia żywa drużyna, nie upadek slota 0)
   const mode = actualHumanCount === 1 ? 'single' : 'multi';
+  const firstHumanSlot = slots.findIndex(s => s.kind === 'human');
 
   const tiles = generateMap(playerCount, mapSeed);
   state = {
@@ -51,7 +154,10 @@ function newGame(opts = {}) {
     mapSeed,
     turn: 1,
     phase: 'active',       // 'active' | 'over'
-    human: 0,               // id imperium "Twojego" (tylko tryb single)
+    // 'local' (hot-seat) | 'net' — gra sieciowa jeszcze nie istnieje, pole trzyma
+    // dla niej miejsce w stanie i zapisie (patrz Documents/15-Silnik-i-przenosnosc.md)
+    transport: opts.transport === 'net' ? 'net' : 'local',
+    human: firstHumanSlot >= 0 ? firstHumanSlot : 0, // id imperium "Twojego" (tylko tryb single)
     humanPlayerCount: actualHumanCount,
     aiDifficulty,          // preset ('easy'..'nightmare') albo liczba 0-100 (custom) — wspólna dla botów tej gry
     currentPlayerIndex: 0,
@@ -63,10 +169,13 @@ function newGame(opts = {}) {
     selectedCity: null,  // wybrane własne pole z miastem (panel budowy)
     selectedResource: null, // wybrane własne, podłączone złoże (panel wyboru miasta +1)
     roadPickFrom: null,  // miasto czekające na kliknięcie celu budowanej drogi
-    players: PLAYERS_DEF.slice(0, playerCount).map((p, i) => ({
-      ...p, id: i, alive: true, capital: CAPITAL_SPOTS[i],
-      isHuman: i < actualHumanCount,
-      difficulty: i < actualHumanCount ? null : aiDifficulty,
+    // id = pozycja w tablicy (ciągła, bo zamknięte sloty nie tworzą imperium),
+    // skin = barwa i zestaw sprite'ów z PLAYERS_DEF (u bossa BOSS_SKIN)
+    players: slots.map((s, i) => ({
+      ...PLAYERS_DEF[s.skin], id: i, skin: s.skin, kind: s.kind, team: s.team,
+      alive: true, capital: CAPITAL_SPOTS[i],
+      isHuman: s.kind === 'human',
+      difficulty: s.kind === 'human' ? null : aiDifficulty,
     })),
     log: [],
   };
@@ -77,6 +186,9 @@ function newGame(opts = {}) {
   // armie startowe na stolicach
   state.players.forEach(p => {
     const [c, r] = p.capital;
+    // mapgen nazywa stolice po indeksie (PLAYERS_DEF[i]), a przy zamkniętych slotach
+    // i bossie id ≠ skin — bez tej podmiany stolica nosiłaby nazwę cudzego imperium
+    if (tiles[r][c].city) tiles[r][c].city.name = p.name;
     tiles[r][c].army = {
       player: p.id, str: 5, vet: 0, type: DEFAULT_UNIT_TYPE,
       mp: UNIT_TYPES[DEFAULT_UNIT_TYPE].mp, activated: false,
@@ -101,9 +213,18 @@ function defaultSpSetup() {
 }
 function defaultMpSetup() {
   return {
-    count: MP_PLAYER_COUNTS[2], bots: 0, difficulty: 'normal', customDiff: 50,
+    transport: 'local', slots: defaultMpSlots(), difficulty: 'normal', customDiff: 50,
     seedMode: 'random', seedValue: randomSeed(), time: TURN_TIME_LIMIT_DEFAULT,
   };
+}
+// domyślnie dwoje ludzi w jednej drużynie przeciw dwóm botom — układ, po który sięga
+// sesja testowa (Documents/11-Early-Access.md): hot-seat, w którym gracze grają RAZEM
+function defaultMpSlots() {
+  return [
+    { kind: 'human', team: 0 }, { kind: 'human', team: 0 },
+    { kind: 'bot', team: 1 }, { kind: 'bot', team: 1 },
+    { kind: 'closed', team: 2 }, { kind: 'closed', team: 3 },
+  ];
 }
 function defaultOptions() {
   return { defaultSeed: null, defaultDifficulty: 'normal' };

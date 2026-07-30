@@ -142,6 +142,13 @@ function drawBorders() {
   }
 }
 
+// zestaw sprite'ów imperium: NIE jest tym samym co id gracza. Zamknięty slot w lobby
+// nie tworzy imperium (id są ciągłe), a boss ma własny, siódmy zestaw — patrz state.js
+function playerSkin(id) {
+  const p = id >= 0 ? state.players[id] : null;
+  return p ? p.skin : 0;
+}
+
 function drawCity(t) {
   const { x, y } = hexCenter(t.c, t.r);
   const cap = t.city.capitalOf >= 0;
@@ -149,7 +156,7 @@ function drawCity(t) {
   ctx.translate(Math.round(x), Math.round(y));
   if (cap) {
     // stolica: kwatera główna z flagą w kolorze właściciela (+ żuraw, gdy port)
-    const spr = SPR.capitals[t.owner >= 0 ? t.owner : t.city.capitalOf];
+    const spr = SPR.capitals[playerSkin(t.owner >= 0 ? t.owner : t.city.capitalOf)];
     if (sprOk(spr)) ctx.drawImage(spr, -24, -22, 48, 34);
     if (t.city.port && sprOk(SPR.crane)) ctx.drawImage(SPR.crane, 5, -14, 20, 26);
   } else if (t.city.port) {
@@ -182,13 +189,13 @@ function drawArmy(t, now) {
   let selBox;
   if (!t.land) {
     const tier = army.str < 20 ? 0 : army.str < 70 ? 1 : 2;
-    const spr = SPR.ships[army.player][tier];
+    const spr = SPR.ships[playerSkin(army.player)][tier];
     selBox = tier === 0 ? [x - 18, y - 10, 36, 18]
       : tier === 1 ? [x - 24, y - 13, 48, 24]
       : [x - 25, y - 12, 50, 22];
     if (sprOk(spr)) ctx.drawImage(spr, selBox[0], selBox[1], selBox[2], selBox[3]);
   } else if (army.type === 'infantry') {
-    const spr = SPR.soldiers[army.player];
+    const spr = SPR.soldiers[playerSkin(army.player)];
     if (sprOk(spr)) {
       // animacja marszu (4 klatki) tylko dla jednostki aktualnie zaznaczonej przez
       // gracza — reszta piechoty stoi (statyczna klatka 0), żeby plansza się nie "migotała"
@@ -197,11 +204,11 @@ function drawArmy(t, now) {
     }
     selBox = [x - 13, y - 18, 26, 32];
   } else if (army.type === 'tank') {
-    const spr = SPR.tanks[army.player];
+    const spr = SPR.tanks[playerSkin(army.player)];
     if (sprOk(spr)) ctx.drawImage(spr, x - 24, y - 15, 48, 28);
     selBox = [x - 25, y - 16, 50, 30];
   } else { // artillery
-    const spr = SPR.artillery[army.player];
+    const spr = SPR.artillery[playerSkin(army.player)];
     if (sprOk(spr)) ctx.drawImage(spr, x - 22, y - 14, 44, 26);
     selBox = [x - 23, y - 15, 46, 28];
   }

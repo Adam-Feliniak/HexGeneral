@@ -170,56 +170,33 @@ nie tutaj.
 - 🟡 **Scenariusze / mapy z celami** — inne warunki zwycięstwa niż eliminacja (utrzymaj
   X tur, zdobądź konkretne miasto). Nadbudowa nad istniejącym generatorem i seedem.
 - 🔴 **Dyplomacja (multi / AI)** — sojusze, zawieszenie broni, wspólny wróg.
-- ⭐ 🟡 **Tryb kooperacyjny (drużyny)** — **PRIORYTET NR 1**. Ludzie (i/lub boty) w stałym
-  sojuszu grający przeciw wspólnemu wrogowi. Prostszy, „zamrożony" wariant dyplomacji
-  (powyżej) — zamiast dynamicznych paktów po prostu przypisanie drużyny przy zakładaniu gry.
+- ✅ **Tryb kooperacyjny (drużyny) + tryb bossa** — **zrealizowane** (v0.7.0). Ludzie
+  i/lub boty w stałym sojuszu przeciw wspólnemu wrogowi; skład partii ustawia **tabela
+  slotów** w lobby wieloosobowym (obsada `człowiek / bot / boss / zamknięty` + drużyna,
+  wzorem potyczki z serii Command & Conquer).
 
-  **Dlaczego to już nie jest pozycja z roadmapy.** Awansowała do rdzenia EA jako **bramka
-  fali 0 testów zewnętrznych**: dwie osoby przy jednym komputerze mogą dziś zagrać wyłącznie
-  *przeciw sobie* (hot-seat FFA), więc jedyna dostępna sesja testowa to pojedynek z autorem
-  gry — układ, który kończy się, zanim wyprodukuje dane. Co-op zamienia to na wspólną grę
-  przeciw botom, gdzie poziom przeciwnika reguluje suwak trudności, a gracze sami komentują
-  decyzje na głos. Pełne uzasadnienie i miejsce w ścieżce krytycznej:
-  [11-Early-Access.md](11-Early-Access.md); protokół sesji: [13-Testy-zewnetrzne.md](13-Testy-zewnetrzne.md).
+  **Kluczowa decyzja: boss nie jest osobnym trybem gry, tylko obsadą slotu.** To, co
+  wyglądało na „dwa tryby do sklejenia" (co-op przeciw botom vs co-op przeciw bossowi),
+  okazało się jedną tabelą i trzema przyciskami szybkiego układu. Dzięki temu nie ma
+  ani osobnych ekranów, ani pola `enemyKind` w stanie, które mogłoby rozjechać się
+  z faktycznym składem — jest jedno źródło prawdy. Opis:
+  [02-Architektura-i-pliki.md](02-Architektura-i-pliki.md#sloty-drużyny-i-boss).
 
-  **Zakres na tę bramkę: sam szkielet drużyn** (niżej), w wariancie „osobne imperia
-  w sojuszu, wspólne zwycięstwo". Super-wróg **nie** wchodzi do tej bramki — jest tańszy
-  dopiero, gdy szkielet stoi, a do testów niepotrzebny.
+  Zrobione: drużyna w stanie gracza (`sameTeam`/`teamHasAlive` w `state.js`), brak
+  friendly-fire i zajmowania pól sojusznika (`blockedByFriendly` w `combat.js`,
+  `captureTile` w `empire.js`), warunek zwycięstwa liczony na drużyny (`checkGameOver`),
+  AI traktujące sojuszników jak swoich (`aiIsEnemy`/`aiIsOwnSide` w `ai.js`), boss jako
+  mnożniki `BOSS_MULT` na wybranym presecie trudności + siódmy, czarny zestaw sprite'ów,
+  `SAVE_FORMAT` 3.
 
-  Uwaga projektowa: to, co początkowo wyglądało na „dwa tryby", to naprawdę **dwie
-  niezależne decyzje**, i lepiej trzymać je osobno:
-  1. **Kształt strony wroga** — jeden boss czy zwykła obsada osobnych przeciwników.
-  2. **Trudność** — suwak mnożnika produkcji wroga. To *parametr*, nie tryb: działa
-     niezależnie od kształtu strony wroga (i nadaje się jako ogólny handicap trudności
-     także poza co-opem). Suwak podnosi trudność, ale sam nie tworzy „wyjątkowego wroga" —
-     to dwie różne rzeczy.
+  Oba przewidziane haczyki bossa potwierdziły się: mnożnik produkcji **musiał** iść
+  w parze z agresją (pomiar: 15% → 75% wygranych samotnika przeciw dwóm botom Normal),
+  a nadmiar produkcji w jednym mieście dalej przepada na capie `MAX_ARMY` — dlatego
+  premia jest umiarkowana (×1,6), a nie ×3.
 
-  **Fundament (wspólny dla wszystkiego): szkielet drużyn.** Pojęcie drużyny w stanie
-  gracza (`state.js`); brak friendly-fire i przechodzenie przez pola sojusznika
-  (`combat.js` / `empire.js` — walka i zajmowanie pól ignorują sojuszników); warunek
-  zwycięstwa liczony na drużyny, nie pojedynczych graczy (`checkGameOver` w `empire.js`
-  dziś kończy grę przy jednym żywym imperium — musiałby kończyć przy jednej żywej
-  drużynie); AI traktujące sojuszników jak swoich, a nie cele (`aiTargets` w `ai.js`);
-  przypisanie drużyn w lobby (`menu.js`, `renderSpSetup` / `renderMpSetup`) + nowe klucze
-  i18n. Ten szkielet od razu daje wariant **„osobne imperia w sojuszu, wspólne
-  zwycięstwo"** (gracze jako drużyna vs zwykła obsada botów, sojusz trwa do końca gry —
-  bez „ostatniego żywego z drużyny") praktycznie za darmo.
-
-  **Nadbudowa: super-wróg (ten „wyjątkowy wróg").** Pojedynczy bot w osobnym kolorze
-  (czarny) jako flagowy wariant co-opa. Tańszy niż sojusz wielu botów — jedno imperium,
-  więc AI nie musi koordynować sprzymierzeńców (koordynacja to już krok w stronę 🔴
-  dyplomacji). Wymaga dodatkowo: nowego koloru i sprite'ów super-bota (`PLAYERS_DEF`
-  w `config.js` + `PLAYERS` w `tools/gen-sprites.js`, regeneracja `assets/`) oraz suwaka
-  produkcji (patrz niżej). Dwa haczyki, których sam mnożnik nie załatwia:
-  - **Mnożnik daje wroga *bogatszego*, niekoniecznie *groźniejszego*.** Przy znanym
-    problemie domykania gier (pozycja „AI słabo domyka wygrane pozycje" wyżej — 40%
-    remisów) super-bot z produkcją ×3 może po prostu turtlować z gigantycznym stosem
-    i dalej nie dobijać. Żeby boss faktycznie napierał, mnożnik powinien iść **w parze
-    z agresją** — spina się to z „Osobowościami AI" (niżej) i z pozycją o stalemate.
-  - **Mnożnik zderza się z limitami.** Produkcja miasta i `MAX_ARMY` / cap garnizonu
-    sprawią, że nadmiar skumulowany w jednym mieście się zmarnuje — mnożnik trzeba
-    rozłożyć na miasta bossa (albo podnieść mu capy), inaczej ×3 daje realnie ×~1,3.
-    Wpięcie w `produce()` (`roads.js`).
+  Zostało poza zakresem: drużyny w lobby single-player (dziś FFA), współdzielona
+  infrastruktura drużyny (morale/drogi/złoża) i łączenie armii sojuszników — patrz
+  pozycja o dyplomacji wyżej.
 - 🟡 **Osobowości AI** — agresywny / obronny / ekspansywny zamiast samego skalowania
   liczb w `AI_DIFFICULTY_PRESETS`.
 - 🟢 **AI realnie budujące drogi** — obserwacja z rozgrywek, potwierdzona w kodzie:
@@ -386,6 +363,29 @@ naturalnie eksponuje wartość zwiadu.
   zachowaniem AI (stalemate wyżej).
 - 🟡 **Minimapa** — przy proceduralnych mapach szybko robi się przydatna, zwłaszcza
   z mgłą wojny.
+- 🟢 **Aseprite przez MCP jako brudnopis graficzny** — dostęp do serwera
+  `diivi/aseprite-mcp` (MIT) jest dostępny: gada z Aseprite przez Lua API w trybie
+  wsadowym, więc działa jak bezgłowa biblioteka do rysowania (`draw_pixels`, `fill_area`,
+  `outline_cel`, `export_frame`, narzędzia do animacji). Realna wartość ponad ręczną
+  robotę: `generate_color_ramp` + `adjust_hsl`, czyli poprawne rampy z hue shiftem —
+  przydatne przy pozycji „Bogatsze sprite'y" i przy klatkach animacji wyżej.
+  **Twardy warunek: źródłem prawdy zostają mapy pikseli jako stringi w
+  `tools/gen-sprites.js`.** Aseprite jest brudnopisem, a nie formatem assetów —
+  `node tools/gen-sprites.js` musi dalej odtwarzać całe `assets/` z zerem zależności.
+  Most z powrotem do generatora już istnieje (`tools/png-to-grid.js`, PNG → siatka
+  znaków). Dwa równoległe źródła prawdy rozjechałyby się jak `PLAYERS_DEF` vs `PLAYERS`.
+  Uwaga bezpieczeństwa: narzędzie `run_lua_script` odpala niesandboxowany kod Lua.
+- 🔴 **Ewentualne przejście na Godota** — opcja jest realna i policzona (port nie jest
+  apokaliptyczny: logika, kodek zapisu i DSP tłumaczą się mechanicznie, render/UI/input
+  do przepisania, pipeline sprite'ów zostaje bez zmian), ale **nie jest planem** — dziś
+  obowiązuje decyzja „zostajemy na JS + Canvas 2D". Bilans linii, co dokładnie tracimy
+  i **pięć warunków, przy których do tej decyzji się wraca** (mobile jako cel twardy,
+  publiczny matchmaking, druga osoba w kodzie, mierzalny spadek klatek, konsole) stoją
+  w jednym miejscu: [15-Silnik-i-przenosnosc.md](15-Silnik-i-przenosnosc.md). Ta pozycja
+  jest wyłącznie wskaźnikiem — świadomie nie powtarza tamtych liczb, żeby nie powstało
+  drugie, rozjeżdżające się źródło prawdy. Najtańsze ubezpieczenie robimy już teraz:
+  reguła przenośności logiki (`node tools/check-portability.js`) i pisanie walidacji
+  ruchu obok logiki, nie w renderze.
 - 🔴 **Multiplayer sieciowy (Steam)** — **cel potwierdzony**, nie kandydat: gra ma mieć
   multiplayer na Steam. Wpisany tutaj, bo *kolejnościowo* jest po EA — sekwencja i skutki
   dla wyboru silnika stoją w [11-Early-Access.md](11-Early-Access.md#cel-potwierdzony-multiplayer-sieciowy-na-steam).

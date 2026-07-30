@@ -19,6 +19,7 @@ const PLAYERS = [
   { color: '#d6a53f', dark: '#8f6a1f' },
   { color: '#8a4fd6', dark: '#5a2f8f' },
   { color: '#3fc9c2', dark: '#1f7f7a' },
+  { color: '#3c3c46', dark: '#15151a' }, // boss (Czarna Legia) — indeks BOSS_SKIN
 ];
 
 function hexToRGB(hex) {

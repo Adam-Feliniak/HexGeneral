@@ -2,6 +2,47 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.7.0] - 2026-07-30
+
+- **Tryb kooperacyjny (drużyny).** Dwoje ludzi może wreszcie zagrać po **tej samej
+  stronie** przeciw botom. Do tej pory hot-seat z definicji stawiał obie osoby przy
+  jednym komputerze przeciw sobie, więc jedyna dostępna sesja testowa to był pojedynek
+  z autorem gry — układ, który kończy się, zanim wyprodukuje jakiekolwiek dane
+- **Tryb bossa.** Pojedynczy przeciwnik w czarnych barwach (Czarna Legia, siódmy zestaw
+  sprite'ów) z premią do produkcji **i** do agresji naraz. Sam mnożnik produkcji nie
+  wystarczał: bogaty bot potrafi okopać się z jednym wielkim stosem i nie napierać.
+  Zmierzone na 30 partiach, samotnik kontra dwa boty Normal w drużynie: **23% wygranych
+  bez premii → 97% z premią**. Liczba graczy zostaje ograniczona do **6 imperiów** —
+  boss zajmuje slot, a nie dokłada siódmego
+- **Lobby wieloosobowe to teraz tabela slotów** w stylu potyczki: każdy slot ma obsadę
+  (człowiek / bot / boss / zamknięty) i drużynę. Boss **nie jest osobnym trybem gry**,
+  tylko wartością obsady — dzięki temu jedna tabela obsługuje FFA, co-op przeciw botom,
+  2v2 i partię z bossem. Trzy przyciski szybkiego układu ustawiają ją jednym kliknięciem
+- Reguły sojuszu: sojusznicy nie walczą ze sobą i nie zabierają sobie pól, ale imperia
+  zostają osobne (produkcja, morale, drogi, limity armii dalej per gracz). Koniec gry
+  liczy się na **drużyny**, nie na pojedyncze imperia
+- **Sojusznicy startują obok siebie.** Kolejność `CAPITAL_SPOTS` jest dobrana pod
+  maksymalny rozrzut, co w drużynach działałoby przeciw graczom: dwie osoby z jednej
+  drużyny lądowały w przeciwległych rogach — najdalej od siebie i najbliżej wroga,
+  a `moraleAt` (liczone od własnych miast) karało marsz na pomoc sojusznikowi.
+  Przy drużynach rozstawienie jest teraz wyliczane z tego samego zbioru pozycji;
+  w FFA nie zmienia się nic. Zmierzone na domyślnym układzie 2v2: sojusznik w odległości
+  9 pól, najbliższy wróg 18 (wcześniej: sojusznik 18, wróg 9)
+- Poprawka przy okazji: stolica nosi nazwę **swojego** imperium. `mapgen.js` nazywa
+  stolice po indeksie pozycji, więc przy zamkniętych slotach i bossie (gdzie numer
+  imperium przestaje odpowiadać wierszowi lobby) dostawała nazwę cudzego państwa
+- W menu wieloosobowym jest już miejsce na **grę przez internet** (nieaktywne). Razem
+  z nim wchodzi reguła, która ma to kiedyś potanieć: legalność ruchu rozstrzyga
+  `canOrderMove()` w warstwie logiki, a nie `input.js` — ten sam kod ma kiedyś walidować
+  ruch przysłany przez sieć
+- Nowy harness `tools/team-check.js` (~70 sprawdzeń, zero zależności): reguły sojuszu,
+  koniec gry na drużyny, boss, rozstawienie stolic, zapis i lobby przez stub DOM.
+  `sim.js` i `stress.js` grają wyłącznie FFA, więc bez niego drużyny nie miałyby
+  żadnej siatki regresyjnej
+- **`SAVE_FORMAT` 2 → 3** (nowe pola gracza: obsada, drużyna, zestaw sprite'ów).
+  Wcześniejsze zapisy i autozapis są niezgodne i dostają komunikat zamiast wczytania —
+  świadomie bez migracji przed 1.0
+
 ## [0.6.3] - 2026-07-30
 
 - **Nowy sprite armaty polowej.** Poprzednia wersja, składana z elips, czytała się jako

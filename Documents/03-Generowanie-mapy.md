@@ -14,7 +14,11 @@ Jeśli podano `seed` (liczba 0–999999, `SEED_MAX_DIGITS`/`SEED_MAX_VALUE` w `c
 
 ## 3. Stolice i miasta
 
-- **Stolice**: po jednej na gracza, na z góry ustalonych pozycjach `CAPITAL_SPOTS` (`config.js`) — rogi mapy, potem środki górnej/dolnej krawędzi, w kolejności dobranej tak, by kolejne podzbiory 2–6 graczy były sensownie rozstawione.
+- **Stolice**: po jednej na gracza, na z góry ustalonych pozycjach `CAPITAL_SPOTS` (`config.js`) — rogi mapy, potem środki górnej/dolnej krawędzi, w kolejności dobranej tak, by kolejne podzbiory 2–6 graczy były sensownie rozstawione. Maksimum to `MAX_PLAYERS = 6` imperiów, bo tyle jest pozycji (boss w trybie drużynowym **zajmuje** jedną z nich, nie dokłada siódmej).
+
+  **Kto dostaje którą pozycję, generator już nie rozstrzyga.** `mapgen` stawia stolice na pierwszych `playerCount` pozycjach i nadaje im `capitalOf: i`; przypisanie graczy do tych pozycji robi `newGame()`. W FFA jest to wprost `CAPITAL_SPOTS[id]` (kolejność maksymalizująca rozrzut), ale w grze drużynowej ta sama kolejność sadzałaby sojuszników w przeciwległych rogach — najdalej od siebie i najbliżej wroga. Dlatego przy realnym sojuszu `assignTeamPositions()` (`state.js`) rozdaje **ten sam zbiór pozycji** tak, by suma dystansów wewnątrz drużyn była najmniejsza (przegląd zupełny, najwyżej 720 permutacji). Zbiór się nie zmienia, więc **mapa dla danego seeda jest identyczna** niezależnie od układu drużyn.
+
+  Konsekwencja dla nazw: `mapgen` nazywa stolicę `PLAYERS_DEF[i].name` po **indeksie pozycji**, a przy zamkniętych slotach i bossie numer imperium przestaje odpowiadać wierszowi lobby — dlatego `newGame()` po wygenerowaniu mapy podmienia nazwy stolic na nazwy faktycznych właścicieli.
 - **Zwykłe miasta**: `CITY_COUNT = 16`, losowane spośród wolnych pól lądowych (przetasowanych przez `shuffle`), z regułą **minimalnego odstępu `hexDist < 3`** od każdego innego miasta (w tym stolic) — zapobiega klastrowaniu miast w jednym miejscu.
 - Każde miasto (stolica i zwykłe) dostaje `buildType: DEFAULT_UNIT_TYPE` (`'infantry'`) — domyślny typ jednostki produkowanej, dopóki gracz/AI go nie zmieni (patrz [Gospodarka](05-Gospodarka.md)).
 

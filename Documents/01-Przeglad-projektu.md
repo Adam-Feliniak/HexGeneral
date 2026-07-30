@@ -38,13 +38,18 @@ Nie ma serwera ani kroku instalacji. Wystarczy otworzyć `index.html` w przeglą
 Gra ma dwa tryby, wybierane w lobby:
 
 - **Pojedynczy gracz (single)** — jeden człowiek + 0–5 botów AI. Przed pierwszym ruchem w turze 1 gracz może kliknąć **dowolną stolicę** na mapie, żeby zamiast domyślnego imperium zagrać tym (mechanika `canPickEmpire`/`switchHuman` w `input.js`) — porzucone imperium przechodzi wtedy pod sterowanie AI.
-- **Wieloosobowy (multi, hot-seat)** — 2–6 ludzi grających przy jednym urządzeniu na zmianę, opcjonalnie dołożone boty (łącznie graczy+botów max 6). Ma opcjonalny limit czasu na turę (`TURN_TIME_LIMIT_OPTIONS`: 60s / 120s / bez limitu).
+- **Wieloosobowy (multi, hot-seat)** — do 6 imperiów przy jednym urządzeniu, grających na zmianę: ludzie i boty w dowolnym układzie. Skład ustawia **tabela slotów** (obsada + drużyna na slot, jak w potyczce z serii Command & Conquer), więc jeden ekran obsługuje trzy różne partie:
+  - **każdy na każdego** — klasyczne FFA, każdy w swojej drużynie,
+  - **co-op** — ludzie w jednej drużynie przeciw botom. Sojusznicy nie walczą ze sobą i nie zabierają sobie pól, ale imperia zostają osobne (produkcja, morale, drogi i limity armii dalej per gracz); wygrywa **drużyna**,
+  - **tryb bossa** — jeden przeciwnik w czarnych barwach (Czarna Legia) z premią do produkcji i do agresji naraz, przeciw drużynie graczy. Boss nie jest osobnym trybem gry, tylko obsadą slotu.
 
-W obu trybach każdy gracz-bot ma przypisany poziom trudności AI (Easy/Normal/Hard/Nightmare albo suwak "Custom" 0–100%, patrz [Sztuczna inteligencja](06-Sztuczna-inteligencja.md)).
+  Tryb ma opcjonalny limit czasu na turę (`TURN_TIME_LIMIT_OPTIONS`: 60s / 120s / bez limitu). W lobby jest już miejsce na **grę przez internet**, na razie nieaktywne (patrz [Silnik i przenośność](15-Silnik-i-przenosnosc.md)).
+
+W obu trybach każdy gracz-bot ma przypisany poziom trudności AI (Easy/Normal/Hard/Nightmare albo suwak "Custom" 0–100%, patrz [Sztuczna inteligencja](06-Sztuczna-inteligencja.md)); premia bossa nakłada się na wybrany poziom, więc suwak trudności działa także w trybie bossa.
 
 ## Cel gry
 
-Zdobyć stolice wszystkich przeciwników. Zajęcie cudzej stolicy **anektuje całe jej imperium** — wszystkie pola, miasta i złoża pokonanego gracza natychmiast przechodzą pod zwycięzcę (`conquerEmpire` w `empire.js`), więc gra kończy się szybciej niż przy stopniowym wykruszaniu pojedynczych pól. Gra kończy się, gdy zostaje jeden żywy gracz (zwycięstwo) albo gdy pada stolica jedynego człowieka w trybie single (porażka).
+Zdobyć stolice wszystkich przeciwników. Zajęcie cudzej stolicy **anektuje całe jej imperium** — wszystkie pola, miasta i złoża pokonanego gracza natychmiast przechodzą pod zwycięzcę (`conquerEmpire` w `empire.js`), więc gra kończy się szybciej niż przy stopniowym wykruszaniu pojedynczych pól. Gra kończy się, gdy zostaje **jedna żywa drużyna** (zwycięstwo — w FFA każdy jest własną drużyną, więc to dokładnie „ostatnie żywe imperium") albo gdy w trybie single ginie cała drużyna człowieka (porażka).
 
 ## Mapa gry
 

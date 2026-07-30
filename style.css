@@ -501,6 +501,51 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
   vertical-align: middle;
 }
 
+/* litera drużyny w panelu bocznym — ten sam kształt co .diff-badge, inna barwa,
+   żeby dało się je od siebie odróżnić jednym spojrzeniem */
+.team-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: #101a1d;
+  border: 1px solid #34686b;
+  border-radius: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #7fe3dd;
+  vertical-align: middle;
+}
+
+/* tabela slotów w lobby wieloosobowym (obsada + drużyna na slot) */
+.slot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.slot-row .slot-name { flex: 1; font-weight: 700; font-size: 13px; }
+.slot-row.slot-closed { opacity: 0.45; }
+
+.slot-row select {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 6px;
+  min-width: 108px;
+  background: #1a1d10;
+  color: #f2e9c8;
+  border: 2px solid #16140c;
+  cursor: pointer;
+}
+
+.slot-row select:disabled { opacity: 0.4; cursor: default; }
+
+.lobby-warning {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #ffb37b;
+}
+
 #seed-footer {
   font-size: 11px;
   color: #6e6a52;

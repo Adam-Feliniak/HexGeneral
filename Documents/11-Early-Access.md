@@ -21,9 +21,11 @@ krytyce partii botów), narzędzie regresji wizualnej `visual-test.html` oraz in
 buildów testerskich (v0.4.1), punkty ruchu (v0.5.0), dźwięk i muzyka (v0.6.0 — zamyka P1
 „gra nie jest niema") oraz czytelna produkcja w tooltipie i panelu (v0.6.1–v0.6.2).
 
-**Zmiana priorytetów w tej wersji dokumentu:** do listy P0 dochodzi **tryb kooperacyjny
-(drużyny)** jako bramka fali 0 testów zewnętrznych — to obecnie priorytet nr 1. Uzasadnienie
-w [nocie o co-opie](#nota-co-op-awansuje-z-roadmapy-do-rdzenia-bramka-fali-0) niżej.
+**Zmiana w tej wersji dokumentu:** **tryb kooperacyjny (drużyny) jest zrobiony** (v0.7.0)
+razem z trybem bossa, więc bramka fali 0 testów zewnętrznych jest zdjęta — została sama
+**realizacja przebiegu** (punkt 5 ścieżki krytycznej). Uzasadnienie, po co co-op był
+warunkiem testów, zostaje w [nocie o co-opie](#nota-co-op-awansuje-z-roadmapy-do-rdzenia-bramka-fali-0)
+niżej; teraz czyta się ją jako zapis decyzji, nie jako plan.
 
 ## Rdzeń EA vs roadmapa EA
 
@@ -53,7 +55,7 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 | Dystrybucja (wrapper + platforma) | brak | Musi *gdzieś* być (Steam/itch) | **P0 (launch)** |
 | Strona sklepu + opis EA + roadmapa | brak | Steam wymaga „czemu EA / jak długo / co dojdzie" | **P0 (Steam)** |
 | Kanał feedbacku (Discord/forum) | brak | Cały sens EA to feedback | **P0, tani** |
-| Tryb kooperacyjny (drużyny) | brak — każdy gra sam (FFA), więc hot-seat *z definicji* stawia dwie osoby przy jednym komputerze przeciw sobie | Dwoje ludzi musi móc zagrać **po tej samej stronie** przeciw botom | **P0 — bramka fali 0 testów, patrz nota niżej** |
+| Tryb kooperacyjny (drużyny) | ✅ **zrobione** (v0.7.0): tabela slotów w lobby (obsada + drużyna), co-op przeciw botom oraz tryb bossa | Dwoje ludzi musi móc zagrać **po tej samej stronie** przeciw botom | **P0 — zamknięte** |
 | Multiplayer sieciowy (Steam) | brak — tryb multi to hot-seat przy jednym komputerze | **Nie jest progiem EA**: na start wystarcza hot-seat + co-op przeciw botom | **Po EA — cel potwierdzony, patrz [sekcja niżej](#cel-potwierdzony-multiplayer-sieciowy-na-steam)** |
 | Testy zewnętrzne (przed publicznym playtestem) | ✅ **infrastruktura gotowa** (v0.4.1: `tools/pack-build.js`, `BUILD_TAG`, protokół w [13](13-Testy-zewnetrzne.md)) | Ktoś poza autorem musi zagrać przed EA | **P0 — narzędzia zamknięte, przebieg do wykonania** |
 | Onboarding / samouczek | statyczny tekst + tooltipy | Pierwsze 10 min decyduje o refundzie | **P1 — patrz nota niżej** |
@@ -74,14 +76,18 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
    legalnych akcji przez prawdziwe ścieżki gry + inwarianty stanu + soak sesyjny) —
    500 partii bez wyjątków i naruszeń; do powtarzania przed każdym wydaniem razem
    z protokołem smoke z `09-Przewodnik-developera.md`.
-4. **Tryb kooperacyjny (drużyny)** — **priorytet bieżący**. Nie jest to feature z roadmapy
-   wciśnięty przed premierę, tylko **narzędzie testowe**: bez niego punkt 5 (fala 0) nie ma
-   jak się odbyć w realnych warunkach domowych — uzasadnienie w nocie niżej. Zakres na tę
-   bramkę to sam **szkielet drużyn** opisany w [10-Przyszle-plany.md](10-Przyszle-plany.md):
+4. ✅ **Tryb kooperacyjny (drużyny)** — **zrobione** (v0.7.0). Nie był to feature z roadmapy
+   wciśnięty przed premierę, tylko **narzędzie testowe**: bez niego punkt 5 (fala 0) nie miał
+   jak się odbyć w realnych warunkach domowych — uzasadnienie w nocie niżej. Weszło:
    drużyna w stanie gracza, brak friendly-fire i zajmowania pól sojusznika, warunek
    zwycięstwa liczony na drużyny zamiast pojedynczych imperiów, AI traktujące sojuszników
-   jak swoich, przypisanie drużyn w lobby. **Super-wróg zostaje w roadmapie** — do testów
-   nie jest potrzebny, a kosztuje osobny kolor, sprite'y i strojenie mnożnika produkcji.
+   jak swoich, tabela slotów w lobby (obsada + drużyna).
+
+   **Zmiana wobec wcześniejszej wersji tego dokumentu: super-wróg NIE został w roadmapie** —
+   wszedł razem ze szkieletem, bo okazał się tani. Powód: boss to nie osobny tryb gry, tylko
+   **obsada slotu** w tej samej tabeli, więc doszły do niego wyłącznie mnożniki `BOSS_MULT`
+   i siódmy zestaw sprite'ów, a nie osobny ekran ani osobna gałąź logiki. Do samych testów
+   fali 0 dalej nie jest potrzebny — jest bonusem, nie warunkiem.
 5. **Testy zewnętrzne** — infrastruktura gotowa (v0.4.1): `node tools/pack-build.js --tag=...`
    produkuje czysty build (88 plików / ~196 KB, bez `.git`, `Documents/` i `tools/`), fale
    dystrybucji i protokół w [13-Testy-zewnetrzne.md](13-Testy-zewnetrzne.md). Do wykonania
@@ -95,14 +101,17 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
 
 ### Nota: co-op awansuje z roadmapy do rdzenia (bramka fali 0)
 
-To **świadomy wyjątek** od zasady „roadmapy nie tykamy przed startem" z początku tego
+**Status: zrealizowane w v0.7.0.** Nota zostaje jako zapis decyzji — dlaczego pozycja
+z roadmapy weszła przed premierą.
+
+To był **świadomy wyjątek** od zasady „roadmapy nie tykamy przed startem" z początku tego
 dokumentu. Wyjątek jest uzasadniony tym, że pozycja trafia tu **nie jako treść gry, tylko
 jako warunek wykonania innego P0**:
 
 - **Fala 0 to jedyny P0, który wymaga drugiego człowieka**, a dostępny człowiek to zwykle
-  domownik, nie fan gatunku. Dziś jedyny tryb dla dwóch osób przy jednym komputerze to
-  hot-seat FFA, czyli **pojedynek z autorem gry** — układ, w którym mniej wprawiona osoba
-  przegrywa szybko i sesja kończy się, zanim wyprodukuje jakiekolwiek dane.
+  domownik, nie fan gatunku. Przed v0.7.0 jedyny tryb dla dwóch osób przy jednym komputerze
+  to był hot-seat FFA, czyli **pojedynek z autorem gry** — układ, w którym mniej wprawiona
+  osoba przegrywa szybko i sesja kończy się, zanim wyprodukuje jakiekolwiek dane.
 - **Co-op odwraca ten układ:** dwoje ludzi gra razem przeciw botom, a przeciwnikiem jest
   trudność do wyregulowania suwakiem, nie druga osoba przy stole. To format, w którym
   sesja trwa długo i sama z siebie generuje protokół „myśl na głos" — bo gracze *muszą*
@@ -114,10 +123,10 @@ jako warunek wykonania innego P0**:
 - **Efekt uboczny wart odnotowania:** pierwsza obserwacja, jak drabinka trudności zachowuje
   się przy dwóch ludziach naraz (dziś presety są strojone `sim.js`-em wyłącznie 1v1/FFA).
 
-**Argument za „teraz, nie później":** szkielet drużyn dokłada pole do gracza, więc wymaga
-podbicia `SAVE_FORMAT` — a to unieważnia istniejące zapisy. Przed EA jest to bezkosztowe
-(świadomie brak migracji przed 1.0); po wypuszczeniu buildów testerskich każde takie
-podbicie kasuje partie testerów w trakcie ich sesji. Im wcześniej, tym taniej.
+**Argument za „teraz, nie później" (zrealizowany):** szkielet drużyn dokłada pola do gracza,
+więc wymagał podbicia `SAVE_FORMAT` (2 → 3) — a to unieważnia istniejące zapisy. Przed EA
+było to bezkosztowe (świadomie brak migracji przed 1.0); po wypuszczeniu buildów testerskich
+każde takie podbicie kasowałoby partie testerów w trakcie ich sesji.
 
 ### Nota: audio i onboarding awansują przez testy zewnętrzne
 

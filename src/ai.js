@@ -44,10 +44,16 @@ function aiFindRoadTarget(t, playerId) {
   return best;
 }
 
+// „wróg" dla AI = żywe imperium spoza jego drużyny; niczyje pole (owner -1) nie jest
+// niczyim wrogiem. Jedno miejsce prawdy, bo pomyłka tutaj każe botowi atakować sojusznika
+function aiIsEnemy(playerId, otherId) {
+  return otherId >= 0 && !sameTeam(otherId, playerId) && state.players[otherId].alive;
+}
+
 function aiFrontDistance(playerId, t) {
   let d = Infinity;
   for (const row of state.tiles) for (const o of row) {
-    if (o.owner >= 0 && o.owner !== playerId && state.players[o.owner].alive) {
+    if (aiIsEnemy(playerId, o.owner)) {
       const dd = hexDist(t.c, t.r, o.c, o.r);
       if (dd < d) d = dd;
     }
@@ -55,12 +61,17 @@ function aiFrontDistance(playerId, t) {
   return d;
 }
 
+// pole sojusznika (i własne) nigdy nie jest celem — captureTile i tak by go nie zajęło
+function aiIsOwnSide(playerId, ownerId) {
+  return ownerId >= 0 && sameTeam(ownerId, playerId);
+}
+
 function aiTargets(playerId) {
   const targets = [];
   for (const row of state.tiles) for (const t of row) {
-    if (t.resource && t.owner !== playerId) { targets.push({ t, val: 7 }); continue; }
+    if (t.resource && !aiIsOwnSide(playerId, t.owner)) { targets.push({ t, val: 7 }); continue; }
     if (!t.city) continue;
-    if (t.owner === playerId) continue;
+    if (aiIsOwnSide(playerId, t.owner)) continue;
     let val;
     if (t.city.capitalOf >= 0 && state.players[t.city.capitalOf].alive) val = 30;
     // niczyje miasto to darmowa produkcja (zajęcie bez walki) — przy 14 przegrywało
@@ -81,8 +92,8 @@ function aiPickMove(playerId, diff) {
       myStr += t.army.str;
       // tylko punkty ruchu — pulę aktywacji pilnuje licznik w aiStep(), nie state
       if (armyCanMove(t)) armies.push(t);
-    } else if (state.players[t.army.player].alive) {
-      enemyStr += t.army.str;
+    } else if (aiIsEnemy(playerId, t.army.player)) {
+      enemyStr += t.army.str; // siła sojusznika nie jest ani moja, ani wroga
     }
   }
   if (!armies.length) return null;
@@ -97,9 +108,8 @@ function aiPickMove(playerId, diff) {
   // czy stolica zagrożona?
   let threat = null;
   for (const row of state.tiles) for (const t of row) {
-    if (t.army && t.army.player !== playerId &&
-        hexDist(t.c, t.r, capC, capR) <= 2 &&
-        state.players[t.army.player].alive) {
+    if (t.army && aiIsEnemy(playerId, t.army.player) &&
+        hexDist(t.c, t.r, capC, capR) <= 2) {
       threat = t; break;
     }
   }
@@ -156,7 +166,7 @@ function aiPickMove(playerId, diff) {
       if (fd === undefined || fd > 3) continue;
       if (t.army.player === playerId) massedStr += t.army.str;
       // obrona lokalna: tylko obrońcy w zasięgu wsparcia bitew na pierścieniu (fd<=2)
-      else if (fd <= 2 && state.players[t.army.player].alive) defLocalStr += t.army.str;
+      else if (fd <= 2 && aiIsEnemy(playerId, t.army.player)) defLocalStr += t.army.str;
     }
     // cierpliwość oblężnicza wyczerpuje się z czasem: na ciasnych mapach strefa
     // zborna bywa za mała, żeby kiedykolwiek osiągnąć pełną przewagę — po długiej
@@ -232,8 +242,10 @@ function aiPickMove(playerId, diff) {
           const dNew = targetDist(g, to);
           const s = g.val * 2 - dNew * 2 +
                     (dNew < g.dNow ? 8 : dNew === g.dNow ? 0 : -10) +
-                    (to.city && to.owner !== playerId ? 25 : 0) +
-                    (to.land && to.owner !== playerId ? 3 : 0) -
+                    // premia za zajęcie pola należy się tylko za pole do ZAJĘCIA —
+                    // wejście na teren sojusznika niczego nie przejmuje
+                    (to.city && !aiIsOwnSide(playerId, to.owner) ? 25 : 0) +
+                    (to.land && !aiIsOwnSide(playerId, to.owner) ? 3 : 0) -
                     (!to.land ? 2 : 0);
           if (s > score) score = s;
         }
@@ -275,7 +287,7 @@ function aiPickMove(playerId, diff) {
 function aiStep(playerId, activationsLeft, done) {
   if (state.phase === 'over') { updateUI(); return; }
   if (activationsLeft <= 0) { done(); return; }
-  const diff = resolveDifficulty(state.players[playerId].difficulty);
+  const diff = playerDifficulty(state.players[playerId]);
   const mv = aiPickMove(playerId, diff);
   if (!mv) { done(); return; }
   const used = executeMove(mv.from, mv.to);

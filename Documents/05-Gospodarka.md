@@ -28,6 +28,7 @@ Najpierw sprawdzane jest, czy miasto ma aktywny **projekt drogi** (`t.city.roadP
 - **Pole puste** → powstaje nowa armia typu `buildType`, z `vet: 0` i `mp: 0` (nie może ruszyć się w tej samej turze, w której powstała — pełną pulę dostanie od `resetMoved` na starcie następnej tury).
 - **Stoi własna armia tego samego typu co `buildType`** → jej `str` rośnie o `gain` (ograniczone do `MAX_ARMY = 99`).
 - **Stoi własna armia INNEGO typu niż `buildType`** → **produkcja tej tury po prostu przepada**. Nie jest odkładana ani konwertowana — to celowo najprostsza reguła spójna z resztą gry (jedno pole trzyma dokładnie jedną armię, bez systemu kolejkowania). Gracz/AI ma pełną kontrolę: wystarczy zmienić `buildType` z powrotem, żeby produkcja znów działała.
+- **Stoi armia SOJUSZNIKA** (tryb drużynowy) → ta sama reguła: produkcja tej tury przepada, bo pole jest zajęte. Warto o tym wiedzieć w co-opie, bo jest to jedyny sposób, w jaki sojusznik może komuś zaszkodzić: zaparkowanie armii na cudzym mieście wstrzymuje jego produkcję, dopóki tam stoi. Świadomie **nie** blokujemy wejścia na miasto sojusznika — swobodny przemarsz przez terytorium drużyny jest wart więcej niż ochrona przed sytuacją, którą widać na planszy i która mija po odejściu armii.
 
 ## Wybór budowanego typu
 

@@ -57,12 +57,17 @@
   <div class="menu-box">
     <h2 data-i18n="lobby.mp.title">Gra wieloosobowa</h2>
     <div class="menu-field">
-      <span data-i18n="lobby.mp.playerCount">Liczba graczy</span>
-      <div id="mp-count-group" class="choice-group"></div>
+      <span data-i18n="lobby.mp.transport">Połączenie</span>
+      <div id="mp-transport-group" class="choice-group"></div>
     </div>
     <div class="menu-field">
-      <span data-i18n="lobby.mp.botCount">Dodaj botów</span>
-      <div id="mp-bots-group" class="choice-group"></div>
+      <span data-i18n="lobby.mp.preset">Szybki układ</span>
+      <div id="mp-preset-group" class="choice-group"></div>
+    </div>
+    <div class="menu-field">
+      <span data-i18n="lobby.mp.slots">Sloty graczy</span>
+      <div id="mp-slots"></div>
+      <div id="mp-slots-warning" class="lobby-warning" hidden></div>
     </div>
     <div class="menu-field" id="mp-diff-field">
       <span data-i18n="lobby.common.difficulty">Trudność botów</span>
@@ -105,6 +110,7 @@
       <li data-i18n-html="help.support">Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.</li>
       <li data-i18n-html="help.ports">Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu.</li>
       <li data-i18n-html="help.annex">Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
+      <li data-i18n-html="help.teams">W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą ani nie zajmują sobie pól, a zwycięstwo liczy się dla całej drużyny.</li>
       <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
     </ul>
     <button id="tutorial-back" data-i18n="lobby.common.back">Wróć</button>
@@ -210,6 +216,7 @@
         <li data-i18n-html="help.support">Sąsiednie własne armie dają <b>wsparcie</b> w bitwie; miasto wzmacnia obrońcę.</li>
         <li data-i18n-html="help.ports">Z <b>portu</b> (⚓) armia może wypłynąć na morze i wylądować na dowolnym brzegu.</li>
         <li data-i18n-html="help.annex">Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
+        <li data-i18n-html="help.teams">W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą ani nie zajmują sobie pól, a zwycięstwo liczy się dla całej drużyny.</li>
         <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
       </ul>
     </details>

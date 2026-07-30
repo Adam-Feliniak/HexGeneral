@@ -47,6 +47,7 @@ node tools/audit-sounds.js    # optional — measures every SFX (peak/RMS/crest/
 node tools/png-to-grid.js x.png   # optional — converts a PNG into a char grid to paste into gen-sprites.js
 node tools/png-to-grid.js --selftest   # verifies the decoder against a committed asset
 node tools/check-portability.js   # enforces "logic layer stays browser-free" — run after touching src/
+node tools/team-check.js          # team/boss invariants (slots, ally rules, team game-over, spawn placement, lobby) — exit code 1 on failure
 ```
 
 Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes every SFX into an `AudioBuffer` at runtime and plays music from a note table. `gen-sounds.js` exists only so you can hear a recipe in an audio editor while tuning it — its output goes to gitignored `dist/` and the game never loads it. See [14-Dzwiek.md](Documents/14-Dzwiek.md).
@@ -79,7 +80,7 @@ The repo has never had a formal test suite. Instead, DOM-touching functions acro
 ```js
 if (typeof document === 'undefined') return;
 ```
-This lets pure game logic run in plain Node via `vm.createContext`, without a browser — useful for verifying combat/movement/AI changes don't throw. See `Documents/09-Przewodnik-developera.md` for a full harness example (load files in `index.html` script order into a `vm` sandbox, call `newGame({ humanCount, botCount, aiDifficulty, seed, timeLimit })` — note it takes one options object and mutates the global `state`, returning nothing — then drive turns via `aiPickMove`/`executeMove`/`produce`/`resetMoved`).
+This lets pure game logic run in plain Node via `vm.createContext`, without a browser — useful for verifying combat/movement/AI changes don't throw. See `Documents/09-Przewodnik-developera.md` for a full harness example (load files in `index.html` script order into a `vm` sandbox, call `newGame({ humanCount, botCount, aiDifficulty, seed, timeLimit })` — note it takes one options object and mutates the global `state`, returning nothing; `humanCount`/`botCount` build an FFA line-up and stay supported for exactly this reason, while the lobby passes `slots` instead (see below) — then drive turns via `aiPickMove`/`executeMove`/`produce`/`resetMoved`).
 
 **This guard is a hard rule in the logic layer, not a style preference.** `config`, `geometry`, `utils`, `mapgen`, `state`, `combat`, `roads`, `empire`, `turns`, `ai` and `save` may touch a browser API *only* inside a function that first checks `typeof <that same API> === 'undefined'` and returns. Anything needing unguarded DOM access belongs in `render`/`ui`/`input`/`menu`. Run `node tools/check-portability.js` after touching `src/` — it enforces exactly this (a guard on a *different* global than the one used does not pass). Rationale and the measured engine-port ledger: `Documents/15-Silnik-i-przenosnosc.md`.
 
@@ -97,14 +98,14 @@ Order only matters where a file executes code immediately at load time (not just
 
 | File | Responsibility | Key functions/constants |
 |---|---|---|
-| `config.js` | Map size, players, city names, capital positions, unit types, AI difficulty presets | `MAP_W/H`, `HEX`, `ACTIVATIONS_PER_TURN`, `MOVE_COST_ROAD/DEFAULT`, `SEA_MOVE_POINTS`, `MAX_ARMY`, `UNIT_TYPES`, `AI_DIFFICULTY_PRESETS`, `PLAYERS_DEF`, `CAPITAL_SPOTS`, `resolveDifficulty()` |
+| `config.js` | Map size, players, city names, capital positions, unit types, AI difficulty presets | `MAP_W/H`, `HEX`, `ACTIVATIONS_PER_TURN`, `MOVE_COST_ROAD/DEFAULT`, `SEA_MOVE_POINTS`, `MAX_ARMY`, `UNIT_TYPES`, `AI_DIFFICULTY_PRESETS`, `PLAYERS_DEF`, `BOSS_SKIN`, `BOSS_MULT`, `MAX_PLAYERS`, `CAPITAL_SPOTS`, `resolveDifficulty()`, `playerDifficulty()` |
 | `locales-data.js` | **Generated** — do not hand-edit | `I18N_DATA` |
 | `i18n.js` | Translation lookup, language switching, `localStorage` persistence | `i18n.t()`, `i18n.setLanguage()`, `applyI18n()` |
 | `geometry.js` | Hex grid geometry (odd-r offset, pointy-top) | `neighborCoords()`, `hexDist()`, `hexCenter()`, `hexCorner()` |
 | `utils.js` | Seeded RNG, color mixing | `rnd()`, `irnd()`, `shuffle()`, `makeRng()`, `mixColor()` |
 | `mapgen.js` | Procedural map generation: land, capitals, cities, ports, resources, connectivity | `generateMap()`, `ensureCapitalConnectivity()` |
-| `state.js` | Game state, new-game setup, tile access, event log | `newGame()`, `tileAt()`, `neighborsOf()`, `addLog()` |
-| `combat.js` | Morale, army power, move legality/range, battle resolution | `moraleAt()`, `armyPowerAt()`, `canStep()`, `moveCostStep()`, `maxMovePoints()`, `reachableMoves()`, `resolveBattle()`, `executeMove()` |
+| `state.js` | Game state, new-game setup, player slots/teams, tile access, event log | `newGame()`, `slotsFromCounts()`, `normalizeSlots()`, `sameTeam()`, `teamHasAlive()`, `tileAt()`, `neighborsOf()`, `addLog()` |
+| `combat.js` | Morale, army power, move legality/range, battle resolution | `moraleAt()`, `armyPowerAt()`, `canStep()`, `moveCostStep()`, `maxMovePoints()`, `reachableMoves()`, `canOrderMove()` (the one legality gate — lives here, not in `input.js`, so future network play can validate a remote move with the same code), `resolveBattle()`, `executeMove()` |
 | `roads.js` | Player/AI-built roads (resource→city or city→city), city production | `roadCost()`, `startRoadProject()`, `completeRoadProject()`, `isRoadActive()`, `tileOnRoad()`, `produce()` |
 | `empire.js` | Tile capture, whole-empire annexation, game-over check | `captureTile()`, `conquerEmpire()`, `checkGameOver()` |
 | `turns.js` | Turn order (human/AI), turn timer | `startTurn()`, `endTurn()`, `requestEndTurn()`, `checkTurnTimer()` |
@@ -120,7 +121,9 @@ Order only matters where a file executes code immediately at load time (not just
 
 ### Key data shapes
 
-`state` (global, created by `newGame()`): `screen`, `gameId` (guards against stale AI/end-of-turn `setTimeout`s across game sessions), `mode` ('single'|'multi'), `tiles` (MAP_H × MAP_W grid), `mapSeed`, `turn`, `phase`, `human` (single-player only), `players[]`, `aiPlayers`, `activationsLeft`, `selected`, `selectedCity`, `log`. Separate module-level arrays outside `state` (in `state.js`): `anims`, `floaters`, `effects`, `hoverTile`, `lastFrame`.
+`state` (global, created by `newGame()`): `screen`, `gameId` (guards against stale AI/end-of-turn `setTimeout`s across game sessions), `mode` ('single'|'multi'), `transport` ('local' hot-seat | 'net' — network play does not exist yet, the field just holds its place), `tiles` (MAP_H × MAP_W grid), `mapSeed`, `turn`, `phase`, `human` (single-player only), `players[]`, `aiPlayers`, `activationsLeft`, `selected`, `selectedCity`, `log`.
+
+**Players, slots and teams.** The multiplayer lobby is a slot table (C&C-skirmish style): each slot has an occupancy (`kind`: 'human' | 'bot' | 'boss' | 'closed') and a `team`. That table is the single source of truth for the line-up — **"boss mode" is not a separate mode or state field**, just a slot whose `kind` is `'boss'` (at most one per game, black colours, production *and* aggression bonus from `BOSS_MULT`). `newGame({ slots })` turns it into `state.players[]`, where each player has `id` (position, always contiguous — closed slots create no empire), `kind`, `team`, `isHuman` (derived from `kind`), and `skin`. **`skin` is for graphics only** (index into `PLAYERS_DEF` and the `assets/*_N.png` sets, `BOSS_SKIN` = 6); every identity comparison — `tile.owner`, `army.player`, `city.capitalOf` — uses `id`. Allies (`sameTeam()` in `state.js`) never fight, never capture each other's tiles, and share nothing else: production, morale, roads and army caps stay per player. The game ends when one *team* is left. Separate module-level arrays outside `state` (in `state.js`): `anims`, `floaters`, `effects`, `hoverTile`, `lastFrame`.
 
 Tile (`state.tiles[r][c]`): `{ c, r, land, city: null|{name, capitalOf, port, buildType, variant?, roadProject?}, resource: null|'oil'|'farm'|'mine' (+ optional supplyCity), road: null|{owner}, owner: -1|playerId, army: null|{player, str, vet, type, mp, activated}, shade, coast[], shallow }`. `city.capitalOf` records the *original* capital owner from map generation and stays put even after conquest, except `captureTile()` sets it to `-1` at the moment a capital is actually captured (it becomes a regular city). `army.type` is `'infantry'|'tank'|'artillery'`. Roads are a player/AI-built **network** (not automatic) — `road` is just a per-hex marker `{owner}`; the network is the set of adjacent same-owner road hexes. See [05-Gospodarka.md](Documents/05-Gospodarka.md): building spends city production points (`city.roadProject = { target, segment, cost, progress, built }`, laid incrementally over the missing hexes, sharing existing ones), a resource hex on the network gives +1 to one player-chosen connected city (`resource.supplyCity`, default nearest), and entering any own road hex costs 1 movement point instead of 2 (so roads reward *travelling along* the network, not standing on it).
 

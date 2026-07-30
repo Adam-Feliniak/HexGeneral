@@ -118,6 +118,13 @@ Wynika wprost z celu „najpierw znajomi, publiczny może później":
 Siada obok `combat.js`/`empire.js`, **nigdy** w `input.js` ani `ui.js`. Kosztuje dziś
 niewiele, a daje dwie rzeczy naraz: darmową drogę do autorytatywnego serwera, gdyby
 multiplayer wyszedł poza grono znajomych, oraz kod, który przeżyłby ewentualny port.
+
+**Pierwszy krok już zrobiony (v0.7.0):** legalność ruchu rozstrzyga `canOrderMove(playerId,
+from, to)` w `combat.js`, a `onTileClick` (`input.js`) tylko ją woła. Do tego `state.transport`
+(`'local' | 'net'`) trzyma w stanie i w zapisie miejsce na wybór połączenia, a lobby ma
+wyłączoną pozycję „Przez internet". Transportu nie ma i świadomie nie powstaje przed EA
+(patrz [11-Early-Access.md](11-Early-Access.md)) — chodzi o to, żeby walidacja **nie zdążyła**
+wrosnąć w warstwę wejścia, zanim sieć się pojawi.
 `serializeGame()`/`deserializeGame()` ([save.js](../src/save.js)) są już gotowym
 prymitywem synchronizacji i wznawiania partii.
 

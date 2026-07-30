@@ -80,6 +80,8 @@ state = {
   screen: 'menu' | 'sp-setup' | 'mp-setup' | 'tutorial' | 'options' | 'game',
   gameId,              // rozróżnia sesje gry — chroni przed spóźnionymi setTimeout AI/końca tury
   mode: 'single' | 'multi',
+  transport: 'local' | 'net',  // hot-seat vs gra sieciowa; sieci jeszcze nie ma — pole
+                               // trzyma jej miejsce w stanie i w zapisie
   mpSetup, spSetup, options,   // stan formularzy lobby (przetrwa między grami)
   tiles,                // MAP_H × MAP_W siatka pól (patrz niżej)
   mapSeed,
@@ -94,11 +96,49 @@ state = {
   activationsLeft,        // ile jednostek aktywny gracz może jeszcze rozkazać w tej turze
   selected,               // zaznaczone pole z armią (albo null)
   selectedCity,           // zaznaczone własne pole z miastem — steruje panelem produkcji
-  players: [{ id, name, color, dark, isHuman, alive, capital, difficulty, ... }],
+  players: [{ id, name, color, dark, kind, team, skin, isHuman, alive, capital, difficulty, ... }],
   aiPlayers,              // podzbiór players[] będący botami
   log,                    // ostatnie komunikaty (max 40, pokazywane ostatnie 10)
 }
 ```
+
+### Sloty, drużyny i boss
+
+Skład partii ustala **tabela slotów** z lobby wieloosobowego (wzorem potyczki w C&C):
+każdy slot ma obsadę i drużynę.
+
+```js
+{ kind: 'human' | 'bot' | 'boss' | 'closed', team: 0..5 }
+```
+
+Ta tabela jest jedynym źródłem prawdy o składzie. **„Tryb bossa" nie jest osobnym trybem
+gry ani osobnym polem stanu** — to slot o obsadzie `'boss'` (najwyżej jeden na partię).
+Dzięki temu jeden mechanizm obsługuje FFA, co-op przeciw botom, 2v2, partię z bossem
+i przyszłe lobby sieciowe; alternatywa (osobne tryby) mnożyłaby konfiguracje do ogrania
+i wybalansowania. `newGame({ slots })` zamienia tabelę na `state.players[]`:
+
+| Pole gracza | Znaczenie |
+|---|---|
+| `id` | pozycja w `state.players` — **zawsze ciągła**, bo zamknięty slot nie tworzy imperium. To jest tożsamość gracza: `tile.owner`, `army.player`, `city.capitalOf` |
+| `kind` | obsada slotu; `isHuman` z niej **wynika**, nie odwrotnie (patrz `switchHuman` w `input.js`) |
+| `team` | drużyna; w FFA każdy ma własną |
+| `skin` | indeks barw i zestawu sprite'ów w `PLAYERS_DEF` / `assets/*_N.png`. **Wyłącznie grafika.** Rozjeżdża się z `id`, bo zamknięte sloty przesuwają numerację, a boss ma własny, siódmy zestaw (`BOSS_SKIN`) |
+
+Reguły sojuszu (`sameTeam()` w `state.js`): sojusznicy **nie walczą** (`canStep`
+nie wpuszcza na pole ich armii — nie ma tam ani bitwy, ani scalania stosów) i **nie
+zabierają sobie pól** (`captureTile` pomija pole sojusznika; skutkiem ubocznym, zamierzonym,
+jest to, że stolica sojusznika nie może paść z naszej ręki). Poza tym imperia zostają
+osobne: produkcja, morale, drogi i limity armii dalej liczą się per gracz. Koniec gry
+liczy `checkGameOver()` na **drużyny**, nie na pojedyncze imperia.
+
+Liczba imperiów jest ograniczona do `MAX_PLAYERS = 6` (tyle jest pozycji w `CAPITAL_SPOTS`);
+boss **zajmuje** slot, a nie dokłada siódmego imperium. Rozstawienie stolic w grze
+drużynowej wylicza `assignTeamPositions()` — patrz [03-Generowanie-mapy.md](03-Generowanie-mapy.md).
+
+Boss to nie osobny poziom trudności, tylko mnożniki `BOSS_MULT` nałożone na wybrany
+preset (`playerDifficulty()` w `config.js`) — suwak trudności dalej reguluje partię.
+Premia ekonomiczna idzie w parze z agresją świadomie: sam mnożnik produkcji daje wroga
+*bogatszego*, niekoniecznie *groźniejszego* (bot potrafi okopać się z jednym stosem).
 
 Poza `state` istnieją jeszcze osobne, niezależnie resetowane tablice modułowe: `anims` (animacje ruchu — tween pozycji), `floaters` (unoszące się napisy strat), `effects` (eksplozje), `hoverTile`, `lastFrame` — wszystkie w `state.js`.
 

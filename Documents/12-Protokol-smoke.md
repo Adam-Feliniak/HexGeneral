@@ -22,6 +22,12 @@ zostaje czysty (wzorzec, nie log konkretnego przebiegu).
 - [ ] **4b. Tryb obserwatora** (single → „Oglądam") — partia samych botów startuje
   sama; przełącznik tempa AI 1×/4×/16× przyspiesza ruchy; panel tempa znika w grze
   bez botów (czysty hot-seat).
+- [ ] **4c. Co-op (szybki układ „Ludzie kontra boty")** — nie da się wejść na pole
+  z armią sojusznika ani przejąć jego terytorium przemarszem; litery drużyn widoczne
+  w panelu bocznym; po padnięciu ostatniego bota overlay **zwycięstwa drużyny**.
+- [ ] **4d. Tryb bossa** (szybki układ „Tryb bossa") — boss czarny na planszy i na
+  liście graczy (💀), partia dobiega końca; przy próbie startu z wszystkimi w jednej
+  drużynie przycisk Start jest zablokowany z komunikatem.
 
 ## Gospodarka i panel miasta
 

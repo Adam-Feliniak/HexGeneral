@@ -54,10 +54,13 @@ function armyPowerAt(army, t, role) {
 }
 
 // blokada wejścia na pole z własną armią: pełny stos (>=MAX_ARMY) albo inny typ —
-// różne typy nie łączą się, więc pole zajęte przez inny typ jest dla nas nieprzejezdne
+// różne typy nie łączą się, więc pole zajęte przez inny typ jest dla nas nieprzejezdne.
+// Armia SOJUSZNIKA blokuje zawsze: imperia w drużynie zostają osobne, więc nie ma tu
+// ani bitwy, ani scalania stosów (patrz reguły drużyn w 04-Mechanika-rozgrywki.md)
 function blockedByFriendly(to, playerId, unitType) {
-  return !!(to.army && to.army.player === playerId &&
-    (to.army.str >= MAX_ARMY || to.army.type !== unitType));
+  if (!to.army) return false;
+  if (to.army.player !== playerId) return sameTeam(to.army.player, playerId);
+  return to.army.str >= MAX_ARMY || to.army.type !== unitType;
 }
 
 function canStep(from, to, playerId, unitType) {
@@ -169,6 +172,17 @@ function reachableMoves(t) {
 
 function validMoves(t) {
   return [...reachableMoves(t).keys()];
+}
+
+// Jedyne miejsce, w którym rozstrzyga się „czy ten gracz może teraz wykonać ten ruch".
+// Świadomie w warstwie logiki, a nie w input.js: gra sieciowa musi walidować ruch
+// przysłany przez drugą stronę dokładnie tym samym kodem, którym lokalny klient
+// waliduje klik (reguła netcode z Documents/15-Silnik-i-przenosnosc.md)
+function canOrderMove(playerId, from, to) {
+  if (!from || !to || from === to) return false;
+  if (!from.army || from.army.player !== playerId) return false;
+  if (!armyCanBeOrdered(from)) return false;
+  return reachableMoves(from).has(to);
 }
 
 function supportFor(playerId, battleTile, excludeTile) {

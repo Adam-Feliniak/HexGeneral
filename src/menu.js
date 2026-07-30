@@ -152,35 +152,119 @@ function renderSpSetup() {
   renderSeedGroup('sp-seed-group', 'sp-seed-input', 'sp-seed-preview', setup, renderSpSetup);
 }
 
+const MP_SLOT_KINDS = ['human', 'bot', 'boss', 'closed'];
+
+// gotowe układy slotów. „Tryb bossa" nie jest osobnym trybem gry, tylko jednym z tych
+// układów — boss to wartość obsady slotu, więc obsługuje go ta sama tabela co resztę
+function mpPreset(key) {
+  if (key === 'coop') return defaultMpSlots();
+  if (key === 'boss') {
+    return [
+      { kind: 'human', team: 0 }, { kind: 'human', team: 0 },
+      { kind: 'closed', team: 2 }, { kind: 'closed', team: 3 }, { kind: 'closed', team: 4 },
+      { kind: 'boss', team: 1 },
+    ];
+  }
+  return [ // ffa — każdy przeciw każdemu, czyli układ sprzed drużyn
+    { kind: 'human', team: 0 }, { kind: 'human', team: 1 },
+    { kind: 'bot', team: 2 }, { kind: 'bot', team: 3 },
+    { kind: 'closed', team: 4 }, { kind: 'closed', team: 5 },
+  ];
+}
+
+function renderMpTransport(setup) {
+  const box = document.getElementById('mp-transport-group');
+  box.innerHTML = '';
+  for (const [key, labelKey] of [['local', 'lobby.mp.transportLocal'], ['net', 'lobby.mp.transportNet']]) {
+    const btn = document.createElement('button');
+    btn.textContent = i18n.t(labelKey);
+    // gra sieciowa ma dziś wyłącznie miejsce w menu i w stanie — transportu nie ma
+    const disabled = key === 'net';
+    btn.className = (setup.transport === key ? 'selected' : '') + (disabled ? ' disabled' : '');
+    btn.disabled = disabled;
+    btn.addEventListener('click', () => { setup.transport = key; renderMpSetup(); });
+    box.appendChild(btn);
+  }
+}
+
+function renderMpPresets(setup) {
+  const box = document.getElementById('mp-preset-group');
+  box.innerHTML = '';
+  for (const [key, labelKey] of [['ffa', 'lobby.mp.presetFfa'], ['coop', 'lobby.mp.presetCoop'], ['boss', 'lobby.mp.presetBoss']]) {
+    const btn = document.createElement('button');
+    btn.textContent = i18n.t(labelKey);
+    btn.addEventListener('click', () => { setup.slots = mpPreset(key); renderMpSetup(); });
+    box.appendChild(btn);
+  }
+}
+
+function renderMpSlots(setup) {
+  const box = document.getElementById('mp-slots');
+  box.innerHTML = '';
+  setup.slots.forEach((slot, i) => {
+    // barwa i nazwa idą z pozycji w tabeli, a u bossa z jego własnego wpisu w PLAYERS_DEF
+    const def = PLAYERS_DEF[slot.kind === 'boss' ? BOSS_SKIN : i];
+    const row = document.createElement('div');
+    row.className = 'slot-row' + (slot.kind === 'closed' ? ' slot-closed' : '');
+    row.innerHTML = `<span class="player-dot" style="background:${def.color}"></span>` +
+      `<span class="slot-name">${def.name}</span>`;
+
+    const kindSel = document.createElement('select');
+    for (const k of MP_SLOT_KINDS) {
+      const opt = document.createElement('option');
+      opt.value = k;
+      opt.textContent = i18n.t('lobby.mp.slot.' + k);
+      kindSel.appendChild(opt);
+    }
+    kindSel.value = slot.kind;
+    kindSel.onchange = () => {
+      slot.kind = kindSel.value;
+      // boss jest jeden na partię — drugi wybór degraduje poprzedniego do zwykłego bota
+      if (slot.kind === 'boss') {
+        setup.slots.forEach((o, j) => { if (j !== i && o.kind === 'boss') o.kind = 'bot'; });
+      }
+      renderMpSetup();
+    };
+    row.appendChild(kindSel);
+
+    const teamSel = document.createElement('select');
+    for (let t = 0; t < MAX_PLAYERS; t++) {
+      const opt = document.createElement('option');
+      opt.value = String(t);
+      opt.textContent = i18n.t('lobby.mp.team', { team: String.fromCharCode(65 + t) });
+      teamSel.appendChild(opt);
+    }
+    teamSel.value = String(slot.team);
+    teamSel.disabled = slot.kind === 'closed';
+    teamSel.onchange = () => { slot.team = Number(teamSel.value); renderMpSetup(); };
+    row.appendChild(teamSel);
+
+    box.appendChild(row);
+  });
+}
+
 function renderMpSetup() {
   const setup = state.mpSetup;
-  const maxBots = 6 - setup.count; // gracze + boty razem <= 6 imperiów
-  if (setup.bots > maxBots) setup.bots = Math.max(0, maxBots);
+  // ustawienia lobby przeżywają sesję (prevMpSetup w newGame), więc setup sprzed
+  // wprowadzenia slotów może tu jeszcze trafić
+  if (!setup.slots) { setup.slots = defaultMpSlots(); setup.transport = 'local'; }
 
-  const countBox = document.getElementById('mp-count-group');
-  countBox.innerHTML = '';
-  for (const n of MP_PLAYER_COUNTS) {
-    const btn = document.createElement('button');
-    btn.textContent = n;
-    btn.className = n === setup.count ? 'selected' : '';
-    btn.addEventListener('click', () => { setup.count = n; renderMpSetup(); });
-    countBox.appendChild(btn);
-  }
+  renderMpTransport(setup);
+  renderMpPresets(setup);
+  renderMpSlots(setup);
 
-  const botsBox = document.getElementById('mp-bots-group');
-  botsBox.innerHTML = '';
-  for (const n of BOT_COUNT_OPTIONS) {
-    const disabled = n > maxBots;
-    const btn = document.createElement('button');
-    btn.textContent = n;
-    btn.className = (n === setup.bots ? 'selected' : '') + (disabled ? ' disabled' : '');
-    btn.disabled = disabled;
-    btn.addEventListener('click', () => { setup.bots = n; renderMpSetup(); });
-    botsBox.appendChild(btn);
-  }
+  const open = setup.slots.filter(s => s.kind !== 'closed');
+  // partia bez dwóch drużyn nie ma warunku końca — Start zostaje zablokowany
+  const problem = open.length < 2 ? 'lobby.mp.needPlayers'
+    : new Set(open.map(s => s.team)).size < 2 ? 'lobby.mp.needTeams' : null;
+  const warn = document.getElementById('mp-slots-warning');
+  warn.hidden = !problem;
+  if (problem) warn.textContent = i18n.t(problem);
+  document.getElementById('mp-start').disabled = !!problem;
 
-  document.getElementById('mp-diff-field').hidden = setup.bots === 0;
-  if (setup.bots > 0) {
+  const hasAi = open.some(s => s.kind !== 'human');
+  document.getElementById('mp-diff-field').hidden = !hasAi;
+  if (hasAi) {
     renderDifficultyGroup('mp-diff-group', 'mp-diff-custom-wrap', 'mp-diff-slider', 'mp-diff-slider-val', setup, renderMpSetup);
   }
 
@@ -331,9 +415,11 @@ function initMenu() {
   document.getElementById('mp-start').addEventListener('click', () => {
     const s = state.mpSetup;
     newGame({
-      humanCount: s.count, botCount: s.bots, aiDifficulty: effectiveDifficulty(s),
-      seed: s.seedValue, timeLimit: s.time,
+      slots: s.slots, aiDifficulty: effectiveDifficulty(s),
+      seed: s.seedValue, timeLimit: s.time, transport: s.transport,
     });
+    // pierwszy slot może być botem albo bossem — wtedy partię trzeba ruszyć jawnie
+    kickOffAiGame();
   });
 
   // wyjście do menu w trakcie gry — zapisz partię (także w trakcie tury AI:

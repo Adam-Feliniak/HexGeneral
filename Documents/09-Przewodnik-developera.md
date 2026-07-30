@@ -95,7 +95,19 @@ run("newGame({ humanCount: 1, botCount: 3, aiDifficulty: 'normal', seed: 12345, 
 console.log(run('state.players.length'));   // odczyt stanu przez kolejne wywołania run()
 ```
 
-Uwaga praktyczna: `newGame(opts)` przyjmuje **obiekt opcji** (`{ humanCount, botCount, aiDifficulty, seed, timeLimit }`), nie argumenty pozycyjne — i nic nie zwraca, tylko nadpisuje globalną zmienną `state`. Symulacja pełnej rozgrywki AI-vs-AI (przydatna do sprawdzenia, że zmiana w mechanice nie wywala wyjątku w żadnym scenariuszu) wygląda tak:
+Uwaga praktyczna: `newGame(opts)` przyjmuje **obiekt opcji** (`{ humanCount, botCount, aiDifficulty, seed, timeLimit }`), nie argumenty pozycyjne — i nic nie zwraca, tylko nadpisuje globalną zmienną `state`.
+
+`humanCount`/`botCount` układają partię **FFA** (każdy w swojej drużynie) i pozostają wspierane właśnie po to, żeby harnessy i `tools/sim.js` nie musiały wiedzieć o slotach. Do sprawdzenia drużyn albo bossa podaje się zamiast tego `slots`:
+
+```js
+run(`newGame({ slots: [
+  { kind: 'human', team: 0 }, { kind: 'human', team: 0 },   // co-op: dwoje ludzi razem
+  { kind: 'bot', team: 1 }, { kind: 'boss', team: 1 },      // bot + boss po drugiej stronie
+  { kind: 'closed', team: 4 }, { kind: 'closed', team: 5 }, // zamknięte sloty nie tworzą imperium
+], aiDifficulty: 'normal', seed: 4242, timeLimit: Infinity });`);
+```
+
+Pętla AI-vs-AI dla takiej partii musi brać trudność przez `playerDifficulty(p)` (nakłada premię bossa), a nie przez `resolveDifficulty(p.difficulty)`. Symulacja pełnej rozgrywki AI-vs-AI (przydatna do sprawdzenia, że zmiana w mechanice nie wywala wyjątku w żadnym scenariuszu) wygląda tak:
 
 ```js
 run(`(() => {
@@ -216,6 +228,43 @@ node --expose-gc tools/stress.js --mode=soak    # sesja: 10+ partii z rzędu, tr
 
 Kiedy uruchamiać: po każdej zmianie w mechanice/AI/zapisie — fuzz ~200 partii jako
 bramka przed wydaniem (obok `sim.js --games=300` dla metryk balansu).
+
+## Harness drużyn i bossa (`tools/team-check.js`)
+
+Trzeci harness, bo dwa poprzednie **nie dotykają drużyn**: `sim.js` gra wyłącznie FFA
+(`newGame` z `humanCount`/`botCount`), a `stress.js` fuzzuje ścieżki pojedynczego
+człowieka. Ten sprawdza inwarianty, które weszły razem ze slotami:
+
+```
+node tools/team-check.js              # ~70 sprawdzeń, kod wyjścia 1 przy błędzie
+node tools/team-check.js --games=8    # więcej pełnych partii AI-vs-AI na układ
+node tools/team-check.js --quiet      # tylko błędy i podsumowanie
+```
+
+Co pokrywa:
+
+- **Skład partii ze slotów** — zamknięte sloty nie tworzą imperium, `id` ciągłe,
+  `skin` z wiersza lobby, limit `MAX_PLAYERS`.
+- **Reguły sojuszu** — `canStep`/`validMoves` nie wpuszczają na pole armii sojusznika,
+  `captureTile` nie zabiera jego terenu, `aiTargets`/`aiFrontDistance` go nie widzą jako wroga.
+- **Koniec gry na drużyny** — łącznie z porażką w single dopiero po śmierci **całej**
+  drużyny człowieka.
+- **Boss** — jeden na partię, własny skin i barwa, mnożniki nałożone NA preset (sprawdzane
+  przez porównanie easy < normal < hard, żeby suwak trudności nie przestał działać).
+- **Rozstawienie stolic** — sojusznik nie może startować dalej niż najbliższy wróg,
+  a FFA musi dawać **dokładnie** `CAPITAL_SPOTS[0..n-1]`; ta druga asercja pilnuje, żeby
+  wyniki `sim.js`/`stress.js` zostały porównywalne z historycznymi pomiarami.
+- **Nazwy stolic** — przy zamkniętych slotach i bossie numer imperium ≠ wiersz lobby.
+- **Zapis** — pełny obrót serialize→deserialize dla partii z bossem.
+- **Lobby przez stub DOM** — `getElementById` zwraca element tylko dla `id` faktycznie
+  obecnych w `index.html`, więc literówka albo zapomniany kontener wywala test, zamiast
+  czekać na kliknięcie w przeglądarce. Do tego blokada Startu (za mało slotów, wszyscy
+  w jednej drużynie) i znaczniki w panelu bocznym.
+- **Pełne partie 2v2 / boss / 3v3** — kończą się, zostaje jedna drużyna, zero ruchów
+  na pole sojusznika.
+
+Uwaga: sam stub DOM nie zastępuje przeglądarki — nie rysuje niczego, więc sprite'y bossa,
+układ tabeli slotów i CSS dalej sprawdza checklista smoke (punkty 4c/4d).
 
 ## Protokół smoke przed wydaniem (przeglądarka, ręcznie)
 

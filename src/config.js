@@ -3,7 +3,7 @@
    KONFIGURACJA — stałe rozgrywki, gracze, nazwy miast
    ============================================================ */
 
-const GAME_VERSION = '0.6.3';
+const GAME_VERSION = '0.7.0';
 // Nota o prawach autorskich w stopce menu (obok wersji); pełne warunki w pliku LICENSE
 const GAME_COPYRIGHT = '© 2026 Adam Feliniak';
 
@@ -20,7 +20,7 @@ const HEX = 28;                       // promień heksa (px)
 const HEX_W = Math.sqrt(3) * HEX;     // szerokość heksa (pointy-top)
 // Ile jednostek gracz może rozkazać w jednej turze. Aktywacja liczy się RAZ na
 // jednostkę: kolejne ruchy tej samej armii w tej turze są darmowe, dopóki ma
-// punkty ruchu. (Uwaga: "MP" w MP_PLAYER_COUNTS niżej to multiplayer, nie punkty ruchu.)
+// punkty ruchu.
 const ACTIVATIONS_PER_TURN = 5;
 
 // Koszt wejścia na pole w punktach ruchu. Własna droga jest tania — dzięki temu
@@ -41,8 +41,8 @@ const RESOURCE_COUNT = 6;             // złoża surowców na mapie
 // limit czasu na turę w grze wieloosobowej (hot-seat); Infinity = bez limitu
 const TURN_TIME_LIMIT_DEFAULT = 120;
 const TURN_TIME_LIMIT_OPTIONS = [60, 120, Infinity];
-const MP_PLAYER_COUNTS = [2, 3, 4, 5, 6];
-const BOT_COUNT_OPTIONS = [0, 1, 2, 3];
+// lobby wieloosobowe nie liczy już graczy i botów osobno — skład ustawia tabela slotów
+// (obsada + drużyna na slot, patrz renderMpSetup w menu.js)
 const SP_BOT_COUNT_OPTIONS = [1, 2, 3, 4, 5];
 
 // seed mapy — max 6 cyfr (pole "Własny" w lobby)
@@ -127,6 +127,20 @@ function resolveDifficulty(diff) {
   };
 }
 
+// trudność konkretnego gracza: preset gry + mnożniki bossa, gdy slot jest bossem.
+// Jedno miejsce prawdy — wołają to i cityGain (produkcja), i aiStep (decyzje bota),
+// więc premia bossa nie może rozjechać się między ekonomią a zachowaniem
+function playerDifficulty(p) {
+  const base = resolveDifficulty(p.difficulty);
+  if (p.kind !== 'boss') return base;
+  return {
+    ...base,
+    economy: base.economy * BOSS_MULT.economy,
+    aggression: base.aggression * BOSS_MULT.aggression,
+    aggressionThreshold: base.aggressionThreshold * BOSS_MULT.aggressionThreshold,
+  };
+}
+
 // etykieta presetu do wyświetlenia — woła i18n.t() zdefiniowane w i18n.js
 // (wczytywanym zaraz po config.js), ale wywoływane dopiero przy renderze UI,
 // więc kolejność <script>-ów tu nie ma znaczenia
@@ -135,6 +149,10 @@ function difficultyLabel(preset) {
   return i18n.t('difficulty.' + preset.key);
 }
 
+// Ostatni wpis (BOSS_SKIN) to imperium bossa: nigdy nie trafia do gry przez slice(),
+// wchodzi wyłącznie na slot obsadzony jako 'boss' w lobby. Kolor jest ciemny, ale nie
+// czysto czarny — barwa właściciela idzie na planszę jako kalka 30% (render.js) i przy
+// #000 pole zlewałoby się z obrysem heksa.
 const PLAYERS_DEF = [
   { name: 'Karmazynia', color: '#d64550', dark: '#8c2530', isHuman: true },
   { name: 'Lazuria',    color: '#3f7fd6', dark: '#24518f', isHuman: false },
@@ -142,7 +160,19 @@ const PLAYERS_DEF = [
   { name: 'Aurelia',    color: '#d6a53f', dark: '#8f6a1f', isHuman: false },
   { name: 'Ametria',    color: '#8a4fd6', dark: '#5a2f8f', isHuman: false },
   { name: 'Turkusja',   color: '#3fc9c2', dark: '#1f7f7a', isHuman: false },
+  { name: 'Czarna Legia', color: '#3c3c46', dark: '#15151a', isHuman: false },
 ];
+// indeks zestawu sprite'ów bossa (assets/*_6.png) — patrz player.skin w state.js
+const BOSS_SKIN = PLAYERS_DEF.length - 1;
+// liczba imperiów możliwych na mapie (tyle jest pozycji w CAPITAL_SPOTS) — boss ZAJMUJE
+// jeden z tych slotów, a nie dokłada kolejnego
+const MAX_PLAYERS = 6;
+
+// Boss to nie osobny poziom trudności, tylko mnożniki NA WIERZCHU wybranego presetu —
+// dzięki temu suwak trudności dalej reguluje partię z bossem. Sama produkcja nie
+// wystarcza: bogaty bot potrafi turtlować z jednym wielkim stosem, więc premia
+// ekonomiczna idzie w parze z agresją i niższym progiem opłacalności ataku.
+const BOSS_MULT = { economy: 1.6, aggression: 1.4, aggressionThreshold: 0.85 };
 
 const CITY_NAMES = [
   'Ostrów', 'Bielsk', 'Toruniec', 'Grodziec', 'Sokole', 'Rawka', 'Jarowo',
@@ -157,3 +187,6 @@ const CAPITAL_SPOTS = [
   [2, 2], [MAP_W - 3, MAP_H - 3], [MAP_W - 3, 2], [2, MAP_H - 3],
   [Math.floor(MAP_W / 2), 2], [Math.floor(MAP_W / 2), MAP_H - 3],
 ];
+// Uwaga: ta kolejność maksymalizuje ROZRZUT, co jest właściwe w FFA, ale przy drużynach
+// byłoby sabotażem (sojusznicy w przeciwległych rogach). Kto gdzie startuje w grze
+// drużynowej wylicza assignTeamPositions() w state.js — z tego samego zbioru pozycji.

@@ -58,6 +58,7 @@ Jednostka z **pełną** pulą może zawsze wejść na jedno sąsiednie pole, cho
 Pojedynczy krok z pola `from` na sąsiednie pole `to` jest legalny, jeśli:
 - pola są rzeczywiście sąsiadami (`hexDist === 1`),
 - na docelowym polu **nie stoi pełny własny stos** (`str >= MAX_ARMY = 99`) **ani armia innego typu tego samego gracza** — różne typy nie mogą się łączyć, więc pole zajęte przez inny typ jest dla ruszającej się armii nieprzejezdne (blokada identyczna jak przy pełnym stosie, funkcja `blockedByFriendly`),
+- na docelowym polu **nie stoi armia sojusznika** (innego imperium z tej samej drużyny) — imperia w sojuszu zostają osobne, więc nie ma tam ani bitwy, ani scalania stosów; pole jest po prostu nieprzejezdne,
 - wejście na wodę wymaga, by pole startowe było morzem **albo własnym portem** — każdy typ lądowy może wypłynąć z portu, nie ma osobnych jednostek desantowych/morskich.
 
 ### Wielokrokowa ścieżka (`reachableMoves`)
@@ -147,5 +148,7 @@ Na morzu każda jednostka ma `SEA_MOVE_POINTS = 6` (**3 pola żeglugi**) niezale
 
 ## Podboje i koniec gry
 
-- **`captureTile`** (`empire.js`): wejście na pole zmienia jego właściciela. Pojedyncze zajęcie pola kasuje ewentualny heks drogi na nim (sieć się rozspójnia), a przejęte miasto porzuca swój projekt budowy drogi (patrz [Gospodarka](05-Gospodarka.md)). Jeśli zdobyto cudzą **stolicę** — natychmiastowa **aneksja całego imperium** (`conquerEmpire`): wszystkie pola, miasta i złoża pokonanego gracza przechodzą pod zwycięzcę, wszystkie jego pozostałe armie znikają z planszy, a heksy jego sieci dróg stają się siecią zwycięzcy. Zdobyta stolica staje się zwykłym miastem (`capitalOf = -1`).
-- **`checkGameOver`**: gra kończy się, gdy zostaje dokładnie jeden żywy gracz (zwycięstwo — różny tekst ekranu końcowego zależnie od trybu single/multi i czy zwycięzcą jest człowiek), albo gdy w trybie single pada stolica jedynego człowieka (porażka), niezależnie od tego, ilu botów jeszcze żyje.
+- **`captureTile`** (`empire.js`): wejście na pole zmienia jego właściciela — **z wyjątkiem pola sojusznika**, które zostaje jego (przemarsz przez terytorium drużyny niczego nie przejmuje). Pojedyncze zajęcie pola kasuje ewentualny heks drogi na nim (sieć się rozspójnia), a przejęte miasto porzuca swój projekt budowy drogi (patrz [Gospodarka](05-Gospodarka.md)). Jeśli zdobyto cudzą **stolicę** — natychmiastowa **aneksja całego imperium** (`conquerEmpire`): wszystkie pola, miasta i złoża pokonanego gracza przechodzą pod zwycięzcę, wszystkie jego pozostałe armie znikają z planszy, a heksy jego sieci dróg stają się siecią zwycięzcy. Zdobyta stolica staje się zwykłym miastem (`capitalOf = -1`).
+- **`checkGameOver`**: gra kończy się, gdy zostaje **jedna żywa drużyna** (zwycięstwo — różny tekst ekranu końcowego zależnie od trybu single/multi, od tego, czy wygrała drużyna czy pojedyncze imperium, i czy zwycięzcą jest człowiek), albo gdy w trybie single ginie **cała drużyna** człowieka (porażka), niezależnie od tego, ilu botów jeszcze żyje. W FFA każdy gracz jest własną drużyną, więc jest to dokładnie dawny warunek „ostatnie żywe imperium".
+
+  Upadek stolicy działa bez zmian także w drużynie: imperium poległego przejmuje ten, kto zdobył stolicę — również wtedy, gdy poległy miał sojuszników. Sojusznik nie „dziedziczy" po sojuszniku.

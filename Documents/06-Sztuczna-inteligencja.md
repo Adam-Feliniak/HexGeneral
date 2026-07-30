@@ -18,9 +18,50 @@ Cała logika botów mieszka w `src/ai.js`. AI nie ma żadnego "wglądu" niedost�
 
 Trudność "Custom" (suwak 0–100% w lobby) interpoluje liniowo (`resolveDifficulty`) między presetami Easy i Nightmare dla wszystkich czterech parametrów naraz.
 
+### Boss (`BOSS_MULT`)
+
+Boss to **nie** kolejny wiersz w tej tabeli, tylko mnożniki nałożone na wybrany preset
+(`playerDifficulty(p)` w `config.js` — jedno miejsce prawdy, bo wołają je i produkcja,
+i pętla decyzji AI):
+
+| Parametr | Mnożnik | Po co |
+|---|---|---|
+| `economy` | ×1.6 | boss ma z czego stawiać armie |
+| `aggression` | ×1.4 | żeby faktycznie napierał |
+| `aggressionThreshold` | ×0.85 | atakuje przy gorszym stosunku sił |
+
+Premia ekonomiczna **musi** iść w parze z agresją: sam mnożnik produkcji daje wroga
+*bogatszego*, niekoniecznie *groźniejszego* — bot potrafi okopać się z jednym wielkim
+stosem i nie dobijać. Zmierzone na 30 partiach (samotnik kontra dwa boty Normal
+w drużynie, ten sam układ slotów): **23% wygranych samotnika bez premii → 97% z premią**.
+
+**Uwaga przy strojeniu: `economy` działa skokowo, nie płynnie.** `cityGain` liczy
+`Math.round(base * mult)`, a zwykłe miasto ma `base = 1`, więc produkcja przeskakuje
+z 1 na 2 dopiero przy `mult ≥ 1,5` — mnożniki 1,0 i 1,49 dają **identyczny** wynik dla
+zwykłych miast, a różnica 1,4 → 1,5 podwaja gospodarkę. Zmierzony efekt: boss z `economy`
+1,4 wygrywa 20% partii, z 1,5 — 93%. To samo tłumaczy, czemu preset Hard (1,25) różni się
+od Normal głównie stolicą (3 → 4), a Nightmare (1,725) skacze na całej mapie. Przy
+strojeniu patrz na **wynikową produkcję**, a nie na sam mnożnik.
+
+Domyślny boss (preset Normal × `BOSS_MULT`) jest **mocny**: wygrywa 97% partii z dwoma
+botami Normal. Do pierwszej sesji z żywymi graczami warto zejść na Easy — boty
+sojusznicze nie koordynują planów, więc dwoje ludzi rozmawiających przy stole gra
+inaczej niż ta próbka.
+
+### Drużyny a decyzje AI
+
+Wszystkie miejsca, w których AI pyta „czy to wróg", idą przez `aiIsEnemy` /
+`aiIsOwnSide` (`ai.js`), a te przez `sameTeam` (`state.js`). Dotyczy to wyceny celów,
+dystansu do frontu, sumowania siły wroga, wykrywania zagrożenia stolicy i liczenia
+lokalnej obrony przy oblężeniu. Pomyłka w którymkolwiek z nich objawia się botem, który
+liczy sojusznika jako wroga (i np. eskaluje agresję, bo „przeciwnik" ma dużo siły).
+
 ## Wycena celów (`aiTargets`)
 
 Dla każdego pola na mapie AI liczy wartość, jeśli warto by tam dotrzeć:
+
+Pola i miasta **sojuszników** (oraz własne) w ogóle nie trafiają na tę listę — `captureTile`
+i tak by ich nie zajęło, więc marsz na nie byłby marnowaniem ruchów.
 
 | Cel | Wartość |
 |---|---|

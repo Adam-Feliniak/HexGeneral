@@ -19,7 +19,9 @@
 
 // 2: ruch przeszedł na punkty ruchu (army.mp/activated zamiast movesUsed,
 //    state.activationsLeft zamiast movesLeft) — zapisy formatu 1 są niezgodne
-const SAVE_FORMAT = 2;
+// 3: drużyny i sloty (player.kind/team/skin, state.transport) — zapisy formatu 2
+//    nie mają przypisania do drużyn, więc nie da się ich sensownie wznowić
+const SAVE_FORMAT = 3;
 const SAVE_STORAGE_KEY = 'hexgeneral.save';
 
 // JSON nie zna Infinity (zamienia na null) — kodujemy jawnie
@@ -69,7 +71,7 @@ function serializeGame() {
     build: BUILD_TAG,
     savedAt: Date.now(),
     game: {
-      mode: state.mode, mapSeed: state.mapSeed, turn: state.turn,
+      mode: state.mode, transport: state.transport, mapSeed: state.mapSeed, turn: state.turn,
       phase: state.phase, human: state.human,
       humanPlayerCount: state.humanPlayerCount, aiDifficulty: state.aiDifficulty,
       currentPlayerIndex: state.currentPlayerIndex,
@@ -77,6 +79,7 @@ function serializeGame() {
       players: state.players.map(p => ({
         name: p.name, color: p.color, dark: p.dark, id: p.id, alive: p.alive,
         capital: p.capital.slice(), isHuman: p.isHuman, difficulty: p.difficulty,
+        kind: p.kind, team: p.team, skin: p.skin,
       })),
       log: state.log.slice(),
       tiles,
@@ -146,6 +149,7 @@ function deserializeGame(data) {
     screen: 'game',
     gameId: (state && state.gameId || 0) + 1,
     mode: g.mode,
+    transport: g.transport === 'net' ? 'net' : 'local',
     mpSetup: (state && state.mpSetup) || defaultMpSetup(),
     spSetup: (state && state.spSetup) || defaultSpSetup(),
     options: (state && state.options) || defaultOptions(),
@@ -165,7 +169,14 @@ function deserializeGame(data) {
     selectedCity: null,
     selectedResource: null,
     roadPickFrom: null,
-    players: g.players.map(p => ({ ...p, capital: p.capital.slice() })),
+    // domyślki drużyny/obsady/skina: uszkodzony zapis nie może zrobić z całej stawki
+    // jednej drużyny (sameTeam na undefined === undefined byłoby prawdą dla wszystkich)
+    players: g.players.map((p, i) => ({
+      ...p, capital: p.capital.slice(),
+      kind: p.kind || (p.isHuman ? 'human' : 'bot'),
+      team: Number.isFinite(p.team) ? p.team : i,
+      skin: Number.isFinite(p.skin) ? p.skin : i,
+    })),
     log: g.log.slice(),
   };
   state.aiPlayers = state.players.filter(p => !p.isHuman).map(p => ({ id: p.id, difficulty: p.difficulty }));

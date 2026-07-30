@@ -13,7 +13,10 @@ function canPickEmpire() {
 function switchHuman(id) {
   state.human = id;
   state.players.forEach(p => {
-    p.isHuman = p.id === id;
+    // źródłem prawdy jest `kind` (obsada slotu) — isHuman tylko z niego wynika,
+    // inaczej oba pola rozjechałyby się przy pierwszej zmianie imperium
+    if (p.kind !== 'boss') p.kind = p.id === id ? 'human' : 'bot';
+    p.isHuman = p.kind === 'human';
     // porzucone imperium przechodzi pod AI z trudnością tej gry
     if (!p.isHuman && p.difficulty == null) p.difficulty = state.aiDifficulty;
   });
@@ -53,7 +56,9 @@ function onTileClick(t) {
     return;
   }
   const sel = state.selected;
-  if (sel && sel !== t && validMoves(sel).includes(t)) {
+  // legalność ruchu rozstrzyga combat.js (canOrderMove), nie input — ten sam kod ma
+  // kiedyś walidować ruch przysłany przez sieć (Documents/15-Silnik-i-przenosnosc.md)
+  if (canOrderMove(cp.id, sel, t)) {
     state.activationsLeft -= executeMove(sel, t);
     // jednostka z zapasem punktów ruchu zostaje zaznaczona, żeby dokończyć marsz
     // bez ponownego klikania — kolejny ruch tej samej armii nie kosztuje aktywacji

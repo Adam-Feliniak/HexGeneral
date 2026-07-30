@@ -27,6 +27,7 @@ function updateUI() {
 
   const box = document.getElementById('players');
   box.innerHTML = '';
+  const teams = teamLabels();
   for (const p of state.players) {
     let cities = 0, str = 0, res = 0;
     for (const row of state.tiles) for (const t of row) {
@@ -38,12 +39,14 @@ function updateUI() {
     div.className = 'player-row'
       + (!p.alive ? ' dead' : '')
       + (p.alive && state.phase !== 'over' && p.id === state.currentPlayerIndex ? ' active' : '');
-    const icon = p.isHuman ? '👤' : '🤖';
+    const icon = p.isHuman ? '👤' : p.kind === 'boss' ? '💀' : '🤖';
     const tyTag = state.mode === 'single' && p.isHuman ? ' ' + i18n.t('game.youTag') : '';
-    const diffBadge = !p.isHuman ? `<span class="diff-badge">${difficultyLabel(resolveDifficulty(p.difficulty))}</span>` : '';
+    const diffBadge = !p.isHuman ? `<span class="diff-badge">${difficultyLabel(playerDifficulty(p))}</span>` : '';
+    // litera drużyny tylko przy realnym sojuszu — w FFA byłaby szumem
+    const teamBadge = teams ? `<span class="team-badge">${i18n.t('game.teamTag', { team: teams.get(p.team) })}</span>` : '';
     div.innerHTML =
       `<span class="player-dot" style="background:${p.color}"></span>` +
-      `<span class="player-name">${icon} ${p.name}${tyTag}${diffBadge}</span>` +
+      `<span class="player-name">${icon} ${p.name}${tyTag}${teamBadge}${diffBadge}</span>` +
       `<span class="player-stats">🏛 ${cities} ⛏ ${res} ⚔ ${str} 💰 ${playerProduction(p.id)}</span>`;
     box.appendChild(div);
   }
@@ -66,6 +69,17 @@ function updateUI() {
       ? i18n.t('game.seedFooterWithDifficulty', { seed: state.mapSeed, difficulty: difficultyLabel(resolveDifficulty(state.aiDifficulty)) })
       : i18n.t('game.seedFooter', { seed: state.mapSeed });
   }
+}
+
+// Mapa drużyna -> litera (A, B, ...) albo null, gdy nikt z nikim nie jest w sojuszu.
+// W FFA każdy gracz ma własną drużynę, więc litery byłyby szumem — stąd warunek `shared`
+function teamLabels() {
+  const shared = state.players.some(p => state.players.some(o => o !== p && o.team === p.team));
+  if (!shared) return null;
+  const map = new Map();
+  [...new Set(state.players.map(p => p.team))].sort((a, b) => a - b)
+    .forEach((t, i) => map.set(t, String.fromCharCode(65 + i)));
+  return map;
 }
 
 // panel pod mapą: produkcja w zaznaczonym mieście ALBO wybór miasta zaopatrywanego

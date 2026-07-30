@@ -176,7 +176,7 @@ function tileOnRoad(t, playerId) {
 // dla wszystkich miast, a tooltip tylko dla jednego (patrz cityResourceBonus).
 function cityGain(cityTile, playerId, resourceBonus) {
   const p = state.players[playerId];
-  const mult = p.isHuman ? 1 : resolveDifficulty(p.difficulty).economy;
+  const mult = p.isHuman ? 1 : playerDifficulty(p).economy;
   const base = (cityTile.city.capitalOf === playerId ? 3 : 1) + (resourceBonus || 0);
   return Math.max(1, Math.round(base * mult));
 }
