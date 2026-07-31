@@ -53,7 +53,9 @@ node tools/audio-check.js         # music playback path (lazy render, track swit
 node tools/team-check.js          # team/boss invariants (slots, ally rules, team game-over, spawn placement, lobby) — exit code 1 on failure
 ```
 
-Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes every SFX into an `AudioBuffer` at runtime and plays music from a note table. `gen-sounds.js` exists only so you can hear a recipe or a music loop in an audio editor while tuning it — its output goes to gitignored `dist/` and the game never loads it. See [14-Dzwiek.md](Documents/14-Dzwiek.md).
+**Sound is never shipped as files — and this is the one place where sound and sprites work in opposite ways.** Sprites are generated *once* by a Node script and **committed** as PNGs, because the game loads them at runtime and no build step exists to produce them. Sound is generated *every time the game starts*: `src/audio.js` synthesizes each SFX into an `AudioBuffer`, and since 0.7.1 each music loop the same way (`renderMusicLoop()` turns a note table into samples, played as a looping `AudioBufferSource`). There is not a single audio file in the repo, and `tools/pack-build.js` — which works off an allowlist — has no audio entry to ship one.
+
+So `gen-sounds.js` is not a build step and has no counterpart to "commit the regenerated PNGs". It exists only so a human can *hear* a recipe or a loop in an audio editor while tuning it; its output lands in gitignored `dist/` and **the game never reads it**, exactly like the waveform PNGs from `audit-sounds.js`. If you find yourself about to commit a `.wav`, something has gone wrong. See [14-Dzwiek.md](Documents/14-Dzwiek.md).
 
 ### Adding/changing UI text
 1. Add/edit the same key in **all three** `locales/pl.json`, `locales/en.json`, `locales/de.json`.
