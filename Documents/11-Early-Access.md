@@ -15,17 +15,15 @@ To odwraca perspektywę wobec backlogu: **`10-Przyszle-plany.md` jest w większo
 mniejsza lista „utwardzania produktu" — w dużej części nieefektowna robota, której
 w backlogu nie ma.
 
-**Stan dokumentu: aktualny na v0.6.2.** Od pierwszej wersji tej analizy doszły: tryb
+**Stan dokumentu: aktualny na v0.7.0.** Od pierwszej wersji tej analizy doszły: tryb
 obserwatora i regulacja tempa AI (v0.4.0 — przydatne przy pokazywaniu gry i przy zdalnej
 krytyce partii botów), narzędzie regresji wizualnej `visual-test.html` oraz infrastruktura
 buildów testerskich (v0.4.1), punkty ruchu (v0.5.0), dźwięk i muzyka (v0.6.0 — zamyka P1
-„gra nie jest niema") oraz czytelna produkcja w tooltipie i panelu (v0.6.1–v0.6.2).
-
-**Zmiana w tej wersji dokumentu:** **tryb kooperacyjny (drużyny) jest zrobiony** (v0.7.0)
-razem z trybem bossa, więc bramka fali 0 testów zewnętrznych jest zdjęta — została sama
-**realizacja przebiegu** (punkt 5 ścieżki krytycznej). Uzasadnienie, po co co-op był
-warunkiem testów, zostaje w [nocie o co-opie](#nota-co-op-awansuje-z-roadmapy-do-rdzenia-bramka-fali-0)
-niżej; teraz czyta się ją jako zapis decyzji, nie jako plan.
+„gra nie jest niema"), czytelna produkcja w tooltipie i panelu (v0.6.1–v0.6.2) oraz
+**tryb kooperacyjny i boss** (v0.7.0). Ten ostatni zdejmuje bramkę fali 0 testów
+zewnętrznych — została sama **realizacja przebiegu** (punkt 5 ścieżki krytycznej),
+a [nota o co-opie](#nota-co-op-awansuje-z-roadmapy-do-rdzenia-bramka-fali-0) czyta się
+odtąd jako zapis decyzji, nie plan.
 
 ## Rdzeń EA vs roadmapa EA
 
@@ -78,16 +76,15 @@ Priorytety: **P0** = bramka startu (bez tego nie ma EA), **P1** = mocno poprawia
    z protokołem smoke z `09-Przewodnik-developera.md`.
 4. ✅ **Tryb kooperacyjny (drużyny)** — **zrobione** (v0.7.0). Nie był to feature z roadmapy
    wciśnięty przed premierę, tylko **narzędzie testowe**: bez niego punkt 5 (fala 0) nie miał
-   jak się odbyć w realnych warunkach domowych — uzasadnienie w nocie niżej. Weszło:
-   drużyna w stanie gracza, brak friendly-fire i zajmowania pól sojusznika, warunek
-   zwycięstwa liczony na drużyny zamiast pojedynczych imperiów, AI traktujące sojuszników
-   jak swoich, tabela slotów w lobby (obsada + drużyna).
+   jak się odbyć w realnych warunkach domowych — uzasadnienie w nocie niżej. Zakres wejścia
+   (drużyny, brak friendly-fire, zwycięstwo liczone na drużyny, tabela slotów) opisuje
+   [02-Architektura-i-pliki.md](02-Architektura-i-pliki.md#sloty-drużyny-i-boss).
 
-   **Zmiana wobec wcześniejszej wersji tego dokumentu: super-wróg NIE został w roadmapie** —
-   wszedł razem ze szkieletem, bo okazał się tani. Powód: boss to nie osobny tryb gry, tylko
-   **obsada slotu** w tej samej tabeli, więc doszły do niego wyłącznie mnożniki `BOSS_MULT`
-   i siódmy zestaw sprite'ów, a nie osobny ekran ani osobna gałąź logiki. Do samych testów
-   fali 0 dalej nie jest potrzebny — jest bonusem, nie warunkiem.
+   **Super-wróg NIE został w roadmapie** — wszedł razem ze szkieletem, bo okazał się tani:
+   boss to nie osobny tryb gry, tylko **obsada slotu** w tej samej tabeli, więc doszły do
+   niego wyłącznie mnożniki `BOSS_MULT` i siódmy zestaw sprite'ów, a nie osobny ekran ani
+   osobna gałąź logiki. Do samych testów fali 0 dalej nie jest potrzebny — jest bonusem,
+   nie warunkiem.
 5. **Testy zewnętrzne** — infrastruktura gotowa (v0.4.1): `node tools/pack-build.js --tag=...`
    produkuje czysty build (88 plików / ~196 KB, bez `.git`, `Documents/` i `tools/`), fale
    dystrybucji i protokół w [13-Testy-zewnetrzne.md](13-Testy-zewnetrzne.md). Do wykonania
@@ -143,13 +140,9 @@ testerów**, nie przed samym EA.
 długości ~348 → ~122 rund, drabinka trudności i balans nienaruszone. Mechanizm
 (eskalacja bramkowana przewagą + oblężenie falowe + ekonomia: zbieranie niczyich miast
 z podziałem ról wg siły) opisany w [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md);
-pozostałe ~6% przypadków i ewentualne kierunki — w pozycji ✅ w
-[10-Przyszle-plany.md](10-Przyszle-plany.md).
+pozostałe ~7% przypadków i ewentualne kierunki naprawy — w pozycji „AI słabo domyka
+wygrane pozycje" w [10-Przyszle-plany.md](10-Przyszle-plany.md).
 Poniższa analiza przyczyn (aktualna dla stanu sprzed poprawki) zostaje jako kontekst.
-
-Szczegóły mechanizmu i kierunki
-naprawy — patrz też pozycja „AI słabo domyka wygrane pozycje" w
-[10-Przyszle-plany.md](10-Przyszle-plany.md) oraz [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md).
 
 **Co znaczy „zamknąć grę".** Gra kończy się dopiero, gdy zostaje jedno żywe imperium
 (`checkGameOver` w `empire.js`). Imperium ginie tylko przez **upadek stolicy**

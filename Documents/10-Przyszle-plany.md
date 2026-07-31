@@ -1,20 +1,17 @@
 # Przyszłe plany
 
-Zbiór pomysłów na rozwój gry — kandydaci do przyszłych wersji, a nie opis
-istniejącego stanu. W przeciwieństwie do pozostałych dokumentów w tym folderze
-(które opisują faktyczny kod), ten plik jest listą propozycji. Każda pozycja ma
-zaznaczony orientacyjny koszt względem obecnej architektury, żeby ułatwić wybór
-kolejności prac.
+Kandydaci do przyszłych wersji — w odróżnieniu od reszty tego folderu ten plik nie
+opisuje kodu, tylko propozycje. Każda ma orientacyjny koszt względem obecnej
+architektury, żeby ułatwić wybór kolejności prac.
 
 Legenda kosztu:
 - 🟢 **niski** — mieści się w istniejących strukturach (np. `UNIT_TYPES`, generator sprite'ów), niewiele plików do ruszenia.
 - 🟡 **średni** — dotyka kilku warstw (logika + render + UI), ale bez zmiany fundamentów.
 - 🔴 **wysoki** — nowa warstwa/fundament (format zapisu, mgła wojny) dotykająca renderu, AI i inputu naraz.
 
-Znacznik ⭐ oznacza pozycję **wyciągniętą z roadmapy do rdzenia EA** — czyli taką, która
-przestała być „kiedyś" i jest bieżącym priorytetem. Kolor obok niej dalej mówi o koszcie,
-nie o pilności; uzasadnienie awansu zawsze stoi w [11-Early-Access.md](11-Early-Access.md),
-nie tutaj.
+Znacznik ⭐ — pozycja **wyciągnięta z roadmapy do rdzenia EA**, czyli bieżący priorytet.
+Kolor obok dalej mówi o koszcie, nie o pilności; uzasadnienie awansu stoi
+w [11-Early-Access.md](11-Early-Access.md), nie tutaj.
 
 ---
 
@@ -30,18 +27,16 @@ nie tutaj.
   i inputu. Otwiera realną rolę zwiadu i zasadzek.
 
   **Uwaga na rozproszoną widoczność informacji o wrogu.** Dziś gra działa na pełnej
-  informacji i **każde miejsce decyduje samo za siebie**, co ujawnia: panel boczny
-  (`ui.js`) pokazuje dla wszystkich graczy liczbę miast, złóż, łączną siłę i produkcję;
-  tooltip armii podaje siłę i morale cudzych jednostek; tooltip miasta jego produkcję;
-  tooltip złoża — które miasto zaopatruje. Osobno tooltip punktów ruchu jest już
-  ograniczony do własnych jednostek (bo to informacja ulotna i niewyliczalna z planszy,
-  w odróżnieniu od reszty, którą da się policzyć z widocznego stanu).
+  informacji i **każde miejsce decyduje samo za siebie**: panel boczny (`ui.js`) pokazuje
+  dla wszystkich graczy liczbę miast, złóż, łączną siłę i produkcję; tooltip armii — siłę
+  i morale cudzych jednostek; tooltip miasta — produkcję; tooltip złoża — zaopatrywane
+  miasto. Wyjątkiem jest tooltip punktów ruchu, ograniczony już do własnych jednostek: to
+  informacja ulotna i niewyliczalna z planszy, w odróżnieniu od reszty.
 
-  Wprowadzenie mgły wymaga więc **jednego wspólnego predykatu** („czy gracz widzi
-  szczegóły tego pola/gracza") użytego przez wszystkie te miejsca. Inaczej logika
-  ujawniania rozlezie się po `input.js` i `ui.js`, i któreś miejsce na pewno zostanie
-  pominięte — co jest gorsze niż brak mgły, bo tworzy wyciek informacji trudny do
-  zauważenia.
+  Mgła wymaga więc **jednego wspólnego predykatu** („czy gracz widzi szczegóły tego
+  pola/gracza") użytego przez wszystkie te miejsca. Inaczej logika ujawniania rozlezie się
+  po `input.js` i `ui.js` i któreś miejsce zostanie pominięte — gorzej niż brak mgły, bo
+  to wyciek informacji trudny do zauważenia.
 - 🟡 **Okopanie / fortyfikacje** — jednostka stojąca kilka tur w miejscu dostaje bonus
   obronny; miasta mogłyby mieć poziomy umocnień.
 - 🟡 **Typy terenu (koszt ruchu + modyfikatory walki)** — wzgórza/las = +obrona i droższe
@@ -151,43 +146,33 @@ nie tutaj.
 
 ## Tryby i AI
 
-- ✅ **AI słabo domyka wygrane pozycje (stalemate)** — **zrealizowane w dwóch
-  iteracjach** (v0.2.2 + v0.2.3): remisy w serii referencyjnej 300 gier `normal` vs
-  `normal` spadły z **40,0% do ~7%** (iteracja 1: eskalacja+oblężenie → 24,7%;
-  iteracja 1.1: ekonomia — zbieranie niczyich miast i podział ról wg siły → ~7%),
-  mediana długości z ~348 do ~122 rund, drabinka trudności i balans stron
-  nienaruszone. Mechanizm (bezstanowy, w `aiPickMove`,
-  opisany w [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md)): eskalacja
-  progów ataku bramkowana przewagą materialną + stolica-cel z polem BFS po lądzie +
-  szturm falowy ze strefą zborną (zamiast karmienia obrońców pojedynczo dowożonymi
-  armiami) + premia szturmowa na obrońców blokujących dojście. Bonusy obronne miast
-  celowo nietknięte (decyzja projektowa: trudno wykończyć gracza = feature).
+- ✅ **AI słabo domyka wygrane pozycje (stalemate)** — **zrealizowane w dwóch iteracjach**
+  (v0.2.2 + v0.2.3): remisy w serii referencyjnej 300 gier `normal` vs `normal` spadły
+  z **40,0% do ~7%** (iteracja 1: eskalacja+oblężenie → 24,7%; iteracja 1.1: ekonomia —
+  zbieranie niczyich miast i podział ról wg siły → ~7%), mediana długości z ~348 do ~122
+  rund, drabinka trudności i balans stron nienaruszone. Mechanizm jest bezstanowy, siedzi
+  w `aiPickMove` i stoi opisany w
+  [06-Sztuczna-inteligencja.md](06-Sztuczna-inteligencja.md). Bonusy obronne miast celowo
+  nietknięte (decyzja projektowa: trudno wykończyć gracza = feature).
 
-  Pozostałe ~7% remisów to głębsze przypadki (twierdze w ciasnych przesmykach,
-  wzajemne rajdy na stolice) — ewentualna kolejna iteracja wymagałaby prawdopodobnie
-  planu trzymanego między turami (`aiPlan`) albo desantów morskich (niżej); pomiar
-  wykluczył korelację z udziałem wody na mapie jako główną przyczyną.
+  Pozostałe ~7% remisów to głębsze przypadki (twierdze w ciasnych przesmykach, wzajemne
+  rajdy na stolice) — kolejna iteracja wymagałaby prawdopodobnie planu trzymanego między
+  turami (`aiPlan`) albo desantów morskich (niżej); pomiar wykluczył udział wody na mapie
+  jako główną przyczynę.
 - 🟡 **Scenariusze / mapy z celami** — inne warunki zwycięstwa niż eliminacja (utrzymaj
   X tur, zdobądź konkretne miasto). Nadbudowa nad istniejącym generatorem i seedem.
 - 🔴 **Dyplomacja (multi / AI)** — sojusze, zawieszenie broni, wspólny wróg.
 - ✅ **Tryb kooperacyjny (drużyny) + tryb bossa** — **zrealizowane** (v0.7.0). Ludzie
   i/lub boty w stałym sojuszu przeciw wspólnemu wrogowi; skład partii ustawia **tabela
   slotów** w lobby wieloosobowym (obsada `człowiek / bot / boss / zamknięty` + drużyna,
-  wzorem potyczki z serii Command & Conquer).
+  wzorem potyczki z serii Command & Conquer). Pełny opis mechanizmu:
+  [02-Architektura-i-pliki.md](02-Architektura-i-pliki.md#sloty-drużyny-i-boss).
 
   **Kluczowa decyzja: boss nie jest osobnym trybem gry, tylko obsadą slotu.** To, co
   wyglądało na „dwa tryby do sklejenia" (co-op przeciw botom vs co-op przeciw bossowi),
-  okazało się jedną tabelą i trzema przyciskami szybkiego układu. Dzięki temu nie ma
-  ani osobnych ekranów, ani pola `enemyKind` w stanie, które mogłoby rozjechać się
-  z faktycznym składem — jest jedno źródło prawdy. Opis:
-  [02-Architektura-i-pliki.md](02-Architektura-i-pliki.md#sloty-drużyny-i-boss).
-
-  Zrobione: drużyna w stanie gracza (`sameTeam`/`teamHasAlive` w `state.js`), brak
-  friendly-fire i zajmowania pól sojusznika (`blockedByFriendly` w `combat.js`,
-  `captureTile` w `empire.js`), warunek zwycięstwa liczony na drużyny (`checkGameOver`),
-  AI traktujące sojuszników jak swoich (`aiIsEnemy`/`aiIsOwnSide` w `ai.js`), boss jako
-  mnożniki `BOSS_MULT` na wybranym presecie trudności + siódmy, czarny zestaw sprite'ów,
-  `SAVE_FORMAT` 3.
+  okazało się jedną tabelą i trzema przyciskami szybkiego układu. Dzięki temu nie ma ani
+  osobnych ekranów, ani pola `enemyKind` w stanie, które mogłoby rozjechać się
+  z faktycznym składem — jest jedno źródło prawdy.
 
   Oba przewidziane haczyki bossa potwierdziły się: mnożnik produkcji **musiał** iść
   w parze z agresją (pomiar: 15% → 75% wygranych samotnika przeciw dwóm botom Normal),
@@ -195,8 +180,8 @@ nie tutaj.
   premia jest umiarkowana (×1,6), a nie ×3.
 
   Zostało poza zakresem: drużyny w lobby single-player (dziś FFA), współdzielona
-  infrastruktura drużyny (morale/drogi/złoża) i łączenie armii sojuszników — patrz
-  pozycja o dyplomacji wyżej.
+  infrastruktura drużyny (morale/złoża — drogi już są wspólne) i łączenie armii
+  sojuszników — patrz pozycja o dyplomacji wyżej.
 - 🟡 **Osobowości AI** — agresywny / obronny / ekspansywny zamiast samego skalowania
   liczb w `AI_DIFFICULTY_PRESETS`.
 - 🟢 **AI realnie budujące drogi** — obserwacja z rozgrywek, potwierdzona w kodzie:
@@ -296,7 +281,7 @@ poprawki grafiki to zmiany w generatorze + regeneracja + commit PNG-ów (patrz
   drodze, płynne przesuwanie jednostek między heksami zamiast skoku. Nadbudowa nad
   istniejącym systemem `effects`/`floaters`.
 - 🟢 **Animacje jako opcja (wydajność / dostępność)** — przełącznik „animacje: wł/wył”
-  (a najlepiej moduł w [systemie modułów](#system-modułów-customizacja-rozgrywki)),
+  (a najlepiej pozycja w rozbudowanym ekranie Opcji),
   z pełnym fallbackiem na wersję statyczną. Ważne dla słabszego sprzętu, redukcji
   ruchu (dostępność) i szybkich symulacji AI-vs-AI, gdzie render i tak jest zbędny.
 
@@ -463,6 +448,7 @@ razem ze stanem gry — inaczej wczytana partia mogłaby zmienić reguły w loci
    (bramką fali 0 jest co-op hot-seat). Sekwencja w
    [11-Early-Access.md](11-Early-Access.md#cel-potwierdzony-multiplayer-sieciowy-na-steam).
 
-Zasada przekrojowa: im więcej z powyższych systemów, tym większa wartość **systemu
-modułów** — warto wprowadzić go, zanim dołoży się drugi–trzeci opcjonalny system, żeby
-każdy kolejny pisać od razu jako włączalny/wyłączalny, a nie przerabiać wstecz.
+Zasada przekrojowa: im więcej z powyższych systemów, tym większa wartość **podziału na
+tryb prosty i złożony** — warto wprowadzić bramkującą flagę, zanim dołoży się drugi–trzeci
+opcjonalny system, żeby każdy kolejny pisać od razu jako włączalny/wyłączalny, a nie
+przerabiać wstecz.

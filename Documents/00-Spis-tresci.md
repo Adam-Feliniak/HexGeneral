@@ -2,7 +2,7 @@
 
 Turowa strategia heksagonalna 2D w klimacie pixel-art *Metal Slug*, napisana w czystym JavaScript i renderowana na `<canvas>`. Zero zależności, zero buildu — gra otwiera się bezpośrednio z pliku (`file://index.html`).
 
-Ten folder zawiera pełną, wyczerpującą dokumentację projektu, wygenerowaną na podstawie faktycznego stanu kodu (nie planów czy założeń). Każdy plik opisuje jeden obszar gry.
+Każdy plik opisuje jeden obszar gry, na podstawie faktycznego stanu kodu — nie planów ani założeń.
 
 ## Spis treści
 

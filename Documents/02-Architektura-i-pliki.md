@@ -139,7 +139,9 @@ jest to, że stolica sojusznika nie może paść z naszej ręki). Drużyna **dzi
 liczą się per gracz, a **zaopatrzenie jest jawnie wyłączone ze współdzielenia**:
 `connectedCities()` chodzi wyłącznie po polach `owner === playerId`, więc złoże
 sojusznika nie zasili twojego miasta (dzielimy przejezdność, nie dochody). Koniec gry
-liczy `checkGameOver()` na **drużyny**, nie na pojedyncze imperia.
+liczy `checkGameOver()` na **drużyny**, nie na pojedyncze imperia — a porażkę w trybie
+single `teamHasAlive()`, więc upadek imperium człowieka nie kończy partii, dopóki żyje
+jego sojusznik.
 
 Liczba imperiów jest ograniczona do `MAX_PLAYERS = 6` (tyle jest pozycji w `CAPITAL_SPOTS`);
 boss **zajmuje** slot, a nie dokłada siódmego imperium. Rozstawienie stolic w grze

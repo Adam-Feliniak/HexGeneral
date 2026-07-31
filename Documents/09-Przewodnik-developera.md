@@ -71,7 +71,7 @@ Ponieważ nie ma modułów, nowa funkcja w dowolnym `src/*.js` jest natychmiast 
 
 ## Weryfikacja bez przeglądarki (headless Node)
 
-Repo **nigdy nie miało formalnych testów jednostkowych** i nie ma żadnego frameworka testowego. Zamiast tego, pliki `src/*.js` mają wbudowane osłony `typeof document === 'undefined'`, co pozwala uruchomić samą logikę gry (bez rysowania) w zwykłym Node.js przez `vm.createContext` — przydatne np. do weryfikacji zmian w mechanice walki/ruchu albo do symulacji AI-vs-AI sprawdzającej, że nic nie rzuca wyjątkiem.
+Repo **nigdy nie miało formalnych testów jednostkowych** ani frameworka testowego. Zamiast tego `src/*.js` mają osłony `typeof document === 'undefined'`, co pozwala uruchomić samą logikę gry (bez rysowania) w zwykłym Node.js przez `vm.createContext` — przydatne do weryfikacji zmian w mechanice walki/ruchu albo do symulacji AI-vs-AI sprawdzającej, że nic nie rzuca wyjątkiem.
 
 Szkielet takiego harnessu (użyty realnie do zweryfikowania wprowadzenia typów jednostek):
 
@@ -95,7 +95,7 @@ run("newGame({ humanCount: 1, botCount: 3, aiDifficulty: 'normal', seed: 12345, 
 console.log(run('state.players.length'));   // odczyt stanu przez kolejne wywołania run()
 ```
 
-Uwaga praktyczna: `newGame(opts)` przyjmuje **obiekt opcji** (`{ humanCount, botCount, aiDifficulty, seed, timeLimit }`), nie argumenty pozycyjne — i nic nie zwraca, tylko nadpisuje globalną zmienną `state`.
+`newGame(opts)` przyjmuje **obiekt opcji** (`{ slots, humanCount, botCount, aiDifficulty, seed, timeLimit }`), nie argumenty pozycyjne.
 
 `humanCount`/`botCount` układają partię **FFA** (każdy w swojej drużynie) i pozostają wspierane właśnie po to, żeby harnessy i `tools/sim.js` nie musiały wiedzieć o slotach. Do sprawdzenia drużyn albo bossa podaje się zamiast tego `slots`:
 
@@ -236,7 +236,7 @@ Trzeci harness, bo dwa poprzednie **nie dotykają drużyn**: `sim.js` gra wyłą
 człowieka. Ten sprawdza inwarianty, które weszły razem ze slotami:
 
 ```
-node tools/team-check.js              # ~70 sprawdzeń, kod wyjścia 1 przy błędzie
+node tools/team-check.js              # 91 sprawdzeń, kod wyjścia 1 przy błędzie
 node tools/team-check.js --games=8    # więcej pełnych partii AI-vs-AI na układ
 node tools/team-check.js --quiet      # tylko błędy i podsumowanie
 ```
@@ -309,7 +309,7 @@ obserwatora w samej grze** (lobby single → „Oglądam") z regulacją tempa AI
 
 ## Weryfikacja UI/wizualna
 
-Projekt jest czystym HTML/CSS/JS otwieranym z `file://` — nie ma zainstalowanego narzędzia do automatycznego sterowania przeglądarką (typu Playwright/`chromium-cli`) w standardowym środowisku roboczym tego repo. Zmiany w layoucie/CSS/renderowaniu canvasu należy sprawdzać **ręcznie**, otwierając `index.html` w przeglądarce po każdej zmianie (i robiąc **hard refresh**, `Ctrl+F5`, jeśli zmiana w `style.css` pozornie "nie działa" — przeglądarki potrafią agresywnie cache'ować lokalne pliki). Do regresji renderu na wielu partiach naraz — `visual-test.html` (wyżej).
+W standardowym środowisku tego repo nie ma narzędzia do automatycznego sterowania przeglądarką (typu Playwright/`chromium-cli`). Zmiany w layoucie/CSS/renderze canvasu sprawdza się **ręcznie**, otwierając `index.html` po każdej zmianie — z **hard refreshem** (`Ctrl+F5`), jeśli zmiana w `style.css` pozornie „nie działa": przeglądarki agresywnie cache'ują pliki lokalne. Do regresji renderu na wielu partiach naraz — `visual-test.html` (wyżej).
 
 ## Znane charakterystyki
 
