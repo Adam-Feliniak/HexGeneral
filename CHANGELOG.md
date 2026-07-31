@@ -2,7 +2,7 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
-## [0.7.0] - 2026-07-30
+## [0.7.0] - 2026-07-31
 
 - **Tryb kooperacyjny (drużyny).** Dwoje ludzi może wreszcie zagrać po **tej samej
   stronie** przeciw botom. Do tej pory hot-seat z definicji stawiał obie osoby przy
