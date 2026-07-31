@@ -26,12 +26,14 @@ kliknięciu. Te same dźwięki jako pliki WAV to **270 KB**, a 30-sekundowa pęt
 
 | Warstwa | Gdzie | Uwagi |
 |---|---|---|
-| Primitywy DSP | `src/audio.js` | oscylator (kwadrat/piła/trójkąt/sinus), szum z filtrem dolnoprzepustowym, obwiednie, ustawienie poziomu na RMS z sufitem szczytu i wygaszeniem ogona |
+| Primitywy DSP | `src/audio.js` | oscylator (kwadrat/piła/trójkąt/sinus), szum z filtrem dolnoprzepustowym, **filtr rezonansowy z przemiataniem** (`svfSweep`), **nasycenie** (`saturate`), **uderzenie o geometrycznie opadającej wysokości** (`addThump`), **pogłos Schroedera** (`reverbTail`), obwiednie, ustawienie poziomu na RMS z blokadą składowej stałej, sufitem szczytu i wygaszeniem ogona |
 | Przepisy dźwięków | `SFX_RECIPES` w `src/audio.js` | jedna czysta funkcja `(rate) => Float32Array` na dźwięk |
 | Partytury muzyki | `MUSIC_TRACKS` w `src/audio.js` | tabela nut `[ćwierćnuta, długość, MIDI, instrument]` |
-| Odtwarzanie | `src/audio.js` | `AudioBuffer` dla SFX, oscylatory dla muzyki, throttling, głośności |
-| Podsłuch / strojenie | `tools/gen-sounds.js` | renderuje przepisy do WAV-ów w `dist/sfx/` — **gra ich nie wczytuje** |
+| Synteza muzyki | `renderMusicLoop()` w `src/audio.js` | czysta funkcja `(rate) => Float32Array`; głosy FM, subtraktywne i perkusyjne, szyna z nasyceniem i pogłosem |
+| Odtwarzanie | `src/audio.js` | `AudioBuffer` dla SFX **i dla muzyki** (pętla jako `BufferSource` z `loop = true`), throttling, głośności |
+| Podsłuch / strojenie | `tools/gen-sounds.js` | renderuje przepisy do WAV-ów w `dist/sfx/`, a pętle muzyki do `dist/music/` (`--music`) — **gra ich nie wczytuje** |
 | Pomiar / audyt | `tools/audit-sounds.js` | szczyt, RMS, crest, atak, centroida widmowa + przebiegi PNG w `dist/audit/`; `--save=`/`--diff=` porównuje stan przed i po zmianie |
+| Ścieżka odtwarzania | `tools/audio-check.js` | atrapa Web Audio: leniwy render pętli, zmiana ekranu, wyścig przy szybkiej zmianie, koniec gry → nowa partia |
 
 ## Miks: dlaczego poziom jest ustawiany na RMS, a nie na szczycie
 
@@ -51,10 +53,67 @@ poziomy są tabelą miksu: interfejs najniżej, ruch nad nim, walka wyżej, zdar
 (zdobycie, aneksja, koniec gry) najwyżej.
 
 **Sufit szczytu jest twardy i celowo widoczny w pomiarze.** Dźwięk o dużym crest factorze
-nie zmieści się w zakresie przy dopasowaniu RMS — `explosion` ma crest ~18 dB, więc to
-szczyt, a nie wzmocnienie, ogranicza jego głośność (audyt pokazuje wtedy szczyt 0,98).
-Wniosek na przyszłość: **eksplozji nie da się podgłośnić gainem** — trzeba zmniejszyć
-crest factor, czyli dodać saturację. To pierwsza pozycja iteracji 2, nie polerka.
+nie zmieści się w zakresie przy dopasowaniu RMS — `explosion` miał crest ~18 dB, więc to
+szczyt, a nie wzmocnienie, ograniczał jego głośność (audyt pokazywał wtedy szczyt 0,98).
+Wniosek brzmiał: **eksplozji nie da się podgłośnić gainem** — trzeba zmniejszyć crest
+factor, czyli dodać saturację.
+
+**Zrobione w 0.7.1 — i lekcja jest inna, niż wyglądała.** Po dodaniu `saturate()` crest
+`explosion` spadł z 18,0 na 9,1 dB, a szczyt odkleił się od sufitu (0,98 → 0,57). Ale
+ujawniło to rzecz, której nikt nie widział: **poziomy w tabeli miksu były życzeniami,
+a nie ustawieniami**. `explosion` i `shot` prosiły o `level = 0,30` i nigdy go nie
+dostawały, bo sufit szczytu ucinał wzmocnienie wcześniej. Gdy cel wreszcie stał się
+osiągalny, oba skoczyły o 6-8 dB i rozpiętość miksu urosła z 10,6 na 15,6 dB — czyli
+poprawka jednego dźwięku zepsuła balans wszystkich. Poziomy trzeba było przestroić do
+świata, w którym działają (`explosion` 0,30 → 0,20, `shot` 0,30 → 0,16; dziś −14,0
+i −15,9 dB przy rozpiętości 12,0 dB).
+
+> **Reguła na przyszłość:** poziom w `finishBuffer` mówi, o co dźwięk *prosi*, a nie co
+> *dostaje*. Zawsze sprawdzaj kolumnę `miks:RMS` w audycie — jeśli `miks:szczyt` stoi
+> na −0,2 dB, poziom nie został osiągnięty i liczba w przepisie jest fikcją.
+
+**Blokada składowej stałej** siedzi teraz na wejściu `finishBuffer()`. Filtrowanie szumu
+do bardzo niskich częstotliwości zostawia powolne błądzenie wokół zera, a grzebienie
+pogłosu mają przy zerze wzmocnienie `1/(1-g)` i jeszcze je podbijają — przy wybuchu dawało
+to offset 0,018 zamiast 0,001. Słyszalne to nie jest, ale zjada zapas przed szczytem,
+czyli wprost obniża głośność, którą da się wycisnąć.
+
+## Wybuch: cztery warstwy i dlaczego kolejność ma znaczenie
+
+`explosion` składa się z warstw odpowiadających za różne wrażenia, a nie z jednego gestu:
+
+| Warstwa | Co robi | Czym jest |
+|---|---|---|
+| korpus | sam huk | szum przez filtr rezonansowy zjeżdżający 2200 → 85 Hz |
+| sub | uderzenie w klatkę piersiową | `addThump` 115 → 30 Hz, geometrycznie |
+| rumor | osypujące się szczątki, echo terenu | szum dolnoprzepustowy, długi zanik |
+| trzask | „blisko", czytelność zdarzenia | krótki szum 4500 → 1500 Hz, 40 ms |
+
+**Pogłos idzie po warstwach niskich, ale przed trzaskiem.** Fizycznie trzask dociera
+bezpośrednio, a odbija się dudnienie. Odwrotna kolejność (pogłos na gotowej całości)
+rozsmarowuje wysokie pasmo trzasku na cały ogon i wybuch robi się jasny. Tak samo
+**saturacja idzie przed trzaskiem**: dokłada harmoniczne, więc podnosi jasność tym
+mocniej, im jaśniejszy materiał dostanie.
+
+Wynik pomiaru, stary kontra nowy (tą samą, naprawioną miarą — patrz niżej):
+
+| | centroida | crest | szczyt | miks:RMS |
+|---|---|---|---|---|
+| przed | 5058 Hz | 18,0 dB | 0,98 (przy suficie) | −18,2 dB |
+| po | **1519 Hz** | 9,1 dB | 0,57 | −14,0 dB |
+
+## Pułapka pomiaru: centroida liczyła się z samego ataku
+
+`spectralCentroid()` w `audit-sounds.js` brał **pierwsze 4096 próbek**, czyli 186 ms przy
+22 kHz — a kolumna nazywała się po prostu „centroida". Przy krótkich dźwiękach to bez
+różnicy, ale przy wybuchu (1,25 s) cały ciemny ogon, sub i pogłos **nie były w ogóle
+mierzone**. Skutek praktyczny: strojenie ogona pod tę liczbę nie mogło jej ruszyć, a odczyt
+sugerował, że dźwięk jest jasny, choć jasny był tylko jego początek — i kusił, żeby
+przytłumić coś, co wcale nie było problemem. Dziś liczy się średnia z ramek po całym
+dźwięku, ważona energią ramki.
+
+Morał ogólniejszy niż ten jeden bug: **przy strojeniu na liczby sprawdź, co liczba mierzy,
+zanim zaczniesz pod nią stroić.** Inaczej optymalizujesz przyrząd, a nie dźwięk.
 
 ## Wariancja przy odtwarzaniu
 
@@ -82,6 +141,119 @@ Przydatne flagi: `--rate=44100` (podgląd w wyższej jakości), `--out=ścieżka
 
 `dist/` jest w `.gitignore`, więc pliki podglądowe nie trafiają do repo. To odwrotnie niż
 przy sprite'ach, gdzie PNG-i **są** commitowane — bo tam runtime ich potrzebuje.
+
+## Muzyka: silnik i architektura
+
+**Muzyka jest renderowana do bufora, nie grana na żywo.** To zmiana z 0.7.1 i ma dwa
+niezależne powody.
+
+Pierwszy jest architektoniczny. Dopóki pętlę grał graf węzłów Web Audio,
+`tools/gen-sounds.js` musiał zawierać **drugą implementację syntezy**, żeby dało się
+jej posłuchać poza przeglądarką — a dwie implementacje rozjeżdżają się po cichu.
+Dziś muzyka to `renderMusicLoop()`: czysta funkcja `(rate) => Float32Array`, tak samo
+jak przepisy SFX. Gra odtwarza jej wynik jako `AudioBufferSourceNode` z `loop = true`,
+a narzędzie zapisuje ten sam wynik do WAV-a. **Nie ma czego synchronizować.**
+
+Drugi powód jest brzmieniowy i ważniejszy. Granie na żywo ogranicza syntezę do tego,
+co da się policzyć w czasie rzeczywistym grafem węzłów — czyli w praktyce do kilku
+oscylatorów. Offline sufit znika: pętla liczy się raz, kilkaset milisekund, i może
+zawierać dowolnie kosztowną syntezę.
+
+### Co gra zamiast trzech fal
+
+Do 0.6.x wszystkie partie grały na `triangle`, `square` i `noise` z jedną obwiednią —
+czyli na zestawie NES-a, i to on odpowiadał za odbiór „muzyka 8-bitowa", a nie
+kompozycja. Dziś:
+
+| Instrument | Synteza | Po co |
+|---|---|---|
+| `lead` | FM, dwa operatory, głębokość modulacji opadająca w czasie | brzmienie Neo Geo: ostre wejście, miękkie podtrzymanie — filtrem się tego nie uzyska |
+| `bass`, `pad` | subtraktywna: rozstrojone piły przez filtr rezonansowy z obwiednią | rozstrojenie daje grubość, obwiednia filtra daje „ruch" |
+| `kick`, `snare`, `hat` | osobne przepisy perkusyjne | stary silnik miał JEDEN dźwięk perkusyjny na każde uderzenie, czyli metronom, nie rytm |
+
+Tonacja **została ta sama** — E frygijska. Diagnoza z fali 0 („brzmi jak dla dzieci")
+dotyczyła syntezy i rytmu, nie materiału wysokościowego: półton E-F na początku skali
+to najciemniejszy interwał dostępny bez wychodzenia poza diatonikę. Zmieniło się to,
+co faktycznie odpowiadało za wrażenie: barwa, rejestr i rozbicie rytmu oom-pah
+(bas i perkusja na zmianę co bit, przez całą pętlę, bez ani jednej pauzy).
+
+### Bezszwowość: jedyna rzecz, którą łatwo tu zepsuć
+
+Bufor ma długość **dokładnie jednej pętli**, więc ogon nuty zaczętej pod koniec musi
+wrócić na początek — `renderMusicLoop` dopisuje głosy modulo długość bufora. Bez tego
+w miejscu szwu powstaje dziura i pętla klika przy każdym obiegu.
+
+Dwie pułapki, obie wykryte pomiarem, nie słuchem:
+
+- **Efekt ze stanem (pogłos) puszczony wprost na bufor pętli łamie szew** — zaczyna od
+  ciszy i urywa się na końcu. Rozwiązanie w `musicLoopReverb()`: przepuścić sygnał dwa
+  razy pod rząd i wziąć drugi przebieg, czyli stan ustalony.
+- **Nie wolno wygaszać ogona** tak, jak robi to `finishBuffer()` dla SFX — tam wygaszenie
+  usuwa trzask na końcu bufora, tu zrobiłoby dziurę przy każdym obiegu. Dlatego pętla ma
+  własną normalizację (`musicNormalize`) bez fade-outu.
+
+Jest jeszcze subtelność, która potrafi zmylić przy każdym porównaniu z modelem: bufor
+musi mieć **całkowitą liczbę próbek**, a 32 bity przy 132 bpm nie wypadają równo.
+Zaokrąglenie znaczy, że pętla gra o ułamek promila wolniej niż nominalne bpm —
+niesłyszalne, ale każdy model liczący pozycje nut z czasu (a nie z długości bufora)
+będzie się z nią rozjeżdżał o ułamek próbki na obieg.
+
+`node tools/gen-sounds.js --selftest` sprawdza szew liczbowo: porównuje skok na styku
+z rozkładem skoków wewnątrz pętli. Przy obecnej partyturze szew to ~30% największego
+skoku w utworze i jest **statystycznie nieodróżnialny od każdego innego wejścia stopy** —
+czyli transjent perkusji, a nie nieciągłość.
+
+### Ścieżka odtwarzania ma własny test i to nie jest nadgorliwość
+
+Synteza jest czysta i sprawdza ją `--selftest`, ale **odtwarzanie** (leniwy render, zmiana
+pętli, zatrzymanie na końcu gry) dotyka Web Audio, więc nie łapie go żaden headless
+harness. `node tools/audio-check.js` uruchamia je na atrapie kontekstu.
+
+Test powstał, bo wersja pierwsza miała realny błąd: przy szybkiej zmianie ekranu
+(menu → gra, zanim odłożony render menu zdążył ruszyć) flaga „render w toku" blokowała
+zlecenie renderu nowej pętli, a zadanie startowe porzucało ją, bo `musicWanted` już się
+zmienił. Efekt: **muzyka nie startowała w ogóle** — i to w scenariuszu, który gracz robi
+przy każdym wejściu do partii.
+
+### Poziom pętli: ta sama pułapka co przy SFX
+
+`level` w partyturze mówi, o jaki RMS pętla *prosi*. Jeśli crest jest wysoki, wcześniej
+zadziała sufit szczytu i zadany poziom pozostanie fikcją — dokładnie tak, jak było
+z `explosion`. Sprawdzian jest ten sam: jeśli szczyt stoi równo na 0,95, to poziom
+**nie** został osiągnięty. Dlatego `game` ma `drive: 2.0` (dopiero przy tym nasyceniu
+crest spada na tyle, że pętla dobija do `level: 0.20`), a `menu` — rzadkie i o wysokim
+creście — ma jawnie niższy `level: 0.11`, bo 0,20 jest dla niego nieosiągalne nawet
+przy mocnym nasyceniu.
+
+### Koszt i kiedy się liczy
+
+| | czas renderu | pamięć |
+|---|---|---|
+| pętla `game` (178 nut, 48 kHz) | ~440 ms | 2,8 MB |
+| pętla `menu` (30 nut, 48 kHz) | ~300 ms | 3,8 MB |
+
+Render idzie **raz na sesję i jest odłożony poza obsługę kliknięcia** (`setTimeout` 0
+w `musicPlaybackStart`): pierwszy gest użytkownika i tak uruchamia syntezę wszystkich
+SFX, a doliczenie do tego pętli zamroziłoby reakcję na przycisk na pół sekundy.
+
+Dwie optymalizacje, bez których to nie miałoby sensu (zmierzone: 2650 ms → 440 ms):
+
+- **tablice falowe na pasmo oktawowe, nie na wysokość** — inaczej koszt rośnie z liczbą
+  różnych nut w utworze, czyli dokładnie tam, gdzie gęsta aranżacja uderza najmocniej;
+- **rekurencje zamiast funkcji przestępnych w pętli próbek** — `Math.exp` na obwiednię
+  i `Math.tan` na współczynniki filtra były głównym kosztem. Obwiednia liczy się raz na
+  nutę i jest współdzielona przez oscylator i filtr, a współczynniki filtra przeliczają
+  się co 32 próbki (obwiednia zmienia się o rzędy wielkości wolniej).
+
+### Porównywanie wariantów bez ruszania gry
+
+```
+node tools/gen-sounds.js --music --tracks=<plik.js>
+```
+
+Plik jest zwykłym modułem CommonJS eksportującym `MUSIC_TRACKS` (opcjonalnie też
+`MUSIC_INSTRUMENTS`) — **tymi samymi nazwami co w grze**, więc zwycięski wariant
+przenosi się do `src/audio.js` kopiuj-wklej.
 
 ## Inwentarz dźwięków
 
@@ -138,24 +310,34 @@ brzmienia per typ jednostki, zaokrętowanie i desant, ukończenie drogi, produkc
 ostrzeżenie timera tury w multi. Wszystkie sprowadzają się do dopisania przepisu i jednego
 wywołania.
 
-**Jakość brzmienia — pozycje wskazane przez pomiar, nie przez wrażenie.** Odczyty
-z `tools/audit-sounds.js`, każda z konkretną liczbą:
+**Jakość brzmienia dźwięków bojowych — ZROBIONE w 0.7.1.** Cztery pozycje wskazane
+pomiarem zostały zamknięte: filtr rezonansowy zamiast jednobiegunowego (`svfSweep`),
+saturacja (`saturate`), pogłos (`reverbTail`) i wypełniony ogon wybuchu. Wyniki i trzy
+pułapki, które przy okazji wyszły, opisuje sekcja *Wybuch: cztery warstwy* wyżej.
 
-- **Filtr jest za łagodny — stąd syk zamiast dudnienia.** `addNoise()` używa filtru
-  jednobiegunowego (6 dB/okt), więc szum zostaje jasny mimo przemiatania w dół.
-  Centroida widmowa `explosion` to **5150 Hz**, a `move` (rumor silnika) **3886 Hz** —
-  obie o rząd za wysoko jak na dźwięki, które mają „buchać". Kaskada dwóch biegunów
-  albo filtr rezonansowy to kilka linii w jednym primitywie.
-- **Saturacja dla eksplozji.** Jak wyżej: przy creście ~18 dB głośność jest ograniczona
-  szczytem, więc gain nic nie da.
-- **Pogłos.** Wszystko jest całkowicie suche. **Uwaga: nie trzeba go pisać ręcznie** —
-  Web Audio ma natywnie `ConvolverNode`, `BiquadFilterNode` i `DynamicsCompressorNode`,
-  a impuls do pogłosu da się zsyntetyzować (szum z wykładniczym zanikiem). Zero plików,
-  zero problemu licencyjnego, działa na `file://`.
-- **Ogon `explosion` jest pusty.** Bufor ma 0,7 s, a sygnał wygasa praktycznie po ~0,45 s
-  (widać na `dist/audit/explosion.png`).
+> **Jedna rada z pierwotnej listy była pułapką i została wycofana:** „nie trzeba pisać
+> pogłosu ręcznie, Web Audio ma `ConvolverNode`, `BiquadFilterNode`
+> i `DynamicsCompressorNode". Ma — ale przepisy w `SFX_RECIPES` są **czystymi funkcjami
+> `(rate) => Float32Array`** i na tym stoją zarówno `gen-sounds.js`, jak i `audit-sounds.js`.
+> Przejście na graf węzłów zabrałoby możliwość wyrenderowania i zmierzenia dźwięku poza
+> przeglądarką, czyli cały aparat, który pozwolił znaleźć te problemy liczbami. Filtry
+> i pogłos są więc napisane jako arytmetyka — to kilkadziesiąt linii i zachowuje czystość.
 
-**Muzyka.** `perc` to jeden timbre na równym rastrze co pół taktu — czyli metronom, nie
-rytm (brak rozdziału stopa/werbel/hat). Między basem a leadem nie ma trzeciego głosu,
-a `bass` ma gain 0,5 przy `lead` 0,16, więc bas przykrywa melodię. Jeden 32-beatowy wzór
-powtarzany identycznie — sekcja B podwoiłaby odczuwalną długość niemal za darmo.
+**Muzyka — w większości ZROBIONE w 0.7.1.** Z pierwotnej listy zamknięte zostały: rozdział
+perkusji na stopę, werbel i hi-hat (był jeden timbre na równym rastrze, czyli metronom),
+trzeci głos między basem a leadem (`pad`) i proporcje głośności (bas przykrywał melodię).
+Sam silnik przeszedł z trzech fal na FM plus syntezę subtraktywną — opis w sekcji
+*Muzyka: silnik i architektura*.
+
+Co zostaje:
+
+- **Sekcja B.** Dalej jest jeden 32-bitowy wzór powtarzany identycznie; druga sekcja
+  podwoiłaby odczuwalną długość niemal za darmo, bo renderer i tak liczy pętlę raz.
+- **Głos lektora** („mission start" i pokrewne). To jedyna pozycja, której **nie da się
+  domknąć syntezą** — mowa formantowa brzmi jak robot, a nie jak lektor z automatu.
+  Wymaga decyzji, czy wchodzą próbki (base64 w pliku `.js`, ~70 KB), czy robotyczny
+  komunikat zostaje świadomym stylem. Patrz `TODO-0.7.1.md`.
+- **Nadpróbkowanie stopni nieliniowych.** FM przy dużym indeksie modulacji i nasycenie
+  generują składowe powyżej Nyquista, które zawijają się w pasmo. Dziś indeksy są
+  na tyle małe, że nie jest to słyszalne — ale przy jaśniejszych barwach będzie,
+  i wtedy trzeba liczyć te stopnie w 2× i decymować.

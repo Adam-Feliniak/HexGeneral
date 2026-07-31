@@ -77,6 +77,100 @@ function addNoise(buf, rate, at, dur, amp, decay, lp0, lp1, rng) {
   }
 }
 
+/* Filtr stanowy (SVF) w topologii ZDF — w odróżnieniu od jednobiegunowego filtra
+   wbudowanego w addNoise() ma REZONANS (Q) i strome zbocze. Rezonans jest tu całym
+   sensem: to on robi z płaskiego szumu „ciało" o rozpoznawalnej wysokości, czyli
+   różnicę między sykiem a hukiem.
+
+   Przemiatanie jest GEOMETRYCZNE (f0 · (f1/f0)^u), a nie liniowe jak w addNoise():
+   ucho słyszy wysokość logarytmicznie, więc zjazd 4000 → 120 Hz liniowo spędza
+   większość czasu w górnej oktawie i brzmi jak nagłe ucięcie zamiast opadania.
+
+   Topologia zero-delay feedback (Zavalishin) zamiast klasycznego Chamberlina, bo
+   ten drugi rozjeżdża się przy wysokich częstotliwościach odcięcia — a tu filtr
+   startuje wysoko i zjeżdża w dół, czyli dokładnie tam, gdzie by się wywalił. */
+function svfSweep(buf, rate, kind, at, dur, f0, f1, q) {
+  const start = Math.floor(at * rate), n = Math.floor(dur * rate);
+  const k = 1 / Math.max(0.5, q);
+  let ic1 = 0, ic2 = 0;
+  for (let i = 0; i < n; i++) {
+    const idx = start + i;
+    if (idx >= buf.length) break;
+    const fc = Math.min(rate * 0.45, Math.max(10, f0 * Math.pow(f1 / f0, i / n)));
+    const g = Math.tan(Math.PI * fc / rate);
+    const a1 = 1 / (1 + g * (g + k)), a2 = g * a1, a3 = g * a2;
+    const x = buf[idx];
+    const v3 = x - ic2;
+    const v1 = a1 * ic1 + a2 * v3;
+    const v2 = ic2 + a2 * ic1 + a3 * v3;
+    ic1 = 2 * v1 - ic1;
+    ic2 = 2 * v2 - ic2;
+    buf[idx] = kind === 'hp' ? (x - k * v1 - v2) : kind === 'bp' ? v1 : v2;
+  }
+}
+
+/* Miękkie nasycenie (tanh). Dwie rzeczy naraz, obie potrzebne przy wybuchu:
+   zbija crest factor — czyli `finishBuffer` może podnieść RMS, zanim uderzy
+   w sufit szczytu (patrz komentarz niżej) — i dokłada harmoniczne, przez co
+   dźwięk czyta się jako GŁOŚNY, a nie tylko wysoko wysterowany. Normalizacja
+   przez tanh(drive) trzyma wejście 1.0 przy wyjściu 1.0. */
+function saturate(buf, drive, at, dur, rate) {
+  const start = at === undefined ? 0 : Math.floor(at * rate);
+  const end = dur === undefined ? buf.length : Math.min(buf.length, start + Math.floor(dur * rate));
+  const norm = Math.tanh(drive);
+  for (let i = start; i < end; i++) buf[i] = Math.tanh(buf[i] * drive) / norm;
+}
+
+/* Uderzenie: ton z GEOMETRYCZNYM opadaniem wysokości. addTone() przemiata liniowo,
+   co brzmi jak zjazd syreny; membrana czy słup powietrza po uderzeniu opada
+   logarytmicznie (kolejne obniżenie o oktawę zajmuje tyle samo czasu) i dopiero
+   to czyta się jako „bum". */
+function addThump(buf, rate, at, dur, f0, f1, kind, amp, decay) {
+  const start = Math.floor(at * rate), n = Math.floor(dur * rate);
+  let phase = 0;
+  for (let i = 0; i < n; i++) {
+    const k = start + i;
+    if (k >= buf.length) break;
+    const u = i / n;
+    phase += (f0 * Math.pow(f1 / f0, u)) / rate;
+    // 1 ms narastania: bez tego start od zera fazy daje słyszalny trzask,
+    // ale dłuższe zmiękczyłoby samo uderzenie
+    buf[k] += waveAt(kind, phase) * amp * Math.min(1, i / (rate * 0.001)) * Math.exp(-decay * u);
+  }
+}
+
+/* Pogłos Schroedera: 4 równoległe filtry grzebieniowe + 2 szeregowe wszechprzepustowe.
+   Po co w grze bez przestrzeni: ogon pogłosowy niesie informację o ODLEGŁOŚCI
+   i wielkości źródła. Bez niego wybuch brzmi jak zderzenie w studiu — krótko
+   i „przy uchu" — a to jest właśnie ta różnica, którą słychać jako „nierealistyczny".
+   Długości opóźnień są względnie pierwsze, żeby grzebienie nie nakładały maksimów
+   i nie robiły metalicznego dzwonienia. */
+function reverbTail(buf, rate, mix, rt60) {
+  const mk = (ms, fb) => ({
+    line: new Float32Array(Math.max(1, Math.round(ms / 1000 * rate))), i: 0,
+    g: fb === undefined ? Math.pow(10, -3 * (ms / 1000) / rt60) : fb,
+  });
+  const combs = [29.7, 37.1, 41.1, 43.7].map(ms => mk(ms));
+  const aps = [5.0, 1.7].map(ms => mk(ms, 0.7));
+  for (let i = 0; i < buf.length; i++) {
+    const x = buf[i];
+    let y = 0;
+    for (const c of combs) {
+      const d = c.line[c.i];
+      c.line[c.i] = x + d * c.g;
+      c.i = (c.i + 1) % c.line.length;
+      y += d;
+    }
+    y *= 0.25;
+    for (const a of aps) {
+      const d = a.line[a.i];
+      a.line[a.i] = y + d * a.g;
+      y = d - y;
+    }
+    buf[i] = x + y * mix;
+  }
+}
+
 /* Ustawienie poziomu na RMS (nie na szczycie) + wygaszenie ogona (bez tego bufor
    kończy się trzaskiem na nagłym odcięciu).
 
@@ -91,6 +185,20 @@ function addNoise(buf, rate, at, dur, amp, decay, lp0, lp1, rng) {
    bezpieczeństwo i to szczyt ogranicza głośność. Podniesienie takiego dźwięku
    wymaga zmniejszenia crest factora (saturacja), a nie większego wzmocnienia. */
 function finishBuffer(buf, rate, level) {
+  /* Blokada składowej stałej. Filtrowanie szumu do bardzo niskich częstotliwości
+     zostawia powolne błądzenie wokół zera, a grzebienie pogłosu mają przy zerze
+     wzmocnienie 1/(1-g), więc je jeszcze podbijają. Przy wybuchu dawało to offset
+     0,018 zamiast 0,001. Słyszalne to nie jest — ale zjada zapas przed szczytem,
+     czyli obniża głośność, którą można wycisnąć. Miejsce jest tutaj, bo to
+     zabezpieczenie miksu, a nie element brzmienia żadnego pojedynczego przepisu. */
+  const r = Math.exp(-2 * Math.PI * 20 / rate);
+  let x1 = 0, y1 = 0;
+  for (let i = 0; i < buf.length; i++) {
+    const x = buf[i];
+    y1 = x - x1 + r * y1;
+    x1 = x;
+    buf[i] = y1;
+  }
   let sumSq = 0, max = 0;
   for (let i = 0; i < buf.length; i++) {
     sumSq += buf[i] * buf[i];
@@ -111,6 +219,13 @@ function finishBuffer(buf, rate, level) {
 
 function newBuffer(rate, seconds) { return new Float32Array(Math.floor(rate * seconds)); }
 
+// warstwy filtrowane osobno trzeba złożyć — filtr musi dostać czysty materiał,
+// więc nie da się ich budować od razu w buforze docelowym
+function mixInto(dst, src, gain) {
+  const n = Math.min(dst.length, src.length);
+  for (let i = 0; i < n; i++) dst[i] += src[i] * gain;
+}
+
 /* -------------------------- przepisy dźwięków -------------------------- */
 /* Jedna funkcja na dźwięk — wzorem tankGrid()/artilleryGrid() w generatorze
    sprite'ów: da się dostroić jeden dźwięk bez ruszania pozostałych. */
@@ -123,33 +238,66 @@ const SFX_RECIPES = {
     return finishBuffer(b, rate, 0.05);
   },
 
-  // marsz/silnik: stłumiony szum plus niski rumor
+  // Marsz/silnik: wąskopasmowy szum (gąsienice, kroki) plus pracujący silnik.
+  // Silnik to DWA lekko rozstrojone tony — dudnienie między nimi daje wrażenie
+  // pracy maszyny; pojedynczy ton brzmi jak brzęczyk.
   move(rate) {
-    const b = newBuffer(rate, 0.22);
-    const rng = audioRng(7);
-    addNoise(b, rate, 0, 0.2, 0.7, 2.4, 1400, 420, rng);
-    addTone(b, rate, 0, 0.2, 120, 82, 'tri', 0.4, 3);
+    const b = newBuffer(rate, 0.28);
+    const tracks = newBuffer(rate, 0.28);
+    addNoise(tracks, rate, 0, 0.24, 1.0, 2.6, 20000, 20000, audioRng(7)); // szum surowy — pasmo wycina filtr
+    svfSweep(tracks, rate, 'bp', 0, 0.24, 1300, 380, 1.4);
+    mixInto(b, tracks, 1.2);
+    addTone(b, rate, 0, 0.26, 118, 96, 'tri', 0.35, 3);
+    addTone(b, rate, 0, 0.26, 121, 98, 'tri', 0.30, 3);
+    saturate(b, 1.6);
     return finishBuffer(b, rate, 0.063);
   },
 
-  // wystrzał: trzask szumu plus zjeżdżający ton (ton bez narastania — 4 ms rampy
-  // zmiękczały właśnie to, co ma być uderzeniem)
+  // Wystrzał: trzask wylotowy + korpus + odbicie w dół lufy.
+  // Trzask bez narastania (4 ms rampy zmiękczały właśnie to, co ma być uderzeniem).
   shot(rate) {
-    const b = newBuffer(rate, 0.26);
+    const b = newBuffer(rate, 0.45);
     const rng = audioRng(11);
-    addNoise(b, rate, 0, 0.22, 1.0, 7, 5200, 900, rng);
-    addTone(b, rate, 0, 0.16, 420, 130, 'square', 0.5, 7, 0.0003);
-    return finishBuffer(b, rate, 0.30);
+    addNoise(b, rate, 0, 0.02, 1.0, 40, 11000, 6000, rng);
+    const body = newBuffer(rate, 0.45);
+    addNoise(body, rate, 0, 0.22, 1.0, 6.5, 20000, 20000, rng);
+    svfSweep(body, rate, 'lp', 0, 0.22, 6000, 320, 2.4);
+    mixInto(b, body, 1.5);
+    addThump(b, rate, 0, 0.16, 320, 70, 'tri', 0.5, 7);
+    reverbTail(b, rate, 0.14, 0.45);
+    saturate(b, 2.6);
+    return finishBuffer(b, rate, 0.16);
   },
 
-  // trafienie/eksplozja: szeroki szum z opadającym filtrem
+  /* Trafienie/eksplozja — cztery warstwy, każda odpowiada za inne wrażenie:
+     trzask niesie „blisko", korpus jest samym hukiem, sub uderza w klatkę
+     piersiową, a rumor to opadające szczątki. Poprzednia wersja miała tylko
+     korpus, i to filtrowany jednobiegunowo, więc centroida widmowa siedziała
+     na 5,1 kHz — czyli energia była w syku, a nie w huku. */
   explosion(rate) {
-    const b = newBuffer(rate, 0.7);
+    const b = newBuffer(rate, 1.25);
     const rng = audioRng(23);
-    addNoise(b, rate, 0, 0.68, 1.0, 4.2, 3800, 180, rng);
-    addTone(b, rate, 0, 0.4, 150, 48, 'tri', 0.55, 4, 0.0003);
-    addTone(b, rate, 0, 0.08, 90, 60, 'square', 0.3, 5, 0);
-    return finishBuffer(b, rate, 0.30);
+    const body = newBuffer(rate, 1.25);
+    addNoise(body, rate, 0, 0.95, 1.0, 2.2, 20000, 20000, rng);
+    svfSweep(body, rate, 'lp', 0, 0.95, 2200, 85, 2.1);               // korpus
+    mixInto(b, body, 2.0);
+    addThump(b, rate, 0, 0.6, 115, 30, 'sine', 1.05, 3.2);            // sub
+    const rumble = newBuffer(rate, 1.25);
+    addNoise(rumble, rate, 0.05, 1.15, 1.0, 2.8, 20000, 20000, audioRng(29));
+    svfSweep(rumble, rate, 'lp', 0.05, 1.15, 550, 80, 0.9);           // rumor
+    mixInto(b, rumble, 0.85);
+    /* Pogłos NA TYM ETAPIE, przed dołożeniem trzasku: odbija się dudnienie,
+       a trzask dociera do ucha bezpośrednio. Odwrotna kolejność (pogłos na
+       gotowej całości) rozsmarowuje wysokie pasmo trzasku na cały ogon i wybuch
+       robi się jasny — centroida 2924 Hz zamiast poniżej 1500. */
+    reverbTail(b, rate, 0.22, 0.9);
+    /* Saturacja dokłada harmoniczne, więc PODNOSI centroidę — i to tym mocniej,
+       im jaśniejszy materiał dostanie. Dlatego nasycamy same niskie warstwy,
+       zanim dojdzie trzask: crest zostaje zbity tam, gdzie siedzi energia,
+       a trzask przechodzi czysto i nie rozjaśnia całości. */
+    saturate(b, 1.9);
+    addNoise(b, rate, 0, 0.04, 0.5, 30, 4500, 1500, rng);             // trzask, sucho i bez nasycenia
+    return finishBuffer(b, rate, 0.20);
   },
 
   // zdobycie miasta: trzy wznoszące nuty
@@ -202,67 +350,396 @@ const SFX_VARY = { click: 0.05, move: 0.08, shot: 0.06, explosion: 0.06 };
 
 // dźwięki, które przechodzą nawet przy przyspieszonym AI (ważne zdarzenia)
 const SFX_ALWAYS = { city: 1, annex: 1, victory: 1, defeat: 1, click: 1 };
-// minimalny odstęp między powtórzeniami tego samego dźwięku (ms)
-const SFX_MIN_GAP = { click: 40, move: 90, shot: 80, explosion: 110 };
+/* Minimalny odstęp między powtórzeniami tego samego dźwięku (ms).
+   Dobierać RAZEM z długością dźwięku: iloraz długość/odstęp to liczba kopii, które
+   mogą brzmieć naraz. Przy limicie 8 głosów `explosion` (1,25 s) z odstępem 110 ms
+   dawał 11 kopii — sam wypełniał pulę i wypychał z niej zdarzenia. 200 ms daje 6. */
+const SFX_MIN_GAP = { click: 40, move: 90, shot: 110, explosion: 200 };
 
 /* ------------------------------ muzyka ------------------------------ */
-/* Chiptune grany w runtime z partytury: pętla 30 s jako plik WAV to 1,3 MB,
-   a jako tabela nut ~3 KB. Dodatkowo zapętla się bez szwu i da się
-   transponować / przyspieszyć bez renderowania od nowa. */
+/* Partytura jako tabela nut (~3 KB) zamiast pliku (pętla to ~1,3 MB jako WAV),
+   renderowana do bufora przy pierwszym odtworzeniu — patrz renderMusicLoop(). */
+
+/* Tonacja: E FRYGIJSKA (E-F-G-A-B-C-D). Wybór świadomy i zostaje z poprzedniej
+   wersji, bo był dobry: półton E-F na samym początku skali to najciemniejszy
+   interwał, jaki da się mieć bez wychodzenia poza materiał diatoniczny.
+   Wersja 0.6.0 brzmiała „jak z NES-a" nie przez tonację, tylko przez syntezę
+   (trzy fale, brak filtra) i przez rytm (bas i perkusja na zmianę co bit,
+   czyli oom-pah). Tu zmienia się jedno i drugie, nie skala. */
+
+function musicEvery(from, to, step) {
+  const a = [];
+  for (let b = from; b < to - 1e-9; b += step) a.push(Math.round(b * 1000) / 1000);
+  return a;
+}
+function musicHits(beats, dur, midi, inst) { return beats.map(b => [b, dur, midi, inst]); }
+
+// bas: ósemkowy wzór na 8 bitów, powtarzany na czterech stopniach (E-F-G-D)
+const MUSIC_BASS_SHAPE = [0, 0, 0, 12, 0, 0, 7, 0, 0, 0, 0, 12, 0, 7, 0, 7];
+function musicBassLine(roots, inst) {
+  const out = [];
+  roots.forEach((root, phrase) => {
+    MUSIC_BASS_SHAPE.forEach((iv, k) => out.push([phrase * 8 + k * 0.5, 0.42, root + iv, inst]));
+  });
+  return out;
+}
 
 // nuta: [ćwierćnuta startu, długość w ćwierćnutach, MIDI, instrument]
 const MUSIC_TRACKS = {
   menu: {
-    bpm: 84,
-    loopBeats: 32,
-    notes: [
-      [0, 4, 45, 'bass'], [4, 4, 45, 'bass'], [8, 4, 50, 'bass'], [12, 4, 50, 'bass'],
-      [16, 4, 52, 'bass'], [20, 4, 52, 'bass'], [24, 4, 48, 'bass'], [28, 4, 45, 'bass'],
-      [0, 3, 69, 'lead'], [3, 1, 71, 'lead'], [4, 4, 72, 'lead'],
-      [8, 3, 71, 'lead'], [11, 1, 69, 'lead'], [12, 4, 67, 'lead'],
-      [16, 3, 64, 'lead'], [19, 1, 67, 'lead'], [20, 4, 69, 'lead'],
-      [24, 2, 71, 'lead'], [26, 2, 69, 'lead'], [28, 4, 64, 'lead'],
-    ],
+    // level dobrany do tego, co pętla FAKTYCZNIE osiąga: menu jest rzadkie, ma
+    // wysoki crest i przy 0,20 ograniczałby je sufit szczytu, a nie zadany RMS
+    // (ta sama pułapka, co przy poziomach SFX — patrz 14-Dzwiek.md)
+    bpm: 96, loopBeats: 32, drive: 1.15, reverb: 0.18, reverbTime: 1.1, level: 0.11,
+    notes: [].concat(
+      musicHits([0, 8, 16, 24], 0.3, 0, 'kick'),
+      musicHits(musicEvery(0, 32, 4), 0.2, 0, 'hat'),
+      [
+        [0, 8, 40, 'bass'], [8, 8, 41, 'bass'], [16, 8, 43, 'bass'], [24, 8, 38, 'bass'],
+        [0, 8, 52, 'pad'], [0, 8, 59, 'pad'], [8, 8, 53, 'pad'], [8, 8, 60, 'pad'],
+        [16, 8, 55, 'pad'], [16, 8, 62, 'pad'], [24, 8, 50, 'pad'], [24, 8, 57, 'pad'],
+        [2, 3, 64, 'lead'], [5, 2, 67, 'lead'], [10, 4, 65, 'lead'],
+        [18, 3, 71, 'lead'], [21, 2, 69, 'lead'], [26, 5, 64, 'lead'],
+      ]),
   },
   game: {
-    bpm: 104,
-    loopBeats: 32,
-    notes: [
-      // marszowy puls basu
-      [0, 1, 40, 'bass'], [2, 1, 40, 'bass'], [4, 1, 40, 'bass'], [6, 1, 47, 'bass'],
-      [8, 1, 41, 'bass'], [10, 1, 41, 'bass'], [12, 1, 41, 'bass'], [14, 1, 48, 'bass'],
-      [16, 1, 43, 'bass'], [18, 1, 43, 'bass'], [20, 1, 43, 'bass'], [22, 1, 50, 'bass'],
-      [24, 1, 38, 'bass'], [26, 1, 38, 'bass'], [28, 1, 45, 'bass'], [30, 1, 40, 'bass'],
-      // rytm perkusyjny
-      [1, 0.5, 0, 'perc'], [3, 0.5, 0, 'perc'], [5, 0.5, 0, 'perc'], [7, 0.5, 0, 'perc'],
-      [9, 0.5, 0, 'perc'], [11, 0.5, 0, 'perc'], [13, 0.5, 0, 'perc'], [15, 0.5, 0, 'perc'],
-      [17, 0.5, 0, 'perc'], [19, 0.5, 0, 'perc'], [21, 0.5, 0, 'perc'], [23, 0.5, 0, 'perc'],
-      [25, 0.5, 0, 'perc'], [27, 0.5, 0, 'perc'], [29, 0.5, 0, 'perc'], [31, 0.5, 0, 'perc'],
-      // temat
-      [0, 2, 64, 'lead'], [2, 2, 67, 'lead'], [4, 2, 71, 'lead'], [6, 2, 67, 'lead'],
-      [8, 2, 65, 'lead'], [10, 2, 69, 'lead'], [12, 4, 72, 'lead'],
-      [16, 2, 67, 'lead'], [18, 2, 71, 'lead'], [20, 2, 74, 'lead'], [22, 2, 71, 'lead'],
-      [24, 2, 69, 'lead'], [26, 2, 65, 'lead'], [28, 4, 64, 'lead'],
-    ],
+    // drive 2,0 nie jest kwestią smaku: dopiero przy nim crest spada na tyle,
+    // że pętla dobija do zadanego RMS zamiast opierać się o sufit szczytu
+    bpm: 132, loopBeats: 32, drive: 2.0, reverb: 0.1, reverbTime: 0.7, level: 0.20,
+    notes: [].concat(
+      // rytm: stopa, werbel na 2 i 4, hi-hat ósemkami — trzy różne brzmienia
+      // zamiast jednego szumu, i dopiero to daje rytm zamiast metronomu
+      musicHits([0, 3.5, 4, 8, 11.5, 12, 16, 19.5, 20, 24, 27.5, 28], 0.3, 0, 'kick'),
+      musicHits([2, 6, 10, 14, 18, 22, 26, 30], 0.3, 0, 'snare'),
+      musicHits(musicEvery(0, 32, 0.5), 0.15, 0, 'hat'),
+      musicBassLine([40, 41, 43, 38], 'bass'),
+      [
+        [0, 8, 52, 'pad'], [0, 8, 59, 'pad'], [8, 8, 53, 'pad'], [8, 8, 60, 'pad'],
+        [16, 8, 55, 'pad'], [16, 8, 62, 'pad'], [24, 8, 50, 'pad'], [24, 8, 57, 'pad'],
+        [0, 1.5, 64, 'lead'], [1.5, 0.5, 67, 'lead'], [2, 1, 71, 'lead'], [3, 1, 69, 'lead'],
+        [4, 2, 67, 'lead'], [6, 1.5, 65, 'lead'],
+        [8, 1.5, 64, 'lead'], [9.5, 0.5, 67, 'lead'], [10, 1, 71, 'lead'], [11, 1, 72, 'lead'],
+        [12, 3.5, 71, 'lead'],
+        [16, 1.5, 71, 'lead'], [17.5, 0.5, 72, 'lead'], [18, 1, 74, 'lead'], [19, 1, 72, 'lead'],
+        [20, 2, 71, 'lead'], [22, 1.5, 67, 'lead'],
+        [24, 1.5, 69, 'lead'], [25.5, 0.5, 67, 'lead'], [26, 1, 65, 'lead'], [27, 1, 64, 'lead'],
+        [28, 3.5, 64, 'lead'],
+      ]),
   },
 };
 
+/* Instrumenty. Do 0.6.x były trzy fale z jedną obwiednią — czyli zestaw NES-a,
+   i to on odpowiadał za „8-bitowe" brzmienie, nie kompozycja. Teraz: synteza FM
+   (blachy Neo Geo), subtraktywna z filtrem rezonansowym (bas, pad) i osobno
+   syntezowany zestaw perkusyjny. */
 const MUSIC_INSTRUMENTS = {
-  bass: { wave: 'triangle', gain: 0.5, release: 0.12 },
-  lead: { wave: 'square', gain: 0.16, release: 0.08 },
-  perc: { wave: 'noise', gain: 0.22, release: 0.05 },
+  bass: { type: 'sub', wave: 'sawtooth', voices: 2, detune: 14, cutoff: 260, cutoffEnv: 1150, q: 3.4, a: 0.004, d: 0.11, s: 0.32, r: 0.08, gain: 0.40 },
+  lead: { type: 'fm', ratio: 2, index: 2.6, indexDecay: 0.18, a: 0.012, d: 0.18, s: 0.62, r: 0.16, gain: 0.19 },
+  pad: { type: 'sub', wave: 'sawtooth', voices: 3, detune: 22, cutoff: 380, cutoffEnv: 420, q: 1.1, a: 0.35, d: 0.6, s: 0.75, r: 0.6, gain: 0.085 },
+  kick: { type: 'kick', len: 0.34, gain: 0.95, seed: 41 },
+  snare: { type: 'snare', len: 0.24, gain: 0.50, seed: 53 },
+  hat: { type: 'hat', len: 0.06, decay: 30, gain: 0.16, seed: 67 },
 };
+
+/* ==================== synteza muzyki (czysta arytmetyka) ====================
+
+   Muzyka jest renderowana do bufora TAK SAMO jak SFX, a nie grana oscylatorami
+   w czasie rzeczywistym. Powód jest architektoniczny, nie brzmieniowy: dopóki
+   pętlę grał graf węzłów Web Audio, `tools/gen-sounds.js` musiał mieć DRUGĄ
+   implementację syntezy, żeby dało się jej posłuchać poza grą — a dwie
+   implementacje rozjeżdżają się po cichu. Jako czysta funkcja `(rate) =>
+   Float32Array` muzyka ma jedną implementację, tę samą w grze i w narzędziu,
+   i przestaje jej ciążyć sufit tego, co da się policzyć na żywo. */
+
+// Kształty fal jako szereg Fouriera obcięty do Nyquista — tak samo definiuje je
+// specyfikacja Web Audio, i tak samo unika się aliasowania: naiwny skok prostokąta
+// ma nieskończone pasmo i zawija się na każdej częstotliwości.
+function musicHarmonic(wave, n) {
+  switch (wave) {
+    case 'sine': return n === 1 ? 1 : 0;
+    case 'square': return (2 / (n * Math.PI)) * (1 - Math.cos(n * Math.PI));
+    case 'sawtooth': return (n % 2 ? 1 : -1) * (2 / (n * Math.PI));
+    case 'triangle': return 8 * Math.sin(n * Math.PI / 2) / (Math.PI * Math.PI * n * n);
+    default: return n === 1 ? 1 : 0;
+  }
+}
+
+const MUSIC_TABLE_SIZE = 4096;
+const MUSIC_BAND_BASE = 20;   // Hz — dolna granica najniższego pasma
+const musicTables = {};       // cache na poziomie modułu: pętle i sesje go współdzielą
+
+/* Tablice są budowane na PASMO OKTAWOWE, nie na pojedynczą wysokość.
+
+   Powód jest wydajnościowy i on decyduje, czy da się w ogóle grać bogatą
+   aranżacją. Tablica dla jednej wysokości kosztuje tyle sinusów, ile ma
+   harmonicznych (bas przy 48 kHz: ~330 × 4096), a przy tablicy na nutę koszt
+   rośnie z liczbą RÓŻNYCH wysokości w utworze — zmierzone: 604 ms na 16 tablic,
+   i im gęstszy utwór, tym gorzej. Przy podziale na pasma tablic jest kilkanaście
+   niezależnie od tego, ile nut gra, więc koszt przestaje rosnąć.
+
+   Każde pasmo obcinamy do swojej NAJWYŻSZEJ częstotliwości, więc żadna nuta
+   z pasma nie zaaliasuje. Nuty z dolnego skraju tracą trochę najwyższych
+   harmonicznych — czyli tych najsłabszych, o amplitudzie rzędu 1/n. */
+function musicWavetable(wave, freq, rate) {
+  const band = Math.max(0, Math.floor(Math.log2(Math.max(freq, MUSIC_BAND_BASE) / MUSIC_BAND_BASE)));
+  const key = wave + '|' + band + '|' + rate;
+  if (musicTables[key]) return musicTables[key];
+  const top = MUSIC_BAND_BASE * Math.pow(2, band + 1);
+  const maxN = Math.max(1, Math.floor((rate / 2) / top));
+  const tab = new Float32Array(MUSIC_TABLE_SIZE);
+  for (let n = 1; n <= maxN; n++) {
+    const amp = musicHarmonic(wave, n);
+    if (amp === 0) continue;
+    /* Rekurencja obrotu zamiast Math.sin na próbkę: kolejne wartości sinusa
+       o stałym kroku kątowym powstają z poprzednich dwoma mnożeniami. Dryf
+       w podwójnej precyzji po 4096 krokach jest rzędu 1e-12, czyli daleko
+       poniżej rozdzielczości Float32Array, w której tablica i tak ląduje. */
+    const a = 2 * Math.PI * n / MUSIC_TABLE_SIZE;
+    const ca = Math.cos(a), sa = Math.sin(a);
+    let s = 0, c = 1;
+    for (let i = 0; i < MUSIC_TABLE_SIZE; i++) {
+      tab[i] += amp * s;
+      const ns = s * ca + c * sa;
+      c = c * ca - s * sa;
+      s = ns;
+    }
+  }
+  musicTables[key] = tab;
+  return tab;
+}
+
+/* Obwiednia ADSR. Stary silnik miał tylko narastanie i wygaszanie, przez co każda
+   nuta miała ten sam kształt — a kształt obwiedni jest tym, co odróżnia szarpnięcie
+   basu od wejścia blachy. `s` to poziom podtrzymania (0-1), reszta w sekundach. */
+function musicFillAdsr(env, n, rate, def, durN) {
+  const atkN = Math.max(1, Math.floor((def.a || 0.005) * rate));
+  const decN = Math.max(1, Math.floor((def.d || 0.1) * rate));
+  const sus = def.s === undefined ? 0.7 : def.s;
+  // zanik rekurencyjnie, żeby nie wołać Math.exp na każdą próbkę
+  const relStep = Math.exp(-4 / Math.max(1, (def.r || 0.1) * rate));
+  let rel = sus;
+  for (let i = 0; i < n; i++) {
+    if (i < atkN) env[i] = i / atkN;
+    else if (i < atkN + decN) env[i] = 1 - (1 - sus) * (i - atkN) / decN;
+    else if (i < durN) env[i] = sus;
+    else { env[i] = rel; rel *= relStep; }
+  }
+}
+
+// tablica sinusa dla FM — modulacja fazy nie da się wyrazić stałą tablicą fali,
+// więc bez niej wychodzą dwa Math.sin na próbkę i to dominuje koszt renderu
+const MUSIC_SIN = (function () {
+  const t = new Float32Array(MUSIC_TABLE_SIZE + 1);
+  for (let i = 0; i <= MUSIC_TABLE_SIZE; i++) t[i] = Math.sin(2 * Math.PI * i / MUSIC_TABLE_SIZE);
+  return t;
+})();
+function musicSinAt(phase) {
+  let p = phase % MUSIC_TABLE_SIZE;
+  if (p < 0) p += MUSIC_TABLE_SIZE;
+  const k = p | 0;
+  return MUSIC_SIN[k] + (MUSIC_SIN[k + 1] - MUSIC_SIN[k]) * (p - k);
+}
+
+/* --- głosy ---
+   Każdy typ syntezuje nutę do bufora roboczego; umieszczaniem w pętli (i zawijaniem
+   ogona) zajmuje się osobno renderMusicLoop. Rozdzielenie jest celowe: dzięki niemu
+   głos może mieć własny filtr i własną obwiednię, nie wiedząc nic o pętli. */
+
+// Synteza FM (dwa operatory). To jest brzmienie Neo Geo: modulator o częstotliwości
+// będącej wielokrotnością nośnej, z GŁĘBOKOŚCIĄ opadającą w czasie — stąd blachy,
+// które mają ostre wejście i miękkie podtrzymanie, czego filtrem się nie uzyska.
+function musicVoiceFm(buf, n, rate, def, freq, env) {
+  const ratio = def.ratio === undefined ? 2 : def.ratio;
+  const idx0 = def.index === undefined ? 3 : def.index;
+  const idxStep = Math.exp(-1 / Math.max(1, (def.indexDecay || 0.3) * rate));
+  const incC = freq / rate * MUSIC_TABLE_SIZE, incM = incC * ratio;
+  const depth = MUSIC_TABLE_SIZE / (2 * Math.PI);   // radiany -> jednostki tablicy
+  let pc = 0, pm = 0, index = idx0;
+  for (let i = 0; i < n; i++) {
+    buf[i] = musicSinAt(pc + index * depth * musicSinAt(pm)) * env[i];
+    index *= idxStep;
+    pc += incC; if (pc >= MUSIC_TABLE_SIZE) pc -= MUSIC_TABLE_SIZE;
+    pm += incM; if (pm >= MUSIC_TABLE_SIZE) pm -= MUSIC_TABLE_SIZE;
+  }
+}
+
+// Synteza subtraktywna: kilka rozstrojonych pił przez filtr rezonansowy z obwiednią.
+// Rozstrojenie jest tu istotne — pojedyncza piła brzmi cienko i „cyfrowo",
+// a dudnienie między kopiami daje grubość, po której poznaje się bas z lat 90.
+function musicVoiceSub(buf, n, rate, def, freq, env) {
+  const wave = def.wave || 'sawtooth';
+  const nv = def.voices || 2;
+  const detune = (def.detune || 8) / 1200;   // centy -> ułamek półtonu
+  const MASK = MUSIC_TABLE_SIZE - 1;
+  const tabs = [], incs = [], phs = [];
+  for (let v = 0; v < nv; v++) {
+    const f = freq * Math.pow(2, (v - (nv - 1) / 2) * detune);
+    tabs.push(musicWavetable(wave, f, rate));
+    incs.push((f / rate) * MUSIC_TABLE_SIZE);
+    phs.push(v * 137.5);   // różne fazy startowe, żeby kopie nie sumowały się w szczyt
+  }
+  const norm = 1 / nv;
+  for (let i = 0; i < n; i++) {
+    let s = 0;
+    for (let v = 0; v < nv; v++) {
+      let ph = phs[v];
+      const p = ph | 0, f = ph - p;
+      s += tabs[v][p] + (tabs[v][(p + 1) & MASK] - tabs[v][p]) * f;
+      ph += incs[v];
+      phs[v] = ph >= MUSIC_TABLE_SIZE ? ph - MUSIC_TABLE_SIZE : ph;
+    }
+    buf[i] = s * norm * env[i];
+  }
+  /* Filtr z obwiednią: otwiera się na ataku i zamyka — to jest „ruch" w dźwięku,
+     którego stary silnik nie miał w ogóle. Współczynniki przeliczamy co 32 próbki,
+     bo `Math.tan` na próbkę było najdroższą operacją w całym renderze, a obwiednia
+     zmienia się o rzędy wielkości wolniej niż co 0,7 ms. */
+  const base = def.cutoff || 500, span = def.cutoffEnv || 800;
+  const k = 1 / Math.max(0.5, def.q || 2);
+  let ic1 = 0, ic2 = 0, a1 = 0, a2 = 0, a3 = 0;
+  for (let i = 0; i < n; i++) {
+    if ((i & 31) === 0) {
+      const fc = Math.min(rate * 0.45, Math.max(30, base + span * env[i]));
+      const g = Math.tan(Math.PI * fc / rate);
+      a1 = 1 / (1 + g * (g + k)); a2 = g * a1; a3 = g * a2;
+    }
+    const x = buf[i];
+    const v3 = x - ic2;
+    const v1 = a1 * ic1 + a2 * v3;
+    const v2 = ic2 + a2 * ic1 + a3 * v3;
+    ic1 = 2 * v1 - ic1; ic2 = 2 * v2 - ic2;
+    buf[i] = v2;
+  }
+}
+
+/* Zestaw perkusyjny. Stary silnik miał JEDEN dźwięk perkusyjny (ten sam szum na
+   każdym uderzeniu) — czyli metronom, nie rytm. Stopa, werbel i hi-hat różnią się
+   nie głośnością, tylko budową, i dopiero to daje wrażenie grania. */
+function musicVoiceDrum(buf, n, rate, def, kind) {
+  const rng = audioRng(def.seed || 41);
+  if (kind === 'kick') {
+    // wysokość opada geometrycznie ze 150 do 45 Hz — uderzenie w membranę
+    let ph = 0;
+    for (let i = 0; i < n; i++) {
+      const u = i / n;
+      ph += (150 * Math.pow(45 / 150, Math.min(1, u * 3))) / rate;
+      buf[i] = Math.sin(2 * Math.PI * ph) * Math.exp(-7 * u) + rng() * 0.25 * Math.exp(-90 * u);
+    }
+  } else if (kind === 'snare') {
+    // szum (naciąg + sprężyna) plus dwa tony korpusu — bez nich zostaje sam syk
+    for (let i = 0; i < n; i++) {
+      const u = i / n;
+      const t = i / rate;
+      buf[i] = rng() * Math.exp(-16 * u) * 0.8
+        + Math.sin(2 * Math.PI * 185 * t) * Math.exp(-26 * u) * 0.35
+        + Math.sin(2 * Math.PI * 330 * t) * Math.exp(-30 * u) * 0.2;
+    }
+    svfSweep(buf, rate, 'bp', 0, n / rate, 2400, 1400, 0.8);
+  } else {  // hat
+    for (let i = 0; i < n; i++) buf[i] = rng() * Math.exp(-def.decay * (i / n));
+    svfSweep(buf, rate, 'hp', 0, n / rate, 6500, 7500, 0.7);
+  }
+}
+
+// Rozkład partytury na głosy. Nuta z `b >= loopBeats` nie zabrzmi — pętla jej
+// nie obejmuje; renderer ją pomija tak samo, jak pomijał ją stary scheduler.
+function musicVoices(track) {
+  const beatSec = 60 / track.bpm;
+  const out = [];
+  for (const [b, dur, midi, inst] of track.notes) {
+    if (b >= track.loopBeats) continue;
+    out.push({ at: b * beatSec, dur: dur * beatSec, midi, inst });
+  }
+  return out;
+}
+
+/* Uwaga o długości: bufor musi mieć całkowitą liczbę próbek, a 32 bity przy 104 bpm
+   to 814 153,8 próbki przy 44,1 kHz. Zaokrąglenie znaczy, że pętla gra o 0,0002%
+   wolniej niż nominalne bpm — niesłyszalne, ale trzeba o tym pamiętać przy
+   porównywaniu z jakimkolwiek modelem liczącym pozycje z czasu, bo tam ułamek
+   próbki narasta z każdym obiegiem. */
+/* Efekt ze stanem (pogłos) na buforze PĘTLI wymaga ostrożności: puszczony wprost
+   zaczyna od ciszy i urywa się na końcu, więc na szwie słychać skok. Rozwiązanie:
+   przepuścić sygnał dwa razy pod rząd i wziąć drugi przebieg — wtedy linie
+   opóźniające są już wypełnione ogonem z poprzedniego obiegu, czyli mamy dokładnie
+   ten stan, w którym pętla gra w kółko. */
+function musicLoopReverb(buf, rate, mix, rt60) {
+  const n = buf.length;
+  const twice = new Float32Array(n * 2);
+  twice.set(buf, 0);
+  twice.set(buf, n);
+  reverbTail(twice, rate, mix, rt60);
+  buf.set(twice.subarray(n, n * 2));
+}
+
+function renderMusicLoop(name, rate, tracks, instruments) {
+  const src = (tracks || MUSIC_TRACKS)[name];
+  if (!src) return null;
+  const inst = instruments || MUSIC_INSTRUMENTS;
+  const beatSec = 60 / src.bpm;
+  const out = new Float32Array(Math.round(src.loopBeats * beatSec * rate));
+  const scratch = new Float32Array(Math.ceil(rate * 8));
+  const env = new Float32Array(scratch.length);
+  for (const v of musicVoices(src)) {
+    const def = inst[v.inst];
+    if (!def) continue;
+    const isDrum = def.type === 'kick' || def.type === 'snare' || def.type === 'hat';
+    const durN = Math.max(1, Math.floor(v.dur * rate));
+    const n = Math.min(scratch.length, isDrum
+      ? Math.floor((def.len || 0.2) * rate)
+      : durN + Math.ceil((def.r || 0.1) * rate) * 2);
+    scratch.fill(0, 0, n);
+    if (isDrum) {
+      musicVoiceDrum(scratch, n, rate, def, def.type);
+    } else {
+      // obwiednia liczona RAZ i współdzielona przez oscylator i filtr — była
+      // liczona dwa razy, po dwa Math.exp na próbkę
+      musicFillAdsr(env, n, rate, def, durN);
+      if (def.type === 'fm') musicVoiceFm(scratch, n, rate, def, midiFreq(v.midi), env);
+      else musicVoiceSub(scratch, n, rate, def, midiFreq(v.midi), env);
+    }
+
+    const g = def.gain === undefined ? 0.2 : def.gain;
+    let idx = Math.round(v.at * rate) % out.length;
+    if (idx < 0) idx += out.length;
+    for (let i = 0; i < n; i++) {
+      out[idx] += scratch[i] * g;
+      if (++idx === out.length) idx = 0;
+    }
+  }
+  // szyna: nasycenie skleja warstwy, pogłos daje wspólną przestrzeń
+  if (src.drive) saturate(out, src.drive);
+  if (src.reverb) musicLoopReverb(out, rate, src.reverb, src.reverbTime || 0.8);
+  musicNormalize(out, src.level === undefined ? 0.20 : src.level);
+  return out;
+}
+
+/* Poziom pętli: dopasowanie RMS z twardym sufitem szczytu — ta sama filozofia,
+   co `finishBuffer()` dla SFX, ale BEZ wygaszania ogona, bo tu ogon jest szwem
+   pętli i wyciszenie go zrobiłoby dziurę przy każdym obiegu. */
+function musicNormalize(buf, level) {
+  let sumSq = 0, max = 0;
+  for (let i = 0; i < buf.length; i++) {
+    sumSq += buf[i] * buf[i];
+    const a = Math.abs(buf[i]);
+    if (a > max) max = a;
+  }
+  const rms = Math.sqrt(sumSq / buf.length);
+  let g = rms > 0 ? level / rms : 1;
+  if (max * g > 0.95) g = 0.95 / max;
+  for (let i = 0; i < buf.length; i++) buf[i] *= g;
+}
 
 /* --------------------------- warstwa runtime --------------------------- */
 
 let AUD = null;              // { ctx, master, musicGain, sfxGain, buffers, voices }
 let audioSettings = { master: 0.7, music: 0.45, sfx: 0.85, muted: false };
-// „co ma grać" (żądanie gry) trzymane osobno od „co gra" (musicTimer) — inaczej
+// „co ma grać" (żądanie gry) trzymane osobno od „co gra" (musicNode) — inaczej
 // wyciszenie gubiłoby informację, do czego wrócić po odciszeniu
 let musicWanted = null;
-let musicTimer = null;
-let musicNextBeatTime = 0;
-let musicBeat = 0;
+let musicNode = null;       // aktualnie grający AudioBufferSourceNode (pętla)
+let musicBuffers = {};      // wyrenderowane pętle, liczone raz na sesję
+let musicPending = false;   // render odłożony na później już zlecony
 let sfxLastAt = {};
 
 function audioAvailable() {
@@ -365,7 +842,11 @@ function sfxAllowed(name) {
   const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
   const gap = SFX_MIN_GAP[name] || 60;
   if (sfxLastAt[name] && now - sfxLastAt[name] < gap) return false;
-  if (AUD && AUD.voices >= 8) return false;
+  // Limit głosów nie dotyczy zdarzeń z SFX_ALWAYS: to są rzadkie, jednorazowe
+  // komunikaty (zdobycie miasta, aneksja, koniec gry), a nazwa mówi, że mają
+  // dojść zawsze. Wcześniej ciężka bitwa mogła wypełnić pulę wybuchami i zjeść
+  // dźwięk zdobycia stolicy — czyli akurat ten, który niesie informację.
+  if (AUD && AUD.voices >= 8 && !SFX_ALWAYS[name]) return false;
   // przy przyspieszonym AI przechodzą tylko ważne zdarzenia
   if (typeof state !== 'undefined' && state && (state.aiSpeed || 1) > 1 && !SFX_ALWAYS[name]) {
     const cp = typeof currentPlayer === 'function' && state.players ? currentPlayer() : null;
@@ -393,70 +874,58 @@ function playSfx(name) {
 
 /* --------------------------- odtwarzanie muzyki --------------------------- */
 
-function musicVoice(a, inst, midi, at, durSec) {
-  const def = MUSIC_INSTRUMENTS[inst] || MUSIC_INSTRUMENTS.lead;
-  const g = a.ctx.createGain();
-  g.connect(a.musicGain);
-  g.gain.setValueAtTime(0, at);
-  g.gain.linearRampToValueAtTime(def.gain, at + 0.01);
-  g.gain.setTargetAtTime(0, at + durSec, def.release);
+/* Pętla jest jednym buforem odtwarzanym z `loop = true`, a nie strumieniem nut
+   dokładanych na oś czasu. Bufor renderuje `renderMusicLoop()` — ta sama czysta
+   funkcja, której używa `tools/gen-sounds.js`, więc to, co słychać w grze, i to,
+   co wychodzi jako WAV, jest z definicji tym samym sygnałem.
 
-  let node;
-  if (def.wave === 'noise') {
-    // krótki szum jako perkusja — bufor tworzony raz i współdzielony
-    if (!a.percBuf) {
-      const n = Math.floor(SFX_RATE * 0.08);
-      const b = a.ctx.createBuffer(1, n, SFX_RATE);
-      const d = b.getChannelData(0);
-      const rng = audioRng(97);
-      for (let i = 0; i < n; i++) d[i] = rng() * Math.exp(-14 * (i / n));
-      a.percBuf = b;
-    }
-    node = a.ctx.createBufferSource();
-    node.buffer = a.percBuf;
-  } else {
-    node = a.ctx.createOscillator();
-    node.type = def.wave;
-    node.frequency.setValueAtTime(midiFreq(midi), at);
-  }
-  node.connect(g);
-  try { node.start(at); } catch (e) { return; }
-  const stopAt = at + durSec + def.release * 4;
-  if (node.stop) node.stop(stopAt);
-}
-
-// Scheduler z wyprzedzeniem: dokłada nuty na osi czasu AudioContext małymi
-// porcjami, więc pętla nie tworzy setek węzłów naraz i gra bez szwu.
-function musicTick() {
-  if (!AUD || !musicWanted) return;
-  const track = MUSIC_TRACKS[musicWanted];
-  if (!track) return;
-  const beatSec = 60 / track.bpm;
-  const horizon = AUD.ctx.currentTime + 1.0;
-  while (musicNextBeatTime < horizon) {
-    const beatInLoop = musicBeat % track.loopBeats;
-    for (const [b, dur, midi, inst] of track.notes) {
-      // ułamkowy start nuty w obrębie ćwierćnuty też ma działać
-      if (Math.floor(b) !== beatInLoop) continue;
-      const at = musicNextBeatTime + (b - Math.floor(b)) * beatSec;
-      musicVoice(AUD, inst, midi, at, dur * beatSec);
-    }
-    musicBeat++;
-    musicNextBeatTime += beatSec;
-  }
+   Renderujemy w częstotliwości kontekstu, żeby przeglądarka nie przepróbkowywała
+   bufora przy każdym odtworzeniu. */
+function musicBufferFor(a, name) {
+  if (musicBuffers[name]) return musicBuffers[name];
+  const samples = renderMusicLoop(name, a.ctx.sampleRate);
+  if (!samples) return null;
+  const buf = a.ctx.createBuffer(1, samples.length, a.ctx.sampleRate);
+  buf.getChannelData(0).set(samples);
+  musicBuffers[name] = buf;
+  return buf;
 }
 
 function musicPlaybackStart() {
   const a = ensureAudio();
-  if (!a || musicTimer) return;
-  musicBeat = 0;
-  musicNextBeatTime = a.ctx.currentTime + 0.08;
-  musicTick();
-  musicTimer = setInterval(musicTick, 250);
+  if (!a || musicNode || !musicWanted) return;
+  /* Pierwszy render pętli to kilkaset ms na jednym wątku, a wołane jest to przy
+     pierwszym geście użytkownika — razem z syntezą SFX zamroziłoby reakcję na
+     kliknięcie. Odkładamy go więc za bieżące zadanie: klik zdąży się obsłużyć
+     i narysować, muzyka wchodzi ułamek sekundy później. */
+  if (!musicBuffers[musicWanted]) {
+    if (musicPending) return;
+    musicPending = true;
+    const wanted = musicWanted;
+    setTimeout(() => {
+      musicPending = false;
+      // pętla mogła się zmienić, zanim render ruszył (szybka zmiana ekranu):
+      // wtedy nie ma po co liczyć tamtej, a syncMusic i tak zleci render bieżącej
+      if (musicWanted === wanted) musicBufferFor(a, wanted);
+      syncMusic();
+    }, 0);
+    return;
+  }
+  const buf = musicBufferFor(a, musicWanted);
+  if (!buf) return;
+  const node = a.ctx.createBufferSource();
+  node.buffer = buf;
+  node.loop = true;
+  node.connect(a.musicGain);
+  try { node.start(); } catch (e) { return; }
+  musicNode = node;
 }
 
 function musicPlaybackStop() {
-  if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  if (!musicNode) return;
+  try { musicNode.stop(); } catch (e) { /* już zatrzymany */ }
+  musicNode.disconnect();
+  musicNode = null;
 }
 
 // dopasowuje faktyczne odtwarzanie do tego, co gra zamówiła i co pozwalają

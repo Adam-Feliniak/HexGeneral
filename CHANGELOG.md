@@ -2,6 +2,78 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.7.1] - 2026-07-31
+
+Wydanie dźwiękowe, w całości wywołane **pierwszą falą testów zewnętrznych**: jedna
+osoba spoza gatunku, 40 minut, dwie spontaniczne uwagi. Druga brzmiała „ścieżka
+dźwiękowa jak dla dzieci", a doprecyzowana — „jak 8-bitowa, z NES-a; chciałbym
+jakości Metal Slug".
+
+- **Dźwięki bojowe przepisane od zera.** `explosion` miał centroidę widmową **5058 Hz**,
+  czyli energia siedziała w syku, a nie w huku. Dziś **1519 Hz**, crest 18,0 → 9,1 dB,
+  szczyt odklejony od sufitu (0,98 → 0,57). Wybuch składa się teraz z czterech warstw
+  o różnych zadaniach — korpus (huk), sub (uderzenie w klatkę), rumor (osypujące się
+  szczątki) i trzask (czytelność zdarzenia) — zamiast jednego gestu. `shot` i `move`
+  przeszły tę samą drogę.
+- **Nowa warstwa DSP**, cała jako czysta arytmetyka: filtr rezonansowy z przemiataniem
+  geometrycznym, miękkie nasycenie, uderzenie o geometrycznie opadającej wysokości
+  i pogłos Schroedera. **Świadomie nie przez węzły Web Audio** — `SFX_RECIPES` są
+  czystymi funkcjami i na tym stoją oba narzędzia pomiarowe; graf węzłów zabrałby
+  możliwość zmierzenia dźwięku poza przeglądarką, czyli aparat, który te problemy
+  w ogóle wykrył.
+- **Silnik muzyki: z zestawu NES-a na arcade lat 90.** Do 0.6.x wszystkie partie grały
+  na trzech falach (`triangle`, `square`, `noise`) z jedną obwiednią — i to on, a nie
+  kompozycja, odpowiadał za odbiór „muzyka 8-bitowa". Teraz: synteza **FM** (lead),
+  **subtraktywna z filtrem rezonansowym i obwiednią** (bas, pad) oraz osobno
+  syntezowany **zestaw perkusyjny** (stopa, werbel, hi-hat zamiast jednego szumu na
+  każde uderzenie — to była różnica między metronomem a rytmem).
+- **Tonacja bez zmian — i to jest ustalenie, nie przeoczenie.** Motyw stoi na E
+  frygijskiej, a półton E-F na początku skali to najciemniejszy interwał dostępny bez
+  wychodzenia poza diatonikę. Za wrażenie „dla dzieci" odpowiadały barwa, rejestr
+  i rytm oom-pah (bas i perkusja na zmianę co bit, bez ani jednej pauzy), nie materiał
+  wysokościowy.
+- **Muzyka renderuje się do bufora zamiast grać oscylatorami na żywo.** To zdejmuje
+  sufit złożoności (na żywo synteza jest ograniczona do tego, co zdąży policzyć graf
+  węzłów) i likwiduje problem, który dotąd ciążył narzędziom: `renderMusicLoop()` jest
+  czystą funkcją `(rate) => Float32Array`, więc gra i `gen-sounds.js` liczą **ten sam**
+  sygnał. Nie ma dwóch implementacji, które mogłyby się cicho rozjechać. Koszt: ~475 ms
+  na pętlę, raz na sesję, odłożone poza obsługę kliknięcia.
+- **Wydajność renderu 2650 → 475 ms.** Tablice falowe budowane na pasmo oktawowe
+  zamiast na pojedynczą wysokość (inaczej koszt rośnie z liczbą różnych nut, czyli
+  dokładnie tam, gdzie gęsta aranżacja uderza najmocniej) i rekurencje zamiast
+  `Math.exp`/`Math.tan` w pętli próbek.
+
+### Narzędzia
+
+- `node tools/gen-sounds.js --music` renderuje pętle do `dist/music/*.wav`,
+  a `--tracks=<plik.js>` bierze partyturę spoza `src/audio.js` — czyli porównanie
+  wariantów ścieżki dźwiękowej nie wymaga edytowania gry między odsłuchami.
+- `node tools/gen-sounds.js --selftest` — 10 sprawdzeń, w tym **bezszwowość pętli**
+  liczona przez porównanie skoku na szwie z rozkładem skoków wewnątrz utworu.
+- `node tools/audio-check.js` (nowe) — ścieżka **odtwarzania** na atrapie Web Audio.
+  Powstało, bo pierwsza wersja miała realny błąd: przy szybkiej zmianie ekranu muzyka
+  nie startowała w ogóle. Żaden istniejący harness tej warstwy nie dotykał.
+- `tools/audit-sounds.js`: **centroida widmowa liczyła się z pierwszych 186 ms**, a nie
+  z całego dźwięku — przy 1,25-sekundowym wybuchu cały ciemny ogon nie był mierzony,
+  więc strojenie go pod tę liczbę nie mogło nic dać. Dziś średnia z ramek po całym
+  dźwięku, ważona energią.
+
+### Poprawki przy okazji
+
+- **Poziomy w tabeli miksu były życzeniami, nie ustawieniami.** `explosion` i `shot`
+  prosiły o RMS 0,30 i nigdy go nie dostawały, bo sufit szczytu ucinał wzmocnienie
+  wcześniej. Po dodaniu saturacji cel stał się osiągalny i oba skoczyły o 6-8 dB,
+  rozwalając balans — poziomy przestrojone do wartości faktycznie osiąganych
+  (rozpiętość miksu 12,0 dB). Ta sama pułapka wróciła przy pętlach muzyki i została
+  rozstrzygnięta tak samo.
+- **Blokada składowej stałej** na wejściu `finishBuffer()`: filtrowanie szumu do bardzo
+  niskich częstotliwości zostawia powolne błądzenie, a grzebienie pogłosu je wzmacniają
+  (offset 0,018 zamiast 0,001). Niesłyszalne, ale zjada zapas przed szczytem.
+- **Ciężka bitwa mogła zagłuszyć zdobycie miasta.** Dłuższy wybuch (1,25 s) przy
+  odstępie retriggera 110 ms mieścił 11 kopii naraz przy limicie 8 głosów, więc sam
+  wypełniał pulę. Odstępy podniesione, a dźwięki z `SFX_ALWAYS` zwolnione z limitu
+  głosów — nazwa mówi, że mają dojść zawsze.
+
 ## [0.7.0] - 2026-07-31
 
 - **Tryb kooperacyjny (drużyny).** Dwoje ludzi może wreszcie zagrać po **tej samej

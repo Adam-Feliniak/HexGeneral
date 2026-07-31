@@ -57,11 +57,16 @@ function loadAudio() {
 // Centroida widmowa = „środek ciężkości" widma w Hz. Niska -> dudnienie,
 // wysoka -> syk. Liczona zwykłym DFT na oknie Hanna: przy kilkuset prążkach
 // to milisekundy, a unikamy pisania FFT dla samego audytu.
-function spectralCentroid(buf, rate, bins = 256) {
-  const n = Math.min(buf.length, 4096);
-  if (n < 16) return 0;
+/* Centroida widmowa CAŁEGO dźwięku: średnia z ramek, ważona energią ramki.
+
+   Wcześniej liczyła się z pierwszych 4096 próbek, czyli 186 ms przy 22 kHz — a więc
+   z samego ataku, mimo że kolumna nazywa się po prostu „centroida". Przy dźwiękach
+   krótkich to bez różnicy, ale przy wybuchu (1,25 s) cały ciemny ogon, sub i pogłos
+   nie były w ogóle mierzone. Strojenie ich pod tę liczbę nie mogło nic dać, a odczyt
+   sugerował, że dźwięk jest jasny, choć jasny był tylko jego początek. */
+function frameCentroid(buf, from, n, rate, bins) {
   const win = new Float64Array(n);
-  for (let i = 0; i < n; i++) win[i] = buf[i] * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1)));
+  for (let i = 0; i < n; i++) win[i] = buf[from + i] * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (n - 1)));
   let num = 0, den = 0;
   for (let k = 1; k <= bins; k++) {
     const f = (k * rate) / (2 * bins);
@@ -70,6 +75,17 @@ function spectralCentroid(buf, rate, bins = 256) {
     for (let i = 0; i < n; i++) { re += win[i] * Math.cos(w * i); im -= win[i] * Math.sin(w * i); }
     const mag = Math.sqrt(re * re + im * im);
     num += f * mag; den += mag;
+  }
+  return { centroid: den > 0 ? num / den : 0, weight: den };
+}
+
+function spectralCentroid(buf, rate, bins = 256) {
+  const N = 2048, hop = N / 2;
+  if (buf.length < N) return buf.length < 16 ? 0 : frameCentroid(buf, 0, buf.length, rate, bins).centroid;
+  let num = 0, den = 0;
+  for (let from = 0; from + N <= buf.length; from += hop) {
+    const { centroid, weight } = frameCentroid(buf, from, N, rate, bins);
+    num += centroid * weight; den += weight;
   }
   return den > 0 ? num / den : 0;
 }

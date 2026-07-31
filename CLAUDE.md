@@ -43,14 +43,17 @@ After `gen-sprites.js` changes, commit the regenerated `assets/*.png` files too 
 
 ```
 node tools/gen-sounds.js      # optional — renders SFX recipes to dist/sfx/*.wav for auditioning
+node tools/gen-sounds.js --music     # optional — renders MUSIC_TRACKS loops to dist/music/*.wav
+node tools/gen-sounds.js --selftest  # verifies the offline music renderer against Web Audio semantics
 node tools/audit-sounds.js    # optional — measures every SFX (peak/RMS/crest/attack/centroid) + waveform PNGs
 node tools/png-to-grid.js x.png   # optional — converts a PNG into a char grid to paste into gen-sprites.js
 node tools/png-to-grid.js --selftest   # verifies the decoder against a committed asset
 node tools/check-portability.js   # enforces "logic layer stays browser-free" — run after touching src/
+node tools/audio-check.js         # music playback path (lazy render, track switching, race on fast screen change) on a Web Audio stub
 node tools/team-check.js          # team/boss invariants (slots, ally rules, team game-over, spawn placement, lobby) — exit code 1 on failure
 ```
 
-Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes every SFX into an `AudioBuffer` at runtime and plays music from a note table. `gen-sounds.js` exists only so you can hear a recipe in an audio editor while tuning it — its output goes to gitignored `dist/` and the game never loads it. See [14-Dzwiek.md](Documents/14-Dzwiek.md).
+Unlike sprites, **sound is never shipped as files**: `src/audio.js` synthesizes every SFX into an `AudioBuffer` at runtime and plays music from a note table. `gen-sounds.js` exists only so you can hear a recipe or a music loop in an audio editor while tuning it — its output goes to gitignored `dist/` and the game never loads it. See [14-Dzwiek.md](Documents/14-Dzwiek.md).
 
 ### Adding/changing UI text
 1. Add/edit the same key in **all three** `locales/pl.json`, `locales/en.json`, `locales/de.json`.
@@ -72,7 +75,9 @@ Unlike sprites, **sounds are not files** — they're synthesized at runtime, so 
 3. New sound: add the key to `SFX_RECIPES`, then call it **always** via `if (typeof playSfx === 'function') playSfx('name');` — `stress.js`, `sim.js` and `visual-test.html` load the game logic without `audio.js`.
 4. Consider entries in `SFX_MIN_GAP` (retrigger spacing), `SFX_ALWAYS` (does it survive fast-forwarded AI) — a frequent event without them machine-guns in observer mode — and `SFX_VARY` (random detune per playback, **non-melodic sounds only**; detuning a note phrase clashes with the music).
 
-Music lives in `MUSIC_TRACKS` as note tables played by oscillators; the generator can't render it, so audition music in the game. Full rationale and inventory: `Documents/14-Dzwiek.md`.
+Music lives in `MUSIC_TRACKS` as note tables, synthesized by `renderMusicLoop()` — a pure `(rate) => Float32Array` function, exactly like the SFX recipes. The game plays the result as a looping `AudioBufferSource`; `node tools/gen-sounds.js --music` writes the same result to `dist/music/*.wav`, and `--tracks=<file.js>` renders a note table from outside `src/audio.js` (that's how you compare candidate soundtracks without editing the game between listens). Voices are FM, subtractive-with-resonant-filter, and a synthesized drum kit.
+
+**The one invariant that is easy to break: the loop buffer is exactly one loop long and note tails wrap around modulo its length.** Anything that touches the end of the buffer breaks the seam — in particular a stateful effect (reverb) applied directly, or a `finishBuffer`-style tail fade. Run `node tools/gen-sounds.js --selftest` after touching music synthesis; it checks the seam numerically against the distribution of steps inside the loop. Full rationale: `Documents/14-Dzwiek.md`.
 
 ### Headless verification (no test framework exists)
 

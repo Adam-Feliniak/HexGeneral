@@ -61,6 +61,20 @@ zostaje czysty (wzorzec, nie log konkretnego przebiegu).
   u pokonanego imperium spada do zera.
 - [ ] **14. Skróty**: Enter kończy turę, Esc czyści zaznaczenie/road-pick/panele.
 
+## Dźwięk
+
+- [ ] **14a. Muzyka wchodzi po pierwszym kliknięciu** — pętla menu startuje z lekkim
+  opóźnieniem (render jest odłożony celowo), a samo kliknięcie nie zacina interfejsu.
+- [ ] **14b. Zmiana ekranu przełącza pętlę** — menu → gra → powrót do menu; także
+  **szybko, bez czekania** (to scenariusz, w którym muzyka potrafiła nie wystartować
+  w ogóle; `tools/audio-check.js` pilnuje tego automatycznie, ale słuch jest ostatecznym
+  sprawdzianem).
+- [ ] **14c. Pętla nie klika na szwie** — posłuchać przynajmniej dwóch pełnych obiegów
+  (pętla gry ~14,5 s, menu ~20 s). Klik oznacza zepsute zawijanie ogonów.
+- [ ] **14d. Gęsta bitwa nie robi papki** — przy tempie AI 4×/16× wybuchy nie zlewają
+  się w ścianę i nie zagłuszają dźwięku zdobycia miasta.
+- [ ] **14e. Koniec gry wycisza muzykę**, a nowa partia ją wraca.
+
 ## Sesja
 
 - [ ] **15. Kilka partii z rzędu bez odświeżania** — brak spadku płynności,
