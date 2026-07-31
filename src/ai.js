@@ -237,15 +237,17 @@ function aiPickMove(playerId, diff) {
           }
         }
       } else {
+        // premia za zajęcie pola należy się tylko za pole do ZAJĘCIA — wejście na teren
+        // sojusznika niczego nie przejmuje. Liczone raz na pole, nie raz na cel: pętla
+        // niżej chodzi po celach, a właściciel pola od celu nie zależy
+        const takeable = !aiIsOwnSide(playerId, to.owner);
         // ruch w kierunku najlepszego celu (dopuszcza obejścia, karze cofanie)
         for (const g of targetInfo) {
           const dNew = targetDist(g, to);
           const s = g.val * 2 - dNew * 2 +
                     (dNew < g.dNow ? 8 : dNew === g.dNow ? 0 : -10) +
-                    // premia za zajęcie pola należy się tylko za pole do ZAJĘCIA —
-                    // wejście na teren sojusznika niczego nie przejmuje
-                    (to.city && !aiIsOwnSide(playerId, to.owner) ? 25 : 0) +
-                    (to.land && !aiIsOwnSide(playerId, to.owner) ? 3 : 0) -
+                    (to.city && takeable ? 25 : 0) +
+                    (to.land && takeable ? 3 : 0) -
                     (!to.land ? 2 : 0);
           if (s > score) score = s;
         }

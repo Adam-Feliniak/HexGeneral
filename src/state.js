@@ -18,6 +18,48 @@ let lastFrame = 0;
    tożsamość gracza to zawsze `id` (owner, army.player, city.capitalOf). Rozjazd bierze
    się stąd, że zamknięty slot nie tworzy imperium, więc id są ciągłe, a skiny nie. */
 
+// Ile różnych drużyn jest w składzie i czy ktokolwiek ma sojusznika. Trzymane razem, bo
+// od tej samej odpowiedzi zależy koniec gry, blokada Startu w lobby, przestawianie stolic
+// i litery drużyn w panelu — rozjazd między nimi znaczyłby np. że sojusznicy startują
+// obok siebie, ale gra i tak kończy się po pierwszym upadku. Działa na slotach i na
+// graczach naraz, bo obie listy mają pole `team`
+function distinctTeams(list) {
+  return new Set(list.map(x => x.team)).size;
+}
+function hasAllies(list) {
+  return list.length > distinctTeams(list);
+}
+
+// Który zestaw barw/sprite'ów z PLAYERS_DEF dostaje slot (u bossa zawsze własny).
+// Liczy to i lobby przy rysowaniu wiersza, i newGame przy budowie gracza — gdyby się
+// rozeszły, tabela slotów zapowiadałaby inne imperium, niż faktycznie wchodzi do gry
+function slotSkin(slot, index) {
+  if (slot.kind === 'boss') return BOSS_SKIN;
+  return Number.isFinite(slot.skin) ? slot.skin : index;
+}
+
+// Rzut gotowego gracza z powrotem na slot ("Nowa mapa"/"Nowa gra" powtarzają skład
+// bieżącej partii). Wypisane tu raz, bo pominięte pole nie daje błędu — po cichu wraca
+// do wartości domyślnej, jak `difficulty`, gdyby go tu zabrakło
+function slotFromPlayer(p) {
+  return { kind: p.kind, team: p.team, skin: p.skin, difficulty: p.difficulty };
+}
+
+// Gotowe układy slotów dla lobby (przyciski „Szybki układ"). „Tryb bossa" NIE jest osobnym
+// trybem gry, tylko jednym z tych układów. Tabela trzyma wyłącznie dane, które naprawdę
+// różnią układy — obsadę i drużynę; regułę „człowiek nie ma trudności, reszta bierze
+// domyślną" dopisuje mpSlots(), żeby nie powtarzać jej w każdym wierszu każdego układu
+const MP_PRESETS = {
+  coop: [['human', 0], ['human', 0], ['bot', 1], ['bot', 1], ['closed', 2], ['closed', 3]],
+  ffa:  [['human', 0], ['human', 1], ['bot', 2], ['bot', 3], ['closed', 4], ['closed', 5]],
+  boss: [['human', 0], ['human', 0], ['closed', 2], ['closed', 3], ['closed', 4], ['boss', 1]],
+};
+function mpSlots(key, difficulty) {
+  const d = difficulty || DEFAULT_AI_DIFFICULTY;
+  return (MP_PRESETS[key] || MP_PRESETS.ffa)
+    .map(([kind, team]) => ({ kind, team, difficulty: kind === 'human' ? null : d }));
+}
+
 function slotsFromCounts(humanCount, botCount) {
   const total = Math.max(2, Math.min(MAX_PLAYERS, Math.max(0, humanCount) + Math.max(0, botCount)));
   const humans = Math.min(Math.max(0, humanCount), total);
@@ -44,6 +86,17 @@ function dominantDifficulty(slots, fallback) {
   return best;
 }
 
+// Czy z tego składu da się w ogóle rozegrać partię: bez dwóch imperiów w dwóch drużynach
+// nie ma warunku końca gry. Zwraca symboliczny kod, a nie klucz i18n — warstwa logiki nie
+// zna słownika UI. Jedno miejsce prawdy dla dwóch różnych reakcji na ten sam problem:
+// lobby blokuje Start (menu.js), a normalizeSlots awaryjnie naprawia skład
+function slotsProblem(slots) {
+  const open = (slots || []).filter(s => s && s.kind !== 'closed');
+  if (open.length < 2) return 'needPlayers';
+  if (distinctTeams(open) < 2) return 'needTeams';
+  return null;
+}
+
 function normalizeSlots(raw) {
   const open = [];
   (raw || []).forEach((s, i) => {
@@ -52,16 +105,16 @@ function normalizeSlots(raw) {
     open.push({
       kind,
       team: Number.isFinite(s.team) ? s.team : i,
-      skin: kind === 'boss' ? BOSS_SKIN : (Number.isFinite(s.skin) ? s.skin : i),
+      skin: slotSkin(s, i),
       // trudność jest per slot; brak wartości (harnessy, stare wywołania) oznacza
       // „weź wspólną trudność gry" — rozstrzyga to newGame
       difficulty: s.difficulty !== undefined ? s.difficulty : null,
     });
   });
-  // partia z jednym imperium albo jedną drużyną nie miałaby warunku końca — lobby
-  // tego nie dopuszcza, ale import/harness mógłby, więc awaryjnie rozbijamy na FFA
-  if (open.length < 2) return slotsFromCounts(1, 1);
-  if (new Set(open.map(s => s.team)).size < 2) open.forEach((s, i) => { s.team = i; });
+  // lobby nie dopuszcza niegrywalnego składu, ale import zapisu albo harness już tak
+  const problem = slotsProblem(open);
+  if (problem === 'needPlayers') return slotsFromCounts(1, 1);
+  if (problem === 'needTeams') open.forEach((s, i) => { s.team = i; }); // rozbijamy na FFA
   return open;
 }
 
@@ -74,8 +127,7 @@ function normalizeSlots(raw) {
 // dostaje spójny łuk sąsiadujących pozycji. Zbiór użytych pozycji się nie zmienia, więc
 // mapa (generateMap) jest identyczna
 function assignTeamPositions(slots) {
-  const allied = slots.some((s, i) => slots.some((o, j) => j !== i && o.team === s.team));
-  if (!allied) return slots;
+  if (!hasAllies(slots)) return slots;
   const n = slots.length;
   const dist = [];
   for (let i = 0; i < n; i++) {
@@ -159,7 +211,7 @@ function newGame(opts = {}) {
     : (opts.humanCount !== undefined || opts.botCount !== undefined)
       ? slotsFromCounts(opts.humanCount !== undefined ? opts.humanCount : 1,
                         opts.botCount !== undefined ? opts.botCount : 0)
-    : hadGame ? normalizeSlots(state.players.map(p => ({ kind: p.kind, team: p.team, skin: p.skin })))
+    : hadGame ? normalizeSlots(state.players.map(slotFromPlayer))
     : slotsFromCounts(1, 3);
   // przy drużynach sojusznicy startują obok siebie, w FFA bez zmian
   const slots = assignTeamPositions(rawSlots);
@@ -187,7 +239,6 @@ function newGame(opts = {}) {
     // dla niej miejsce w stanie i zapisie (patrz Documents/15-Silnik-i-przenosnosc.md)
     transport: opts.transport === 'net' ? 'net' : 'local',
     human: firstHumanSlot >= 0 ? firstHumanSlot : 0, // id imperium "Twojego" (tylko tryb single)
-    humanPlayerCount: actualHumanCount,
     // trudność bota siedzi w player.difficulty (per gracz, ustawiana w slotach lobby);
     // to pole jest tylko wartością domyślną dla imperium przechodzącego pod AI w trakcie gry
     aiDifficulty: dominantDifficulty(slots, aiDifficulty),
@@ -244,19 +295,11 @@ function defaultSpSetup() {
 }
 function defaultMpSetup() {
   return {
-    transport: 'local', slots: defaultMpSlots(),
+    // domyślnie co-op: dwoje ludzi w jednej drużynie przeciw dwóm botom — układ, po który
+    // sięga sesja testowa (Documents/11-Early-Access.md), hot-seat grany RAZEM
+    transport: 'local', slots: mpSlots('coop'),
     seedMode: 'random', seedValue: randomSeed(), time: TURN_TIME_LIMIT_DEFAULT,
   };
-}
-// domyślnie dwoje ludzi w jednej drużynie przeciw dwóm botom — układ, po który sięga
-// sesja testowa (Documents/11-Early-Access.md): hot-seat, w którym gracze grają RAZEM
-function defaultMpSlots(difficulty) {
-  const d = difficulty || DEFAULT_AI_DIFFICULTY;
-  return [
-    { kind: 'human', team: 0, difficulty: null }, { kind: 'human', team: 0, difficulty: null },
-    { kind: 'bot', team: 1, difficulty: d }, { kind: 'bot', team: 1, difficulty: d },
-    { kind: 'closed', team: 2, difficulty: d }, { kind: 'closed', team: 3, difficulty: d },
-  ];
 }
 function defaultOptions() {
   return { defaultSeed: null, defaultDifficulty: 'normal' };

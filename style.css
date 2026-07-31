@@ -422,7 +422,7 @@ button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0, 0,
 
 /* wybornik trudności ma 5 przycisków ("NIGHTMARE" najdłuższy) — węższa czcionka
    i większy min-width wymuszają zawijanie na 2 rzędy zamiast ścieśniania tekstu */
-#sp-diff-group button, #mp-diff-group button {
+#sp-diff-group button {
   min-width: 84px;
   font-size: 11px;
   letter-spacing: 0.5px;

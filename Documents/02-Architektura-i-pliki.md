@@ -88,7 +88,6 @@ state = {
   turn,                 // numer aktualnej rundy (rośnie po pełnym obrocie wszystkich graczy)
   phase: 'active' | 'over',
   human,                 // id imperium "twojego" gracza (tylko single)
-  humanPlayerCount,
   aiDifficulty,          // wspólny preset/liczba dla botów tej gry
   currentPlayerIndex,
   turnStartTime,

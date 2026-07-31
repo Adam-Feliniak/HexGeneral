@@ -154,25 +154,11 @@ function renderSpSetup() {
 
 const MP_SLOT_KINDS = ['human', 'bot', 'boss', 'closed'];
 
-// gotowe układy slotów. „Tryb bossa" nie jest osobnym trybem gry, tylko jednym z tych
-// układów — boss to wartość obsady slotu, więc obsługuje go ta sama tabela co resztę
+// Gotowe układy slotów — same układy siedzą w MP_PRESETS (state.js), tu zostaje tylko
+// to, co należy do menu: szybki układ nie zgaduje trudności, bierze domyślną z Opcji,
+// tak jak lobby robiło to wcześniej jednym wspólnym wybornikiem
 function mpPreset(key) {
-  // szybki układ nie zgaduje trudności — bierze domyślną z Opcji, tak jak lobby robiło
-  // to wcześniej jednym wspólnym wybornikiem
-  const d = (state.options && state.options.defaultDifficulty) || DEFAULT_AI_DIFFICULTY;
-  if (key === 'coop') return defaultMpSlots(d);
-  if (key === 'boss') {
-    return [
-      { kind: 'human', team: 0, difficulty: null }, { kind: 'human', team: 0, difficulty: null },
-      { kind: 'closed', team: 2, difficulty: d }, { kind: 'closed', team: 3, difficulty: d },
-      { kind: 'closed', team: 4, difficulty: d }, { kind: 'boss', team: 1, difficulty: d },
-    ];
-  }
-  return [ // ffa — każdy przeciw każdemu, czyli układ sprzed drużyn
-    { kind: 'human', team: 0, difficulty: null }, { kind: 'human', team: 1, difficulty: null },
-    { kind: 'bot', team: 2, difficulty: d }, { kind: 'bot', team: 3, difficulty: d },
-    { kind: 'closed', team: 4, difficulty: d }, { kind: 'closed', team: 5, difficulty: d },
-  ];
+  return mpSlots(key, state.options && state.options.defaultDifficulty);
 }
 
 function renderMpTransport(setup) {
@@ -201,68 +187,59 @@ function renderMpPresets(setup) {
   }
 }
 
+// wspólny szkielet wyborników w wierszu slotu; `items` to pary [wartość, etykieta]
+function slotSelect(items, value, disabled, onPick) {
+  const sel = document.createElement('select');
+  for (const [val, label] of items) {
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  }
+  sel.value = value;
+  sel.disabled = disabled;
+  if (!disabled) sel.onchange = () => onPick(sel.value);
+  return sel;
+}
+
 function renderMpSlots(setup) {
   const box = document.getElementById('mp-slots');
   box.innerHTML = '';
+  const teamItems = [];
+  for (let t = 0; t < MAX_PLAYERS; t++) {
+    teamItems.push([String(t), i18n.t('lobby.mp.team', { team: String.fromCharCode(65 + t) })]);
+  }
   setup.slots.forEach((slot, i) => {
     // barwa i nazwa idą z pozycji w tabeli, a u bossa z jego własnego wpisu w PLAYERS_DEF
-    const def = PLAYERS_DEF[slot.kind === 'boss' ? BOSS_SKIN : i];
+    // (slotSkin — ta sama reguła, którą newGame nadaje gotowemu graczowi)
+    const def = PLAYERS_DEF[slotSkin(slot, i)];
     const row = document.createElement('div');
     row.className = 'slot-row' + (slot.kind === 'closed' ? ' slot-closed' : '');
     row.innerHTML = `<span class="player-dot" style="background:${def.color}"></span>` +
       `<span class="slot-name">${def.name}</span>`;
 
-    const kindSel = document.createElement('select');
-    for (const k of MP_SLOT_KINDS) {
-      const opt = document.createElement('option');
-      opt.value = k;
-      opt.textContent = i18n.t('lobby.mp.slot.' + k);
-      kindSel.appendChild(opt);
-    }
-    kindSel.value = slot.kind;
-    kindSel.onchange = () => {
-      slot.kind = kindSel.value;
-      // boss jest jeden na partię — drugi wybór degraduje poprzedniego do zwykłego bota
-      if (slot.kind === 'boss') {
-        setup.slots.forEach((o, j) => { if (j !== i && o.kind === 'boss') o.kind = 'bot'; });
-      }
-      renderMpSetup();
-    };
-    row.appendChild(kindSel);
+    row.appendChild(slotSelect(
+      MP_SLOT_KINDS.map(k => [k, i18n.t('lobby.mp.slot.' + k)]), slot.kind, false, v => {
+        slot.kind = v;
+        // boss jest jeden na partię — drugi wybór degraduje poprzedniego do zwykłego bota
+        if (v === 'boss') {
+          setup.slots.forEach((o, j) => { if (j !== i && o.kind === 'boss') o.kind = 'bot'; });
+        }
+        renderMpSetup();
+      }));
 
     // trudność per slot: każdy bot (i boss) może być inny, więc nie ma już jednego
     // wspólnego wybornika dla całej partii. U bossa preset jest bazą, na którą
     // playerDifficulty() nakłada BOSS_MULT
-    const diffSel = document.createElement('select');
     const aiSlot = slot.kind === 'bot' || slot.kind === 'boss';
-    if (aiSlot) {
-      for (const key of AI_DIFFICULTY_ORDER) {
-        const opt = document.createElement('option');
-        opt.value = key;
-        opt.textContent = difficultyLabel(AI_DIFFICULTY_PRESETS[key]);
-        diffSel.appendChild(opt);
-      }
-      diffSel.value = slot.difficulty || DEFAULT_AI_DIFFICULTY;
-      diffSel.onchange = () => { slot.difficulty = diffSel.value; renderMpSetup(); };
-    } else {
-      const opt = document.createElement('option');
-      opt.textContent = i18n.t('lobby.mp.noDifficulty');
-      diffSel.appendChild(opt);
-      diffSel.disabled = true;
-    }
-    row.appendChild(diffSel);
+    row.appendChild(aiSlot
+      ? slotSelect(AI_DIFFICULTY_ORDER.map(k => [k, difficultyLabel(AI_DIFFICULTY_PRESETS[k])]),
+          slot.difficulty || DEFAULT_AI_DIFFICULTY, false,
+          v => { slot.difficulty = v; renderMpSetup(); })
+      : slotSelect([['', i18n.t('lobby.mp.noDifficulty')]], '', true));
 
-    const teamSel = document.createElement('select');
-    for (let t = 0; t < MAX_PLAYERS; t++) {
-      const opt = document.createElement('option');
-      opt.value = String(t);
-      opt.textContent = i18n.t('lobby.mp.team', { team: String.fromCharCode(65 + t) });
-      teamSel.appendChild(opt);
-    }
-    teamSel.value = String(slot.team);
-    teamSel.disabled = slot.kind === 'closed';
-    teamSel.onchange = () => { slot.team = Number(teamSel.value); renderMpSetup(); };
-    row.appendChild(teamSel);
+    row.appendChild(slotSelect(teamItems, String(slot.team), slot.kind === 'closed',
+      v => { slot.team = Number(v); renderMpSetup(); }));
 
     box.appendChild(row);
   });
@@ -270,21 +247,18 @@ function renderMpSlots(setup) {
 
 function renderMpSetup() {
   const setup = state.mpSetup;
-  // ustawienia lobby przeżywają sesję (prevMpSetup w newGame), więc setup sprzed
-  // wprowadzenia slotów może tu jeszcze trafić
-  if (!setup.slots) { setup.slots = defaultMpSlots(); setup.transport = 'local'; }
 
   renderMpTransport(setup);
   renderMpPresets(setup);
   renderMpSlots(setup);
 
-  const open = setup.slots.filter(s => s.kind !== 'closed');
-  // partia bez dwóch drużyn nie ma warunku końca — Start zostaje zablokowany
-  const problem = open.length < 2 ? 'lobby.mp.needPlayers'
-    : new Set(open.map(s => s.team)).size < 2 ? 'lobby.mp.needTeams' : null;
+  // partia bez dwóch drużyn nie ma warunku końca — Start zostaje zablokowany. Ten sam
+  // warunek (slotsProblem w state.js) naprawia awaryjnie skład wpuszczony bokiem, więc
+  // lobby nie może blokować czegoś, co newGame i tak by przyjęło
+  const problem = slotsProblem(setup.slots);
   const warn = document.getElementById('mp-slots-warning');
   warn.hidden = !problem;
-  if (problem) warn.textContent = i18n.t(problem);
+  if (problem) warn.textContent = i18n.t('lobby.mp.' + problem);
   document.getElementById('mp-start').disabled = !!problem;
 
   renderSeedGroup('mp-seed-group', 'mp-seed-input', 'mp-seed-preview', setup, renderMpSetup);
@@ -306,7 +280,7 @@ function applyOptionsToSetups() {
   const opt = state.options;
   state.spSetup.difficulty = opt.defaultDifficulty;
   // w multi trudność jest per slot, więc domyślna z Opcji spływa na wszystkie sloty AI
-  for (const s of state.mpSetup.slots || []) {
+  for (const s of state.mpSetup.slots) {
     if (s.kind !== 'human') s.difficulty = opt.defaultDifficulty;
   }
   for (const setup of [state.spSetup, state.mpSetup]) {

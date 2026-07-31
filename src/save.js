@@ -73,7 +73,7 @@ function serializeGame() {
     game: {
       mode: state.mode, transport: state.transport, mapSeed: state.mapSeed, turn: state.turn,
       phase: state.phase, human: state.human,
-      humanPlayerCount: state.humanPlayerCount, aiDifficulty: state.aiDifficulty,
+      aiDifficulty: state.aiDifficulty,
       currentPlayerIndex: state.currentPlayerIndex,
       timeLimit: saveEncInf(state.timeLimit), activationsLeft: state.activationsLeft,
       players: state.players.map(p => ({
@@ -158,7 +158,6 @@ function deserializeGame(data) {
     turn: g.turn,
     phase: g.phase,
     human: g.human,
-    humanPlayerCount: g.humanPlayerCount,
     aiDifficulty: g.aiDifficulty,
     currentPlayerIndex: g.currentPlayerIndex,
     turnStartTime: performance.now(),

@@ -58,8 +58,7 @@ function conquerEmpire(loserId, winnerId) {
 // to dokładnie dawny warunek „ostatnie żywe imperium")
 function checkGameOver() {
   const alive = state.players.filter(p => p.alive);
-  const teamsLeft = new Set(alive.map(p => p.team));
-  if (alive.length && teamsLeft.size === 1) {
+  if (alive.length && distinctTeams(alive) === 1) {
     state.phase = 'over';
     // rozstrzygnięta partia znika z autozapisu („Kontynuuj" jej nie wskrzesza);
     // osłona typeof — headless sim/harness ładuje empire.js bez save.js

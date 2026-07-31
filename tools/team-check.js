@@ -57,13 +57,15 @@ function check(name, cond, detail) {
 
 /* ---------------- sandboxy ---------------- */
 
-// Bez `document`: osłony headless (typeof document === 'undefined') wyłączają UI,
-// dokładnie jak w sim.js/stress.js
-function makeLogicCtx() {
+// Bez `document` (domyślnie): osłony headless (typeof document === 'undefined') wyłączają
+// UI, dokładnie jak w sim.js/stress.js. Oba sandboxy budujemy tą samą funkcją, żeby
+// połowa testów nie zaczęła po cichu chodzić w innym środowisku niż druga
+function makeCtx(extraGlobals) {
   const ctx = vm.createContext({
     console, JSON, Math, Infinity, Date,
     performance: { now: () => 0 },
     setTimeout: () => 0, clearTimeout: () => {},
+    ...extraGlobals,
   });
   for (const f of SRC_FILES) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'src', f), 'utf8'), ctx, { filename: f });
@@ -108,18 +110,10 @@ function makeDomCtx() {
       return nodes.get(id);
     },
   };
-  const ctx = vm.createContext({
-    console, JSON, Math, Infinity, Date, document,
-    performance: { now: () => 0 },
-    setTimeout: () => 0, clearTimeout: () => {},
-  });
-  for (const f of SRC_FILES) {
-    vm.runInContext(fs.readFileSync(path.join(ROOT, 'src', f), 'utf8'), ctx, { filename: f });
-  }
-  return ctx;
+  return makeCtx({ document });
 }
 
-const logic = makeLogicCtx();
+const logic = makeCtx();
 const run = src => vm.runInContext(src, logic);
 
 const SLOTS = {
@@ -139,17 +133,18 @@ const SLOTS = {
                   { kind: 'closed', team: 4 }, { kind: 'closed', team: 5 }]`,
 };
 
-const newTeamGame = (slots, seed) =>
-  run(`newGame({ slots: ${slots}, aiDifficulty: 'normal', seed: ${seed}, timeLimit: Infinity });`);
+// Nowa partia z podanego układu slotów. Od razu wystawia w sandboxie `A` i `B` — id
+// imperiów drużyny 0 i 1 — bo assignTeamPositions przestawia sloty, więc stały indeks nic
+// nie znaczy i każdy test i tak musi szukać graczy po drużynie, nie po pozycji w tabeli
+const newTeamGame = (slots, seed) => run(`
+  newGame({ slots: ${slots}, aiDifficulty: 'normal', seed: ${seed}, timeLimit: Infinity });
+  var A = state.players.filter(p => p.team === 0).map(p => p.id);
+  var B = state.players.filter(p => p.team === 1).map(p => p.id);`);
 
 /* ---------------- 1. skład partii ze slotów ---------------- */
 
 section('Skład partii ze slotów');
 newTeamGame(SLOTS.coop2v2, 4242);
-// wszystkiego szukamy po drużynie/obsadzie: assignTeamPositions przestawia sloty,
-// więc stały indeks nic nie znaczy
-run(`var A = state.players.filter(p => p.team === 0).map(p => p.id);
-     var B = state.players.filter(p => p.team === 1).map(p => p.id);`);
 const A = run('A'), B = run('B');
 
 check('zamknięte sloty nie tworzą imperium', run('state.players.length') === 4, run('state.players.length'));
@@ -171,8 +166,6 @@ check('nie da się przekroczyć MAX_PLAYERS', run(`
 
 section('Reguły sojuszu');
 newTeamGame(SLOTS.coop2v2, 4242);
-run(`var A = state.players.filter(p => p.team === 0).map(p => p.id);
-     var B = state.players.filter(p => p.team === 1).map(p => p.id);`);
 
 run(`var t = state.tiles[3][3];
      t.land = true; t.city = null; t.road = null; t.resource = null; t.army = null;
@@ -230,8 +223,6 @@ check('złoże sojusznika NIE zasila mojego miasta (gospodarka zostaje osobna)',
 
 section('Koniec gry liczony na drużyny');
 newTeamGame(SLOTS.coop2v2, 4242);
-run(`var A = state.players.filter(p => p.team === 0).map(p => p.id);
-     var B = state.players.filter(p => p.team === 1).map(p => p.id);`);
 run(`state.players[A[1]].alive = false; checkGameOver();`);
 check('gra trwa, gdy ginie jedno imperium z drużyny', run('state.phase') === 'active');
 run(`B.forEach(function (id) { state.players[id].alive = false; }); checkGameOver();`);

@@ -76,10 +76,9 @@ function updateUI() {
 }
 
 // Mapa drużyna -> litera (A, B, ...) albo null, gdy nikt z nikim nie jest w sojuszu.
-// W FFA każdy gracz ma własną drużynę, więc litery byłyby szumem — stąd warunek `shared`
+// W FFA każdy gracz ma własną drużynę, więc litery byłyby szumem — stąd hasAllies()
 function teamLabels() {
-  const shared = state.players.some(p => state.players.some(o => o !== p && o.team === p.team));
-  if (!shared) return null;
+  if (!hasAllies(state.players)) return null;
   const map = new Map();
   [...new Set(state.players.map(p => p.team))].sort((a, b) => a - b)
     .forEach((t, i) => map.set(t, String.fromCharCode(65 + i)));

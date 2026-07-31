@@ -27,21 +27,26 @@ function moraleAt(playerId, t) {
   // pełną siłą także 10 pól w głębi cudzego kraju. To jest ta różnica, która robi
   // z niego przeciwnika innego RODZAJU, a nie tylko bogatszego bota: rajd na
   // zaplecze przestaje być dla niego samobójstwem, choć dla obrońców nadal jest.
-  // Skanu miast wtedy w ogóle nie robimy (moraleAt jest wołane setki razy na turę)
-  if (isBossPlayer(playerId)) return t.land ? 100 : 85;
+  // Nie zwracamy dla niego osobnego wyniku, tylko podstawiamy dystans 0: wspólny wzór
+  // niżej zostaje JEDYNYM miejscem, w którym żyją kara za morze i widełki morale
+  // (przepisane ręcznie rozjechałyby się przy pierwszej zmianie balansu). Skanu miast
+  // i tak nie robimy — moraleAt jest wołane setki razy na turę
   // morale zależy od odległości do najbliższego własnego miasta —
   // podbijanie miast przesuwa front morale do przodu
-  let d = Infinity;
-  if (moraleCityCache) {
-    for (const o of moraleCityList(playerId)) {
-      const dd = hexDist(t.c, t.r, o.c, o.r);
-      if (dd < d) d = dd;
-    }
-  } else {
-    for (const row of state.tiles) for (const o of row) {
-      if (o.city && o.owner === playerId) {
+  let d = 0; // boss: zawsze „u siebie", stąd zerowy dystans i pominięty skan
+  if (!isBossPlayer(playerId)) {
+    d = Infinity;
+    if (moraleCityCache) {
+      for (const o of moraleCityList(playerId)) {
         const dd = hexDist(t.c, t.r, o.c, o.r);
         if (dd < d) d = dd;
+      }
+    } else {
+      for (const row of state.tiles) for (const o of row) {
+        if (o.city && o.owner === playerId) {
+          const dd = hexDist(t.c, t.r, o.c, o.r);
+          if (dd < d) d = dd;
+        }
       }
     }
   }

@@ -165,9 +165,6 @@ const PLAYERS_DEF = [
 ];
 // indeks zestawu sprite'ów bossa (assets/*_6.png) — patrz player.skin w state.js
 const BOSS_SKIN = PLAYERS_DEF.length - 1;
-// liczba imperiów możliwych na mapie (tyle jest pozycji w CAPITAL_SPOTS) — boss ZAJMUJE
-// jeden z tych slotów, a nie dokłada kolejnego
-const MAX_PLAYERS = 6;
 
 // Boss to nie osobny poziom trudności, tylko mnożniki NA WIERZCHU wybranego presetu —
 // dzięki temu suwak trudności dalej reguluje partię z bossem. Sama produkcja nie
@@ -191,3 +188,8 @@ const CAPITAL_SPOTS = [
 // Uwaga: ta kolejność maksymalizuje ROZRZUT, co jest właściwe w FFA, ale przy drużynach
 // byłoby sabotażem (sojusznicy w przeciwległych rogach). Kto gdzie startuje w grze
 // drużynowej wylicza assignTeamPositions() w state.js — z tego samego zbioru pozycji.
+
+// liczba imperiów możliwych na mapie — wprost tyle, ile jest pozycji stolic (boss ZAJMUJE
+// jeden z tych slotów, a nie dokłada kolejnego). Liczona, a nie wpisana, bo rozejście się
+// tych dwóch wartości oznaczałoby imperium bez stolicy — CAPITAL_SPOTS[id] === undefined
+const MAX_PLAYERS = CAPITAL_SPOTS.length;
