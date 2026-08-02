@@ -16,6 +16,7 @@
    Użycie:
      node tools/png-to-grid.js rysunek.png            # -> mapa znaków na stdout
      node tools/png-to-grid.js rysunek.png --player=2 # barwy gracza 2 jako b/B/h/m
+     node tools/png-to-grid.js --palette              # paleta znak -> kolor do edytora
      node tools/png-to-grid.js --selftest             # test poprawności na assets/tank_0.png
 
    Wymagania wobec pliku: PNG bez przeplotu, 8 bitów na kanał (RGBA, RGB, szarość
@@ -173,11 +174,25 @@ if (args.includes('--selftest')) {
   process.exit(0);
 }
 
+/* ------------------------------ zrzut palety ------------------------------ */
+/* Rysowanie sprite'a poza repo (edytor pixel-artu, Aseprite przez MCP) wymaga
+   wprowadzenia tam palety. Przepisywanie kilkudziesięciu hexów z BASE_PAL ręcznie
+   kończy się literówką, która wychodzi na jaw dopiero tutaj — jako '?' na końcu
+   łańcucha. Ten tryb podaje dokładnie tę samą paletę, której użyje mapowanie
+   z powrotem, więc obie strony nie mogą się rozjechać.
+
+   Musi być PRZED sprawdzeniem nazwy pliku niżej, bo nie bierze żadnego pliku. */
+if (args.includes('--palette')) {
+  console.log(JSON.stringify(playerPalette(PLAYER), null, 2));
+  process.exit(0);
+}
+
 /* ------------------------------ tryb zwykły ------------------------------ */
 
 const file = args.find(a => !a.startsWith('--'));
 if (!file) {
   console.error('Użycie: node tools/png-to-grid.js <plik.png> [--player=N]');
+  console.error('        node tools/png-to-grid.js --palette [--player=N]');
   console.error('        node tools/png-to-grid.js --selftest');
   process.exit(1);
 }

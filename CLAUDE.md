@@ -47,6 +47,7 @@ node tools/gen-sounds.js --music     # optional — renders MUSIC_TRACKS loops t
 node tools/gen-sounds.js --selftest  # verifies the offline music renderer against Web Audio semantics
 node tools/audit-sounds.js    # optional — measures every SFX (peak/RMS/crest/attack/centroid) + waveform PNGs
 node tools/png-to-grid.js x.png   # optional — converts a PNG into a char grid to paste into gen-sprites.js
+node tools/png-to-grid.js --palette    # dumps the resolved palette (char -> hex) for drawing outside the repo
 node tools/png-to-grid.js --selftest   # verifies the decoder against a committed asset
 node tools/check-portability.js   # enforces "logic layer stays browser-free" — run after touching src/
 node tools/audio-check.js         # music playback path (lazy render, track switching, race on fast screen change) on a Web Audio stub
@@ -69,6 +70,8 @@ So `gen-sounds.js` is not a build step and has no counterpart to "commit the reg
 3. Run `node tools/gen-sprites.js`.
 4. If it's a new sprite file/category, register it in `loadSprites()` in `src/sprites.js`.
 5. Commit the changed/new `assets/*.png` alongside the generator change.
+
+To place pixels deliberately instead of composing a silhouette from ellipses, an **Aseprite MCP server is wired up** (project-local scope, installed outside the repo — see `Documents/09-Przewodnik-developera.md` for locations and the reproduce-elsewhere steps). It is a scratchpad only: the char maps in `gen-sprites.js` stay the source of truth, and the drawing comes back via `png-to-grid.js`. Two rules that are easy to get wrong — draw **without an outline** (`outline()` converts the shape's own outer ring to `o`, it does not add a ring outside, so a drawn outline gets counted twice), and paint strictly from `node tools/png-to-grid.js --palette` (off-palette colours return as `?`).
 
 ### Adding/changing a sound
 Unlike sprites, **sounds are not files** — they're synthesized at runtime, so there is nothing to regenerate or commit.

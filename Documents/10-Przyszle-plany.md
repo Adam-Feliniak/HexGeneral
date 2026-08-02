@@ -348,18 +348,24 @@ naturalnie eksponuje wartość zwiadu.
   zachowaniem AI (stalemate wyżej).
 - 🟡 **Minimapa** — przy proceduralnych mapach szybko robi się przydatna, zwłaszcza
   z mgłą wojny.
-- 🟢 **Aseprite przez MCP jako brudnopis graficzny** — dostęp do serwera
-  `diivi/aseprite-mcp` (MIT) jest dostępny: gada z Aseprite przez Lua API w trybie
-  wsadowym, więc działa jak bezgłowa biblioteka do rysowania (`draw_pixels`, `fill_area`,
-  `outline_cel`, `export_frame`, narzędzia do animacji). Realna wartość ponad ręczną
-  robotę: `generate_color_ramp` + `adjust_hsl`, czyli poprawne rampy z hue shiftem —
-  przydatne przy pozycji „Bogatsze sprite'y" i przy klatkach animacji wyżej.
-  **Twardy warunek: źródłem prawdy zostają mapy pikseli jako stringi w
+- ✅ **Aseprite przez MCP jako brudnopis graficzny** — **zrealizowane** (02.08.2026;
+  warsztat, nie zmiana w grze). Serwer `diivi/aseprite-mcp` (MIT) zainstalowany i podłączony; gada
+  z Aseprite przez Lua API w trybie wsadowym, więc działa jak bezgłowa biblioteka do
+  rysowania (`draw_pixels`, `fill_area`, `outline_cel`, `export_frame`, narzędzia do
+  animacji). Realna wartość ponad ręczną robotę: `generate_color_ramp` + `adjust_hsl`,
+  czyli poprawne rampy z hue shiftem — przydatne przy pozycji „Bogatsze sprite'y"
+  i przy klatkach animacji wyżej.
+  **Twardy warunek utrzymany: źródłem prawdy zostają mapy pikseli jako stringi w
   `tools/gen-sprites.js`.** Aseprite jest brudnopisem, a nie formatem assetów —
   `node tools/gen-sprites.js` musi dalej odtwarzać całe `assets/` z zerem zależności.
-  Most z powrotem do generatora już istnieje (`tools/png-to-grid.js`, PNG → siatka
-  znaków). Dwa równoległe źródła prawdy rozjechałyby się jak `PLAYERS_DEF` vs `PLAYERS`.
-  Uwaga bezpieczeństwa: narzędzie `run_lua_script` odpala niesandboxowany kod Lua.
+  Most z powrotem to `tools/png-to-grid.js` (PNG → siatka znaków, z flagą `--palette`
+  w drugą stronę). Dwa równoległe źródła prawdy rozjechałyby się jak `PLAYERS_DEF`
+  vs `PLAYERS`. Warsztat, lokalizacje instalacji i uwaga bezpieczeństwa o
+  `run_lua_script` (niesandboxowany kod Lua) — w
+  [Przewodniku developera](09-Przewodnik-developera.md).
+  Pozostaje otwarte: **przepisanie `tankGrid()` z kodu na `TANK_ROWS`**, czyli świadoma
+  zamiana parametrycznych kształtów na stawiane piksele — osobna decyzja, wymaga
+  wariantów do wyboru.
 - 🔴 **Ewentualne przejście na Godota** — opcja jest realna i policzona (port nie jest
   apokaliptyczny: logika, kodek zapisu i DSP tłumaczą się mechanicznie, render/UI/input
   do przepisania, pipeline sprite'ów zostaje bez zmian), ale **nie jest planem** — dziś

@@ -6,6 +6,91 @@ Brak builda, brak serwera, brak `npm install`. Wystarczy otworzyć `index.html` 
 
 `tools/png.js` to jedyne miejsce z obsługą formatu PNG — korzystają z niego generator sprite'ów, audyt dźwięku i import PNG → siatka znaków. To moduł CommonJS z `module.exports`; zasada „bez modułów" dotyczy wyłącznie `src/*.js`, które przeglądarka wczytuje przez `<script>` z `file://`.
 
+## Narzędzia poza repo (Aseprite przez MCP)
+
+**Nic z tej sekcji nie jest zależnością projektu.** Gra otwiera się z `index.html`, a każdy
+skrypt w `tools/` działa na gołym Node bez instalowania czegokolwiek — i tak ma zostać.
+Opisane niżej rzeczy to prywatny warsztat do *rysowania* sprite'ów, świadomie trzymany
+**poza katalogiem repo**, żeby obcy kod i wirtualne środowisko Pythona nie wsiąkły
+do projektu. Ktoś, kto klonuje repo, może tę sekcję pominąć w całości.
+
+Po co: sylwetkę organiczną (czołg) łatwiej postawić piksel po pikselu niż złożyć
+z `ellipseFill()`. Aseprite jest brudnopisem; źródłem prawdy zostają mapy znaków
+w `tools/gen-sprites.js`, a most z powrotem to `tools/png-to-grid.js`.
+
+### Co i gdzie jest zainstalowane (stan na 02.08.2026)
+
+| Rzecz | Lokalizacja / wersja |
+|---|---|
+| Aseprite | `C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe` — 1.3.18.1-x64 (instalacja ze Steama) |
+| Serwer MCP | `C:\Users\AMD\tools\aseprite-mcp` — klon `github.com/diivi/aseprite-mcp` (MIT), serwer raportuje się jako `aseprite` v1.6.0 |
+| Python | 3.13.7 (serwer wymaga ≥3.13) |
+| `uv` | `C:\Users\AMD\AppData\Local\Programs\Python\Python313\Scripts\uv.exe` — 0.12.1, zainstalowany przez `pip install uv` |
+| Zależności serwera | `.venv` **wewnątrz katalogu serwera**, założony przez `uv sync` — nie w repo |
+| Rejestracja MCP | zasięg `local` → `C:\Users\AMD\.claude.json`, sekcja projektu `D:\Projekty\HexGeneral` |
+
+Serwera **nie ma na PyPI** — trzeba go sklonować.
+
+### Odtworzenie na innej maszynie
+
+```
+pip install uv
+git clone --depth 1 https://github.com/diivi/aseprite-mcp.git <katalog-poza-repo>
+cd <katalog-poza-repo> && uv sync
+```
+
+Następnie plik `.env` w katalogu serwera (bez tego serwer nie znajdzie Aseprite,
+o ile nie jest na PATH):
+
+```
+ASEPRITE_PATH=C:\Program Files (x86)\Steam\steamapps\common\Aseprite\Aseprite.exe
+```
+
+I rejestracja w kliencie MCP:
+
+```
+claude mcp add -s local aseprite -- <bezwzględna-ścieżka-do-uv.exe> --directory <katalog-poza-repo> run -m aseprite_mcp
+```
+
+Dwie rzeczy, które łatwo zrobić źle:
+
+- **Ścieżka do `uv` musi być bezwzględna.** Serwer uruchamia klient MCP, a nie powłoka,
+  więc obecność `uv` na PATH w terminalu niczego nie gwarantuje.
+- **Zasięg `local`, nie globalny.** Serwer wystawia ponad sto narzędzi; przy zasięgu
+  globalnym ich schematy wchodziłyby w kontekst każdej sesji w każdym projekcie.
+  `local` trzyma je przy tym projekcie i poza kontrolą wersji — dlatego w repo nie ma
+  `.mcp.json` i nie powinno się pojawić: konfiguracja zawiera ścieżki z konkretnej maszyny.
+
+Uwaga bezpieczeństwa: narzędzie `run_lua_script` wykonuje **nieograniczony kod na hoście**
+(tak ostrzega samo repo serwera). To inna kategoria zaufania niż `tools/*.js`, które są
+zerowo-zależne i czytelne w całości.
+
+### Zasady rysowania wymuszone przez pipeline
+
+Rysunek z Aseprite wraca do generatora przez `tools/png-to-grid.js`, więc musi spełniać
+te same warunki co ręcznie pisana mapa znaków:
+
+- **Nie rysuj konturu** — `outline()` jest wywoływany wewnątrz każdej funkcji `*Grid()`
+  i nie dokłada obwódki na zewnątrz, tylko zamienia zewnętrzny pierścień samego kształtu
+  na `o`. Narysowany kontur zostałby policzony podwójnie.
+- **Każdy wystający element ≥3 piksele grubości** — cieńszy znika w całości pod konturem.
+  To wynika wprost z `outline()`, a więc dotyczy mapy znaków, nie ekranu: obowiązuje
+  tak samo przy autorstwie 1:1, jak przy skalowaniu 2×.
+- **Maluj wyłącznie kolorami z palety.** `node tools/png-to-grid.js --palette` wypisuje
+  ją jako JSON, rozwiązaną dokładnie tak, jak zrobi to mapowanie z powrotem — dzięki temu
+  obie strony nie mogą się rozjechać. Kolor spoza palety wraca jako `?` wraz z listą
+  nierozpoznanych wartości.
+- Rozdzielczość autorska zależy od sprite'a: czołg jest autorowany 1:1 w 48×28, armata
+  22×13 i skalowana 2×. Reżimy różnią się **tolerancją na skosy**, i to jedyna zasada,
+  która nie jest wspólna: przy 2× przekątna o grubości 3 zostaje po konturze czarnym
+  patykiem (dlatego lufa armaty jest pozioma), przy autorstwie 1:1 skos przeżywa. Rysując
+  czołga w 48×28 nie stosuj więc dyscypliny armaty — patrz
+  [Grafika i sprite'y](07-Grafika-i-sprite-y.md).
+
+Miary „% barwy gracza w sylwetce" **nie czyta się z eksportu z Aseprite**, tylko
+z wygenerowanego assetu: cel 25–35% jest skalibrowany na obrazie po `outline()`,
+a eksport jest sprzed konturu, więc wypada zawyżony.
+
 ## Typowe zadania
 
 ### Dodanie/zmiana tekstu UI

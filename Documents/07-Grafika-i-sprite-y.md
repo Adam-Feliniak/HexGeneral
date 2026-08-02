@@ -65,7 +65,16 @@ go po prostu przyciemniać, bo samo przyciemnienie czyta się jak brud, a nie ja
 Udział barwy gracza w sylwetce mierzy `node tools/png-to-grid.js <plik.png>` — wypisuje go
 w pierwszej linii wraz z celem 25–35%. Warto sprawdzać, bo oko myli się tu bardzo łatwo:
 przy pierwszym pomiarze okazało się, że jednostki lądowe (30/31/32%) od dawna są w normie,
-a odstają **okręty** (15/12/8%) i **stolica** (4%).
+a odstają **okręty** (15/12/8%) i **stolica** (4%). Miarę czyta się z gotowego assetu, nie
+z rysunku sprzed potoku — cel jest skalibrowany na obrazie **po** `outline()`, który zjada
+zewnętrzny pierścień pikseli `b`.
+
+Do rysowania sprite'a poza repo (edytor pixel-artu, Aseprite przez MCP) ten sam skrypt
+wypisuje paletę: `node tools/png-to-grid.js --palette` zwraca JSON znak → kolor, rozwiązany
+przez tę samą funkcję, której użyje mapowanie z powrotem. Sens jest wyłącznie taki, żeby
+paleta nie była nigdzie przepisywana ręcznie — literówka w hexie wyszłaby dopiero na końcu
+łańcucha, jako `?` w siatce znaków. Warsztat opisuje
+[Przewodnik developera](09-Przewodnik-developera.md).
 
 ### 2. Painter per-piksel (teren)
 
