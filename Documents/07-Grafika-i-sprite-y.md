@@ -174,3 +174,18 @@ Kilka elementów nad jednostką jest rysowanych bezpośrednio poleceniami canvas
 ## Regeneracja sprite'ów
 
 Po każdej zmianie w `tools/gen-sprites.js` trzeba ręcznie uruchomić `node tools/gen-sprites.js` i **scommitować zmienione pliki `assets/*.png`** — bez tego kroku zmiana w generatorze nie ma żadnego efektu w grze (patrz [Przewodnik developera](09-Przewodnik-developera.md)).
+
+### Archiwum poprzednich wersji grafiki
+
+Generator nadpisuje `assets/*.png` w miejscu, więc **przemalowanie sprite'a kasuje poprzednią wersję** — zostaje wyłącznie w historii gita, do odzyskania trzeba znać commit, w którym zniknęła. Przy porównywaniu wariantów chce się ją mieć po prostu obok, jako plik.
+
+Dlatego przed przemalowaniem:
+
+```
+node tools/archive-assets.js tank      # tank_0.png .. tank_6.png
+node tools/archive-assets.js --all     # cały obecny stan assets/
+```
+
+Kopie lądują w `archiwum/` z datą w nazwie (`tank_0_2026-08-02.png`). Data, a nie numer wersji, bo grafika bywa wymieniana częściej niż wersja gry — dwa warianty tego samego sprite'a w jednej wersji dostałyby ten sam numer. Skrypt nie nadpisuje istniejącej kopii: druga próba tego samego dnia oznaczałaby, że to pierwsza kopia jest tą starą wersją, którą chcemy zachować.
+
+**Katalog leży poza `assets/` świadomie.** `tools/pack-build.js` czyta `assets/` i bierze wszystko, co kończy się na `.png`; podkatalog dziś by się nie załapał, ale to przypadek, nie gwarancja. Katalog na poziomie repo nie trafi do buildu nigdy, bo pack-build działa na allowliście. Rozmiar nie jest problemem — całe `assets/` to ~29 KB.

@@ -46,6 +46,7 @@ node tools/gen-sounds.js      # optional — renders SFX recipes to dist/sfx/*.w
 node tools/gen-sounds.js --music     # optional — renders MUSIC_TRACKS loops to dist/music/*.wav
 node tools/gen-sounds.js --selftest  # verifies the offline music renderer against Web Audio semantics
 node tools/audit-sounds.js    # optional — measures every SFX (peak/RMS/crest/attack/centroid) + waveform PNGs
+node tools/archive-assets.js tank # optional — copies assets/tank_*.png into archiwum/ with a date suffix, before a redraw replaces them
 node tools/png-to-grid.js x.png   # optional — converts a PNG into a char grid to paste into gen-sprites.js
 node tools/png-to-grid.js --palette    # dumps the resolved palette (char -> hex) for drawing outside the repo
 node tools/png-to-grid.js --selftest   # verifies the decoder against a committed asset
@@ -65,6 +66,7 @@ So `gen-sounds.js` is not a build step and has no counterpart to "commit the reg
 4. Note: tutorial screen (`#menu-tutorial`) and the sidebar help list (`#help`) duplicate the same `data-i18n-html` list in two places in `index.html` — update both.
 
 ### Adding/changing a sprite
+0. If you are *replacing* existing art rather than adding new art, run `node tools/archive-assets.js <prefix>` first — `gen-sprites.js` overwrites `assets/*.png` in place, and the previous drawing then survives only in git history. Copies land in `archiwum/` as `tank_0_2026-08-02.png`; that directory is outside `assets/` on purpose, so the allowlist in `pack-build.js` can never pick it up.
 1. Edit `tools/gen-sprites.js` — add a painting function (see `tankGrid()`/`artilleryGrid()` for examples) or modify an existing one.
 2. If the sprite needs per-player recoloring, register it in the `PLAYERS.forEach(...)` loop at the end of the file, painting `b`/`B`/`h` palette characters in the player's color.
 3. Run `node tools/gen-sprites.js`.
@@ -72,6 +74,8 @@ So `gen-sounds.js` is not a build step and has no counterpart to "commit the reg
 5. Commit the changed/new `assets/*.png` alongside the generator change.
 
 To place pixels deliberately instead of composing a silhouette from ellipses, an **Aseprite MCP server is wired up** (project-local scope, installed outside the repo — see `Documents/09-Przewodnik-developera.md` for locations and the reproduce-elsewhere steps). It is a scratchpad only: the char maps in `gen-sprites.js` stay the source of truth, and the drawing comes back via `png-to-grid.js`. Two rules that are easy to get wrong — draw **without an outline** (`outline()` converts the shape's own outer ring to `o`, it does not add a ring outside, so a drawn outline gets counted twice), and paint strictly from `node tools/png-to-grid.js --palette` (off-palette colours return as `?`).
+
+The rule that decides how much detail fits: `outline()` only touches pixels 4-adjacent to transparency, so the "≥3 px thick" minimum applies **only to elements that protrude past the silhouette**. Anything drawn *inside* the shape — rivets, vision slits, weld seams, a single-pixel hub — survives at any size. That is why the tank carries detail the artillery could not.
 
 ### Adding/changing a sound
 Unlike sprites, **sounds are not files** — they're synthesized at runtime, so there is nothing to regenerate or commit.

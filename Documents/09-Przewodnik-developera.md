@@ -76,6 +76,11 @@ te same warunki co ręcznie pisana mapa znaków:
 - **Każdy wystający element ≥3 piksele grubości** — cieńszy znika w całości pod konturem.
   To wynika wprost z `outline()`, a więc dotyczy mapy znaków, nie ekranu: obowiązuje
   tak samo przy autorstwie 1:1, jak przy skalowaniu 2×.
+- **Ale tylko wystający.** `outline()` zamienia na `o` wyłącznie piksele stykające się
+  z przezroczystością, więc detal narysowany **wewnątrz** sylwetki przeżywa w dowolnym
+  rozmiarze — nity, wzierniki, spoiny, jednopikselowa piasta koła. To jest granica
+  między „czego nie da się narysować" a „czego nie warto": nie warto dokładać detalu,
+  który w skali 1:1 zamienia się w szum, ale technicznie nic go nie zjada.
 - **Maluj wyłącznie kolorami z palety.** `node tools/png-to-grid.js --palette` wypisuje
   ją jako JSON, rozwiązaną dokładnie tak, jak zrobi to mapowanie z powrotem — dzięki temu
   obie strony nie mogą się rozjechać. Kolor spoza palety wraca jako `?` wraz z listą
