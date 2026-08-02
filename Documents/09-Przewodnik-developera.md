@@ -338,9 +338,45 @@ elementy interfejsu (część bez osłon na `null`).
 Do oglądania „na żywo" przyspieszonej partii samych botów służy natomiast **tryb
 obserwatora w samej grze** (lobby single → „Oglądam") z regulacją tempa AI 1×/4×/16×.
 
+## Podgląd renderu (`marker-preview.html`)
+
+Uzupełnia `visual-test.html` od drugiej strony: tamten pilnuje, **czy** coś się zmieniło
+(hasz pikseli wielu partii), ten pokazuje, **jak wygląda** konkretny element w komplecie
+sytuacji, w których może się z czymś zlać. Działa z `file://` (nie czyta pikseli, więc
+serwer niepotrzebny).
+
+- **Arkusz przypadków** (widok domyślny) — 16 spreparowanych heksów: miasto/stolica/port
+  × czołg/piechota/artyleria, trzy złoża, weteran z gwiazdką, zaznaczona jednostka, piana
+  wybrzeża, kalka koloru właściciela i puste pole jako kontrola. Szukanie tych sytuacji na
+  losowej mapie to loteria — tutaj każda stoi obok drugiej, z podpisem.
+- **Przełącznik „Znaczniki"** wyłącza samo `drawTileMarks()` (reszta renderu bez zmian),
+  czyli daje porównanie „przed/po" bez cofania kodu.
+- **Widok losowej mapy** stawia jednostkę na każdym mieście i złożu — zgłoszony przypadek
+  w najostrzejszej postaci.
+- Adres przyjmuje `?zoom=&sx=&sy=&marks=0&view=map&seed=`, więc zrzuty da się robić
+  z wiersza poleceń (`chrome --headless=new --screenshot=... --window-size=...`).
+  Wycinek przesuwa **ujemny margines**, nie scroll: scroll ustawiony przed końcem układu
+  strony bywa przycinany do zera i po cichu daje inny kadr, niż się prosiło.
+
+Powstał przy znacznikach miast i złóż i od razu zarobił na siebie: pokazał, że pierwsza
+wersja znaczników zasłania liczbę siły i pasek morale (stąd podział `drawArmy()` na sprite
+i HUD). Do oceny nowego elementu HUD-u albo sprite'a dopisz przypadek do tablicy `CASES`.
+
 ## Weryfikacja UI/wizualna
 
-W standardowym środowisku tego repo nie ma narzędzia do automatycznego sterowania przeglądarką (typu Playwright/`chromium-cli`). Zmiany w layoucie/CSS/renderze canvasu sprawdza się **ręcznie**, otwierając `index.html` po każdej zmianie — z **hard refreshem** (`Ctrl+F5`), jeśli zmiana w `style.css` pozornie „nie działa": przeglądarki agresywnie cache'ują pliki lokalne. Do regresji renderu na wielu partiach naraz — `visual-test.html` (wyżej).
+W standardowym środowisku tego repo nie ma narzędzia do automatycznego sterowania przeglądarką (typu Playwright/`chromium-cli`). Zmiany w layoucie/CSS/renderze canvasu sprawdza się **ręcznie**, otwierając `index.html` po każdej zmianie — z **hard refreshem** (`Ctrl+F5`), jeśli zmiana w `style.css` pozornie „nie działa": przeglądarki agresywnie cache'ują pliki lokalne. Do regresji renderu na wielu partiach naraz — `visual-test.html`, do obejrzenia pojedynczego elementu w komplecie sytuacji — `marker-preview.html` (oba wyżej).
+
+Sam **zrzut ekranu** da się zrobić bez żadnej instalacji, jeśli w systemie jest Chrome —
+przydaje się, gdy zmianę renderu trzeba komuś pokazać albo obejrzeć bez klikania:
+
+```
+chrome --headless=new --disable-gpu --hide-scrollbars --virtual-time-budget=8000 \
+  --screenshot=out.png --window-size=1260,800 "file:///.../marker-preview.html?zoom=2"
+```
+
+Ścieżka wyjściowa musi być zapisywalna (katalog repo działa, systemowy temp bywa
+zablokowany), a `--virtual-time-budget` daje czas na wczytanie sprite'ów — bez niego
+łapiesz pustą klatkę.
 
 ## Znane charakterystyki
 

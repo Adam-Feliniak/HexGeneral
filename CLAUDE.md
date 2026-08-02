@@ -120,7 +120,7 @@ Order only matters where a file executes code immediately at load time (not just
 | `save.js` | Save/load: explicit state codec (JSON), autosave to `localStorage` (`hexgeneral.save`), continue, text export/import | `serializeGame()`, `deserializeGame()`, `autosave()`, `loadAutosave()`, `exportSaveText()`, `importSaveText()` |
 | `sprites.js` | Loads PNGs from `assets/` into `SPR` | `loadSprites()`, `sprOk()` |
 | `audio.js` | Procedurally synthesized SFX + chiptune (no audio files at all), volume settings | `SFX_RECIPES`, `playSfx()`, `initAudio()`, `setMusicTrack()`, `setAudioSetting()` |
-| `render.js` | All canvas drawing | `draw()`, `frame()`, `drawTile()`, `drawArmy()`, `drawCity()`, `drawRoads()` |
+| `render.js` | All canvas drawing | `draw()`, `frame()`, `drawTile()`, `drawArmySprite()`, `drawArmyHud()`, `drawTileMarks()`, `drawCity()`, `drawRoads()` |
 | `ui.js` | Sidebar, banners, game-over screen, production panel | `updateUI()`, `updateBuildPanel()`, `showBanner()`, `showOverlay()` |
 | `input.js` | Click/hover handling, tooltips, keyboard shortcuts | `onTileClick()`, `tileTooltip()`, `initInput()` |
 | `menu.js` | Main menu/lobby screens, options, screen navigation | `applyScreen()`, `goToScreen()`, `renderSpSetup()`, `renderMpSetup()`, `initMenu()` |

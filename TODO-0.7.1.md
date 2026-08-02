@@ -92,7 +92,37 @@ Bez tej jednej decyzji trzy warianty mogą zostać odrzucone razem.
 Zakres: `src/audio.js` (`MUSIC_TRACKS`, `MUSIC_INSTRUMENTS`), `tools/gen-sounds.js`,
 `Documents/14-Dzwiek.md`.
 
-## 2. Miasta niewidoczne pod jednostkami
+## 2. Miasta niewidoczne pod jednostkami — MECHANIZM ZROBIONY, WYGLĄD DO DOSTROJENIA
+
+> **Stan po pierwszym podejściu:** sam pomysł zaakceptowany (znacznik przy krawędzi,
+> rozróżnianie kształtem i położeniem, warstwa nad sprite'em a pod HUD-em), ale
+> **konkretne wykonanie odrzucone** — obecny łuk się nie podoba. Do dostrojenia w kolejnej
+> sesji: grubość, barwa, kształt i to, czy stolica ma być podwójnym łukiem. Kod jest tak
+> ustawiony, że rusza się wyłącznie `drawTileMarks()` w `src/render.js` — kolejność
+> rysowania i podział `drawArmy()` zostają bez zmian niezależnie od wybranego wyglądu.
+> Warianty oglądać w `marker-preview.html` (przełącznik „przed/po" + arkusz 16 przypadków).
+
+**Znacznik na krawędzi heksa: dolny łuk = miasto (podwójny = stolica), górny = złoże.**
+Zgodnie z rozpisanym niżej kierunkiem — łuk przy krawędzi, promień 0,88 (żeby nie siadać na
+obrysie heksa, pianie wybrzeża i granicy imperium), rozróżnianie kształtem i położeniem,
+nie barwą, bo prawie każdy odcień jest już kolorem któregoś imperium. Linia ciągła, a
+stolica dostaje drugi łuk do wewnątrz zamiast dłuższego obrysu — ten zlałby się z ramką
+zaznaczenia (0,92) i hoveru (0,95). Złoża objęte tą samą zmianą.
+
+**Kolejność rysowania musiała się rozjechać na trzy przebiegi**, i to jest sedno poprawki:
+sprite'y armii → znaczniki → HUD armii. Pierwsza wersja szła na samym wierzchu i **zjadała
+liczbę siły oraz pasek morale** — dolna krawędź heksa to jedyne czytelne miejsce na
+znacznik, ale siedzą tam też liczba (x+9, y+19) i morale (x-17..x-1, y+15..y+19). Zasłonić
+sprite wolno, zasłonić danych nie. Stąd `drawArmy()` rozpadło się na `drawArmySprite()`
+i `drawArmyHud()`.
+
+Weryfikacja: `marker-preview.html` — arkusz 16 przypadków (miasto/stolica/port × czołg/
+piechota/artyleria, złoża, weteran, zaznaczenie, piana wybrzeża, kalka koloru właściciela,
+puste pole jako kontrola) z przełącznikiem „przed/po". Oglądane w przeglądarce, bo żaden
+harness headless nie sięga renderu.
+
+<details>
+<summary>Pierwotny opis zadania</summary>
 
 **Uwaga testerki:** nie widziała, gdzie są miasta — szczególnie gdy stały na nich
 jednostki. To nie jest przeoczenie gracza, tylko brak informacji na ekranie:
@@ -122,6 +152,8 @@ o kolorach. Notatka na później, nie do doklejenia tutaj.
 
 Zakres: `src/render.js`; weryfikacja ręczna w przeglądarce (Ctrl+F5), bo żaden harness
 headless nie sięgnie renderu.
+
+</details>
 
 ## 3. Fuzz drużyn i bossa w `tools/stress.js` — ZROBIONE
 
@@ -180,3 +212,10 @@ Do odhaczenia przed samym wydaniem 0.7.1, niezależnie od powyższych: protokó�
 z `Documents/12-Protokol-smoke.md` (obie pozycje 1-2 to zmiany renderu i audio, których
 nie pokrywa żaden harness), `node tools/check-portability.js`, `node tools/team-check.js`,
 bump `GAME_VERSION` w `src/config.js` + wpis w `CHANGELOG.md` w tym samym commicie.
+
+**Wzorzec regresji wizualnej do przestawienia — świadomie odłożone.** Znaczniki miast
+i złóż zmieniły piksele każdego heksa z miastem i złożem, więc zapisany wzorzec
+`visual-test.html` już nie pasuje i do czasu przestawienia każdy przebieg będzie ścianą
+fałszywych błędów. Przestawiać dopiero, gdy render przestanie się ruszać (`node tools/serve.js`
+→ „Ustaw jako wzorzec") — robienie tego w trakcie pracy nad wyglądem tylko zabetonowałoby
+stan pośredni.

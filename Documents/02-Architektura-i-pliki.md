@@ -38,7 +38,7 @@ Poza tymi przypadkami, funkcje z dowolnego pliku mogą swobodnie wołać funkcje
 | `save.js` | Zapis gry: jawny kodek stanu (JSON), autozapis w `localStorage` (klucz `hexgeneral.save`), „Kontynuuj", eksport/import tekstowy | `serializeGame()`, `deserializeGame()`, `autosave()`, `loadAutosave()`, `exportSaveText()`, `importSaveText()` |
 | `sprites.js` | Wczytywanie plików PNG z `assets/` do obiektu `SPR` | `loadSprites()`, `sprOk()` |
 | `audio.js` | Proceduralnie syntezowane dźwięki i chiptune (zero plików audio), ustawienia głośności | `SFX_RECIPES`, `playSfx()`, `initAudio()`, `setMusicTrack()`, `setAudioSetting()` |
-| `render.js` | Całe rysowanie na `<canvas>` | `draw()`, `frame()`, `drawTile()`, `drawArmy()`, `drawCity()`, `drawRoads()` |
+| `render.js` | Całe rysowanie na `<canvas>` | `draw()`, `frame()`, `drawTile()`, `drawArmySprite()`, `drawArmyHud()`, `drawTileMarks()`, `drawCity()`, `drawRoads()` |
 | `ui.js` | Panel boczny, banery, ekran końca gry, panel produkcji | `updateUI()`, `updateBuildPanel()`, `showBanner()`, `showOverlay()` |
 | `input.js` | Obsługa kliknięć/najechania myszą, tooltipy, skróty klawiszowe | `onTileClick()`, `tileTooltip()`, `initInput()` |
 | `menu.js` | Ekrany menu głównego, lobby (single/multi), opcje, nawigacja między ekranami | `applyScreen()`, `goToScreen()`, `renderSpSetup()`, `renderMpSetup()`, `initMenu()` |

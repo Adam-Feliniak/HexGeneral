@@ -75,7 +75,7 @@ const FILES = ['index.html', 'style.css', 'LICENSE'].concat(scripts, assets);
 //   tools/         sim.js, stress.js, gen-sprites.js (własny enkoder PNG)
 //   CLAUDE.md      opis architektury i wewnętrznych konwencji
 //   CHANGELOG.md   metryki balansu i historia strojenia AI
-//   visual-test.html, README.md
+//   visual-test.html, marker-preview.html, README.md
 //   locales/*.json niepotrzebne w runtime — gra ładuje src/locales-data.js
 //
 // Audio świadomie nie ma tu wpisu: dźwięki są syntezowane w runtime z przepisów

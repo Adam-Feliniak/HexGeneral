@@ -121,12 +121,35 @@ tło (kolor bazowy)
 → granice terytoriów (drawBorders — kontur w ciemnym kolorze gracza wzdłuż krawędzi z cudzym/niczyim terenem)
 → podświetlenia (zaznaczone pole + dostępne ruchy — czerwonawe dla wrogich, białe dla pustych/własnych + hover)
 → miasta i dekoracje (drawCity / drawDecor — drzewa/skały tylko gdy pole puste)
-→ armie (drawArmy — sprite typu/klasy okrętu + liczba siły + pasek morale + odznaka weterana)
+→ sprite'y armii (drawArmySprite — sprite typu jednostki albo klasy okrętu)
+→ znaczniki miast i złóż (drawTileMarks — łuk przy krawędzi heksa)
+→ HUD armii (drawArmyHud — liczba siły, pasek morale, odznaka weterana, puls zaznaczenia)
 → eksplozje (arkusz 6 klatek, indeksowany po czasie trwania efektu)
 → floatery strat (unoszący się tekst "-N" z zanikającą przezroczystością)
 ```
 
-### `drawArmy` — wybór sprite'a jednostki
+Jednostka rysuje się **w dwóch przebiegach, nie w jednym**, i to nie jest kosmetyka —
+między nimi wchodzą znaczniki miast i złóż. Znacznik MUSI iść nad sprite'em, bo inaczej
+nie rozwiązuje problemu, dla którego powstał (czołg 48×28 zasłania miasto 46×38), ale MUSI
+iść pod liczbą siły i paskiem morale, bo pierwsza wersja szła na samym wierzchu i zjadała
+liczbę siły. Zasłonić sprite wolno, zasłonić danych nie.
+
+### Znaczniki miast i złóż (`drawTileMarks`)
+
+Dolny łuk przy krawędzi heksa = miasto (podwójny = stolica), górny = złoże. Trzy decyzje,
+każdą wymusza to, co na heksie już jest:
+
+- **łuk przy krawędzi, nie ikona w środku** — środek należy do sprite'a jednostki,
+  a krawędzi nie dosięga bounding box żadnego z nich (także przyszłego);
+- **promień 0,88 zamiast 1,0** — na samej krawędzi siedzą już obrys heksa, piana wybrzeża
+  i granica imperium;
+- **rozróżnianie kształtem i położeniem, nie barwą** — prawie każdy odcień jest kolorem
+  któregoś imperium (`PLAYERS_DEF`), a z rzeczy rysowanych przy krawędzi biały pełny obrys
+  to zaznaczenie (0,92), biały przerywany to zasięg ruchu (0,86), a złoty to wybór celu
+  drogi. Stąd też linia zawsze ciągła i stolica oznaczona drugim łukiem do wewnątrz,
+  a nie dłuższym obrysem — ten zlałby się z ramką zaznaczenia i hoveru.
+
+### `drawArmySprite` — wybór sprite'a jednostki
 
 Na lądzie wybór jest **wprost po `army.type`** (trójstronna gałąź `if/else if/else`): `'infantry'` → `SPR.soldiers` (z animacją marszu — 4 klatki, ale animuje się **tylko** jednostka aktualnie zaznaczona przez gracza, żeby plansza się nie "migotała" masowo), `'tank'` → `SPR.tanks`, `'artillery'` → `SPR.artillery`. Na wodzie wybór jest **wprost po `army.str`** (progi 20/70) i niezależny od `army.type` — klasa okrętu jest czysto kosmetyczna (patrz [Mechanika rozgrywki](04-Mechanika-rozgrywki.md)).
 

@@ -74,6 +74,25 @@ jakości Metal Slug".
   wypełniał pulę. Odstępy podniesione, a dźwięki z `SFX_ALWAYS` zwolnione z limitu
   głosów — nazwa mówi, że mają dojść zawsze.
 
+### Widać wreszcie, gdzie są miasta
+
+> Wygląd samego znacznika jest jeszcze roboczy — do dostrojenia przed wydaniem
+> (mechanizm i kolejność warstw są już ustalone, zmienia się tylko `drawTileMarks()`).
+
+- **Miasto pod jednostką znikało bez śladu.** Czołg (48×28) jest szerszy niż miasto
+  (46×38) i zjadał mu dolną połowę — heks z miastem i jednostką wyglądał dokładnie jak
+  pusty heks z jednostką. Autor tego nie widzi, bo pamięta mapę; zgłosiła to osoba grająca
+  pierwszy raz. Teraz każdy heks nosi znacznik przy krawędzi: **dolny łuk = miasto**
+  (podwójny = stolica), **górny łuk = złoże** (złoża miały ten sam błąd klasowo).
+- **Znacznik rozróżnia kształtem i położeniem, nie barwą** — prawie każdy odcień jest już
+  kolorem któregoś imperium, a przy krawędzi heksa biały pełny obrys znaczy „zaznaczone",
+  biały przerywany „w zasięgu ruchu", złoty „cel drogi". Z tego samego powodu stolica
+  dostaje drugi łuk do wewnątrz, a nie dłuższy obrys.
+- **Kolejność rysowania rozpadła się na trzy przebiegi**: sprite'y armii → znaczniki → HUD
+  armii. Pierwsza wersja szła na samym wierzchu i zjadała liczbę siły oraz pasek morale.
+  Zasłonić sprite wolno, zasłonić danych nie — `drawArmy()` rozdzieliło się więc na
+  `drawArmySprite()` i `drawArmyHud()`.
+
 ### Stabilność: fuzz obejmuje wreszcie drużyny i bossa
 
 - **Cały kod z 0.7.0 był poza zasięgiem fuzzu.** `tools/stress.js` losował skład partii

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Hex General — podgląd znaczników miast i złóż</title>
+<style>
+  body { margin: 0; background: #14120c; color: #cfc9a8; font-family: "Segoe UI", Arial, sans-serif; font-size: 13px; }
+  header { padding: 12px 16px; border-bottom: 1px solid #4a4636; }
+  h1 { font-size: 17px; margin: 0 0 8px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button { background: #2b2820; color: #ffd91c; border: 1px solid #6e6a52; border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  button:hover { background: #3a362a; }
+  button.on { background: #4a4020; border-color: #ffd91c; }
+  .hint { color: #6e6a52; margin: 6px 16px 0; }
+  #wrap { padding: 12px 16px; overflow: auto; }
+  canvas { image-rendering: pixelated; border: 1px solid #4a4636; border-radius: 6px; display: block; }
+  b.k { color: #f2ead2; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⬡ Podgląd znaczników miast i złóż</h1>
+  <div class="controls">
+    <button id="toggle" class="on">Znaczniki: WŁĄCZONE</button>
+    <button id="mode">Widok: arkusz przypadków</button>
+    <button id="reseed">Nowa mapa (tylko w widoku mapy)</button>
+    <span id="info"></span>
+  </div>
+</header>
+<div class="hint">
+  <b class="k">Dolny łuk = miasto</b> (podwójny = stolica), <b class="k">górny łuk = złoże</b>.
+  Znacznik rysuje się nad sprite'em jednostki, ale pod jej HUD-em — liczba siły i pasek morale
+  muszą zostać czytelne. Przełącznik „Znaczniki" wyłącza samo <code>drawTileMarks()</code>,
+  reszta renderu jest bez zmian. Adres przyjmuje <code>?zoom=3&amp;sx=&amp;sy=&amp;marks=0&amp;view=map</code>.
+</div>
+<div id="wrap"><canvas id="board"></canvas></div>
+
+<div id="stubs" style="display:none">
+  <div id="players"></div><div id="log"></div><div id="banner"></div>
+  <div id="overlay"><div id="overlay-title"></div><div id="overlay-text"></div></div>
+  <div id="turn-info"></div><div id="timer"></div><div id="build-panel"></div><div id="tooltip"></div>
+</div>
+
+<script src="src/config.js"></script>
+<script src="src/locales-data.js"></script>
+<script src="src/i18n.js"></script>
+<script src="src/geometry.js"></script>
+<script src="src/utils.js"></script>
+<script src="src/mapgen.js"></script>
+<script src="src/state.js"></script>
+<script src="src/combat.js"></script>
+<script src="src/roads.js"></script>
+<script src="src/empire.js"></script>
+<script src="src/turns.js"></script>
+<script src="src/ai.js"></script>
+<script src="src/save.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/render.js"></script>
+<script>
+// Podgląd nie ładuje ui.js/menu.js/input.js — podstawia puste wersje funkcji, które woła
+// newGame(). Dzięki temu strona zależy wyłącznie od render.js, czyli od tego, co oceniamy.
+function updateUI() {}
+function showBanner() {}
+function hideOverlay() {}
+function showOverlay() {}
+function applyScreen() {}
+function updateTimerDisplay() {}
+function autosave() {}
+function clearAutosave() {}
+
+const q = new URLSearchParams(location.search);
+let marksOn = true;
+let view = q.get('view') === 'map' ? 'map' : 'sheet';
+const realMarks = drawTileMarks;
+let labels = [];
+
+setupCanvas();
+loadSprites();
+
+function army(type, str, vet) {
+  return { player: 0, str, vet, type, mp: 2, activated: false };
+}
+
+/* Arkusz przypadków: zamiast szukać ich na losowej mapie, stawiamy każdy z osobna.
+   Chodzi o komplet sytuacji, w których znacznik może się z czymś zlać — kalka koloru
+   właściciela, piana wybrzeża, ramka zaznaczenia, odznaka weterana, pasek morale. */
+const CASES = [
+  ['miasto', t => { t.city = { name: 'X', capitalOf: -1, variant: 0 }; }],
+  ['miasto + czołg', t => { t.city = { name: 'X', capitalOf: -1, variant: 0 }; t.army = army('tank', 38, 0); }],
+  ['miasto + piechota', t => { t.city = { name: 'X', capitalOf: -1, variant: 1 }; t.army = army('infantry', 7, 0); }],
+  ['miasto + artyleria', t => { t.city = { name: 'X', capitalOf: -1, variant: 2 }; t.army = army('artillery', 120, 0); }],
+  ['STOLICA', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; }],
+  ['STOLICA + czołg', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; t.army = army('tank', 55, 0); }],
+  ['port', t => { t.city = { name: 'X', capitalOf: -1, port: true }; }],
+  ['port + czołg', t => { t.city = { name: 'X', capitalOf: -1, port: true }; t.army = army('tank', 9, 0); }],
+  ['złoże: ropa', t => { t.resource = 'oil'; }],
+  ['złoże: farma + czołg', t => { t.resource = 'farm'; t.army = army('tank', 44, 0); }],
+  ['złoże: kopalnia + piechota', t => { t.resource = 'mine'; t.army = army('infantry', 61, 0); }],
+  ['złoże + weteran (gwiazdka)', t => { t.resource = 'oil'; t.army = army('tank', 88, 15); }],
+  ['miasto na terenie gracza', t => { t.city = { name: 'X', capitalOf: -1, variant: 0 }; t.owner = 2; t.army = army('tank', 23, 8); }],
+  ['miasto + zaznaczenie', t => { t.city = { name: 'X', capitalOf: -1, variant: 1 }; t.army = army('tank', 31, 0); state.selected = t; }],
+  ['miasto przy wybrzeżu (piana)', t => { t.city = { name: 'X', capitalOf: -1, variant: 2 }; t.coast = [1, 2]; t.army = army('tank', 12, 0); }],
+  ['puste pole + czołg (kontrola)', t => { t.army = army('tank', 5, 0); }],
+];
+
+function buildSheet() {
+  newGame({ humanCount: 1, botCount: 5, aiDifficulty: 'normal', seed: 4242, timeLimit: Infinity });
+  // czysty ląd — bez tego przypadki mieszałyby się z tym, co wylosował mapgen
+  for (const row of state.tiles) for (const t of row) {
+    t.land = true; t.city = null; t.resource = null; t.road = null; t.army = null;
+    t.owner = -1; t.coast = []; t.shallow = false; t.shade = 0.3; t.supplyCity = null;
+  }
+  state.selected = null;
+  labels = [];
+  CASES.forEach((cs, i) => {
+    const c = 2 + (i % 4) * 5, r = 1 + Math.floor(i / 4) * 3;
+    const t = state.tiles[r][c];
+    cs[1](t);
+    labels.push([cs[0], hexCenter(c, r)]);
+  });
+  document.getElementById('info').textContent = CASES.length + ' przypadków';
+}
+
+function buildMap(seed) {
+  newGame({ humanCount: 1, botCount: 5, aiDifficulty: 'normal', seed, timeLimit: Infinity });
+  labels = [];
+  let i = 0;
+  for (const row of state.tiles) for (const t of row) {
+    if (!t.land || (!t.city && !t.resource)) continue;
+    t.army = army(['tank', 'infantry', 'artillery'][i % 3], 10 + (i % 9) * 7, (i % 4) * 5);
+    t.army.player = t.owner >= 0 ? t.owner : 0;
+    i++;
+  }
+  document.getElementById('info').textContent = i + ' pól z miastem/złożem obsadzonych jednostką';
+}
+
+function rebuild() {
+  if (view === 'sheet') buildSheet(); else buildMap(Number(q.get('seed')) || 4242);
+}
+
+document.getElementById('toggle').addEventListener('click', ev => {
+  marksOn = !marksOn;
+  drawTileMarks = marksOn ? realMarks : function () {};
+  ev.target.textContent = 'Znaczniki: ' + (marksOn ? 'WŁĄCZONE' : 'wyłączone');
+  ev.target.classList.toggle('on', marksOn);
+});
+document.getElementById('mode').addEventListener('click', ev => {
+  view = view === 'sheet' ? 'map' : 'sheet';
+  ev.target.textContent = 'Widok: ' + (view === 'sheet' ? 'arkusz przypadków' : 'losowa mapa');
+  rebuild();
+});
+document.getElementById('reseed').addEventListener('click', () => {
+  view = 'map';
+  document.getElementById('mode').textContent = 'Widok: losowa mapa';
+  buildMap(Math.floor(Math.random() * 999999));
+});
+
+const zoom = Math.max(1, Number(q.get('zoom')) || 1);
+canvas.style.width = Math.round(BOARD_PX_W * zoom) + 'px';
+canvas.style.height = Math.round(BOARD_PX_H * zoom) + 'px';
+if (q.get('marks') === '0') document.getElementById('toggle').click();
+document.getElementById('mode').textContent = 'Widok: ' + (view === 'sheet' ? 'arkusz przypadków' : 'losowa mapa');
+rebuild();
+
+requestAnimationFrame(function loop(now) {
+  draw(now);
+  // podpisy przypadków dorysowujemy PO draw(), bo to warstwa podglądu, nie gry
+  if (labels.length) {
+    ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    for (const [text, p] of labels) {
+      // +34, nie +30: przy +30 podpis siadał dokładnie na dolnym łuku i na pianie
+      // wybrzeża, czyli zasłaniał to, co ma być oceniane
+      ctx.strokeStyle = '#0f0e08';
+      ctx.strokeText(text, p.x, p.y + 34);
+      ctx.fillStyle = '#ffd91c';
+      ctx.fillText(text, p.x, p.y + 34);
+    }
+  }
+  requestAnimationFrame(loop);
+});
+// wycinek przesuwamy ujemnym marginesem, a nie scrollem: scroll ustawiony przed
+// zakończeniem układu strony bywa przycięty do zera, co przy zrzutach z wiersza poleceń
+// daje po cichu inny kadr, niż się prosiło
+if (q.has('sx') || q.has('sy')) {
+  canvas.style.marginLeft = -Math.round((Number(q.get('sx')) || 0) * zoom) + 'px';
+  canvas.style.marginTop = -Math.round((Number(q.get('sy')) || 0) * zoom) + 'px';
+}
+</script>
+</body>
+</html>

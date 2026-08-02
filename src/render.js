@@ -170,8 +170,10 @@ function drawCity(t) {
   ctx.restore();
 }
 
-function drawArmy(t, now) {
-  const army = t.army;
+// Pozycja rysowania armii: środek heksa albo punkt tweenu, gdy jednostka jest w ruchu.
+// Wydzielone, bo sprite i HUD jednostki rysują się w DWÓCH osobnych przebiegach
+// (patrz kolejność w draw()) i muszą trafić w to samo miejsce
+function armyDrawPos(t) {
   let { x, y } = hexCenter(t.c, t.r);
   const anim = anims.find(a => a.tile === t);
   if (anim) {
@@ -179,21 +181,43 @@ function drawArmy(t, now) {
     x = anim.x0 + (anim.x1 - anim.x0) * k;
     y = anim.y0 + (anim.y1 - anim.y0) * k;
   }
-  const dim = !armyCanMove(t) && army.player === state.currentPlayerIndex &&
+  return { x: Math.round(x), y: Math.round(y) };
+}
+
+// przygaszenie jednostki, która w tej turze już nic nie zrobi — dotyczy tak samo
+// sprite'a, jak i jego HUD-u, więc liczone raz dla obu przebiegów
+function armyDimmed(t) {
+  return !armyCanMove(t) && t.army.player === state.currentPlayerIndex &&
     state.phase !== 'over' && currentPlayer().isHuman;
+}
+
+// pudełko sprite'a — używane przy rysowaniu okrętu i przez ramkę zaznaczenia, która
+// idzie już w przebiegu HUD-u; na morzu klasa okrętu wynika z siły, nie z army.type
+function armyBox(t, x, y) {
+  const army = t.army;
+  if (!t.land) {
+    const tier = army.str < 20 ? 0 : army.str < 70 ? 1 : 2;
+    return tier === 0 ? [x - 18, y - 10, 36, 18]
+      : tier === 1 ? [x - 24, y - 13, 48, 24]
+      : [x - 25, y - 12, 50, 22];
+  }
+  if (army.type === 'infantry') return [x - 13, y - 18, 26, 32];
+  if (army.type === 'tank') return [x - 25, y - 16, 50, 30];
+  return [x - 23, y - 15, 46, 28];
+}
+
+function drawArmySprite(t, now) {
+  const army = t.army;
+  const { x, y } = armyDrawPos(t);
   ctx.save();
-  ctx.globalAlpha = dim ? 0.55 : 1;
-  x = Math.round(x); y = Math.round(y);
+  ctx.globalAlpha = armyDimmed(t) ? 0.55 : 1;
   // typ jednostki lądowej wybierany w panelu budowy (army.type);
   // na morzu armia płynie okrętem wg siły: barka / pancernik / lotniskowiec
-  let selBox;
   if (!t.land) {
     const tier = army.str < 20 ? 0 : army.str < 70 ? 1 : 2;
     const spr = SPR.ships[playerSkin(army.player)][tier];
-    selBox = tier === 0 ? [x - 18, y - 10, 36, 18]
-      : tier === 1 ? [x - 24, y - 13, 48, 24]
-      : [x - 25, y - 12, 50, 22];
-    if (sprOk(spr)) ctx.drawImage(spr, selBox[0], selBox[1], selBox[2], selBox[3]);
+    const box = armyBox(t, x, y);
+    if (sprOk(spr)) ctx.drawImage(spr, box[0], box[1], box[2], box[3]);
   } else if (army.type === 'infantry') {
     const spr = SPR.soldiers[playerSkin(army.player)];
     if (sprOk(spr)) {
@@ -202,18 +226,28 @@ function drawArmy(t, now) {
       const fr = state.selected === t ? Math.floor(now / 150) % 4 : 0;
       ctx.drawImage(spr, fr * 24, 0, 24, 30, x - 12, y - 17, 24, 30);
     }
-    selBox = [x - 13, y - 18, 26, 32];
   } else if (army.type === 'tank') {
     const spr = SPR.tanks[playerSkin(army.player)];
     if (sprOk(spr)) ctx.drawImage(spr, x - 24, y - 15, 48, 28);
-    selBox = [x - 25, y - 16, 50, 30];
   } else { // artillery
     const spr = SPR.artillery[playerSkin(army.player)];
     if (sprOk(spr)) ctx.drawImage(spr, x - 22, y - 14, 44, 26);
-    selBox = [x - 23, y - 15, 46, 28];
   }
+  ctx.restore();
+}
+
+// HUD jednostki: liczba siły, pasek morale, odznaka weterana i puls zaznaczenia.
+// Rysowany PO znacznikach miast/złóż — znacznik ma prawo przykryć sprite (o to w nim
+// chodzi), ale nie liczbę siły ani morale, bo to są dane, bez których nie da się grać
+function drawArmyHud(t, now) {
+  const army = t.army;
+  const { x, y } = armyDrawPos(t);
+  ctx.save();
+  ctx.globalAlpha = armyDimmed(t) ? 0.55 : 1;
   // puls zaznaczenia
   if (state.selected === t) {
+    const selBox = armyBox(t, x, y);
+    ctx.setLineDash([]);
     ctx.strokeStyle = `rgba(255,255,255,${0.6 + 0.4 * Math.sin(now / 140)})`;
     ctx.lineWidth = 2;
     ctx.strokeRect(selBox[0] - 1, selBox[1] - 1, selBox[2] + 2, selBox[3] + 2);
@@ -237,6 +271,73 @@ function drawArmy(t, now) {
   // odznaka weterana: krokiewka co 4 pkt vet (4/8/12), gwiazdka na maksie (15)
   drawVetBadge(ctx, x, y, army.vet);
   ctx.restore();
+}
+
+/* Znaczniki miasta i złoża — rysowane PO sprite'ach armii, bo na tym polega cały problem:
+   czołg (48×28) jest szerszy niż miasto (46×38) i zjada mu dolną połowę, a heks
+   z miastem i jednostką wyglądał dokładnie jak pusty heks z jednostką. Autor tego nie
+   widzi, bo pamięta mapę — zgłosiła to dopiero osoba grająca pierwszy raz.
+
+   ...ale PRZED HUD-em jednostki (liczba siły, morale, weteran). Pierwsza wersja szła
+   na samym wierzchu i zjadała liczbę siły — dolna krawędź heksa to jedyne miejsce
+   czytelne dla znacznika, ale siedzą tam też liczba (x+9, y+19) i pasek morale
+   (x-17..x-1, y+15..y+19). Zasłonić sprite wolno, zasłonić danych nie.
+
+   Trzy decyzje, każdą wymusza to, co na heksie już jest:
+   - łuk przy KRAWĘDZI, nie ikona w środku: środek należy do sprite'a jednostki,
+     a krawędzi nie dosięga bounding box żadnego z nich (także przyszłego);
+   - promień 0,88 zamiast 1,0: na samej krawędzi siedzą już obrys heksa, piana
+     wybrzeża i granica imperium;
+   - rozróżnianie KSZTAŁTEM I POŁOŻENIEM, nie barwą. Prawie każdy odcień jest już
+     kolorem któregoś imperium (PLAYERS_DEF), a z rzeczy rysowanych na krawędzi:
+     biały pełny obrys to zaznaczenie (0,92), biały przerywany to zasięg ruchu (0,86),
+     złoty to wybór celu drogi. Stąd: miasto = łuk u dołu, złoże = łuk u góry,
+     stolica = drugi łuk wewnątrz. Linia zawsze ciągła — przerywana czytałaby się
+     jako zasięg ruchu; a stolicy NIE wydłużamy obrysu, bo łuk przez 4 krawędzie
+     zlałby się z ramką zaznaczenia i hoveru (0,95). */
+const MARK_CITY = '#f2ead2';
+const MARK_RES = '#cfc79a';
+const MARK_CASE = '#16140c';   // czarny kontur jak przy reszcie HUD-u (patrz 07-Grafika)
+
+// łuk po `count` krawędziach heksa, licząc od rogu `from`; hexCorner() ma promień na
+// sztywno, więc skalowaną wersję liczymy tutaj
+function hexArcPath(cx, cy, from, count, scale) {
+  ctx.beginPath();
+  for (let k = 0; k <= count; k++) {
+    const ang = Math.PI / 180 * (60 * ((from + k) % 6) - 30);
+    const x = cx + HEX * scale * Math.cos(ang);
+    const y = cy + HEX * scale * Math.sin(ang);
+    if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+}
+
+function strokeMark(cx, cy, from, count, scale, color, width) {
+  // stan pędzla ustawiamy jawnie: drawRoads/drawBorders zostawiają po sobie lineCap
+  // i lineJoin, a gałęzie podświetleń bywają pominięte, więc dziedziczenie różniłoby
+  // się między klatkami
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.setLineDash([]);
+  hexArcPath(cx, cy, from, count, scale);
+  ctx.strokeStyle = MARK_CASE;
+  ctx.lineWidth = width + 2;
+  ctx.stroke();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.stroke();
+}
+
+function drawTileMarks(t) {
+  if (!t.land) return;
+  const { x, y } = hexCenter(t.c, t.r);
+  if (t.city) {
+    strokeMark(x, y, 1, 2, 0.88, MARK_CITY, 3);          // dwie dolne krawędzie
+    if (t.city.capitalOf >= 0) strokeMark(x, y, 1, 2, 0.74, MARK_CITY, 2.5);
+  } else if (t.resource) {
+    // miasto i złoże nie trafiają się na jednym heksie (mapgen sadzi złoża tylko na
+    // polach bez miasta i min. 2 heksy od każdego), więc gałęzie mogą się wykluczać
+    strokeMark(x, y, 4, 2, 0.88, MARK_RES, 2.5);          // dwie górne krawędzie
+  }
 }
 
 function drawVetBadge(ctx, x, y, vet) {
@@ -344,7 +445,12 @@ function draw(now) {
   for (const row of state.tiles) for (const t of row) {
     if (t.city) drawCity(t); else drawDecor(t);
   }
-  for (const row of state.tiles) for (const t of row) if (t.army) drawArmy(t, now);
+  // trzy przebiegi zamiast jednego: sprite'y jednostek, na nich znaczniki miast i złóż
+  // (inaczej nie rozwiązywałyby problemu, dla którego powstały), a na samej górze HUD
+  // jednostek — liczby siły i morale muszą zostać czytelne (patrz drawTileMarks)
+  for (const row of state.tiles) for (const t of row) if (t.army) drawArmySprite(t, now);
+  for (const row of state.tiles) for (const t of row) drawTileMarks(t);
+  for (const row of state.tiles) for (const t of row) if (t.army) drawArmyHud(t, now);
 
   // eksplozje (sprite-sheet 6 klatek)
   if (sprOk(SPR.explosion)) {
