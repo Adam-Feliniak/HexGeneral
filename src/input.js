@@ -10,6 +10,16 @@ function canPickEmpire() {
     state.turn === 1 && state.activationsLeft === ACTIVATIONS_PER_TURN;
 }
 
+// Czy klik w to konkretne pole przejmuje imperium. Osobno od canPickEmpire(), bo warunek
+// mają sprawdzać dwa miejsca (klik i podpowiedź w tooltipie) i rozjazd między nimi
+// obiecywałby wybór, którego klik nie wykona. Boss jest wyłączony: switchHuman celowo
+// nie rusza slotu `kind === 'boss'` (boss zostaje bossem), więc przejęcie jego stolicy
+// zostawiłoby partię bez ani jednego człowieka
+function canPickEmpireAt(t) {
+  return canPickEmpire() && !!t.city && t.city.capitalOf >= 0 &&
+    t.city.capitalOf !== state.human && !isBossPlayer(t.city.capitalOf);
+}
+
 function switchHuman(id) {
   state.human = id;
   state.players.forEach(p => {
@@ -51,7 +61,7 @@ function onTileClick(t) {
   // gdy stoi tam armia, klik ma ją wybrać do ruchu, nie otwierać panelu
   state.selectedResource = (t.resource && t.owner === cp.id && t.road && !t.army && connectedCities(t, cp.id).length)
     ? t : null;
-  if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
+  if (canPickEmpireAt(t)) {
     switchHuman(t.city.capitalOf);
     return;
   }
@@ -136,7 +146,7 @@ function tileTooltip(t) {
       lines.push(i18n.t('tooltip.movePoints', { mp: t.army.mp, total: maxMovePoints(t) }));
     }
   }
-  if (canPickEmpire() && t.city && t.city.capitalOf >= 0 && t.city.capitalOf !== state.human) {
+  if (canPickEmpireAt(t)) {
     lines.push(i18n.t('tooltip.pickEmpireHint'));
   }
   return lines.join('<br>');

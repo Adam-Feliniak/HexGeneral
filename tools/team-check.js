@@ -2,9 +2,13 @@
 /* ============================================================
    team-check.js — inwarianty gry drużynowej (headless, zero zależności)
 
-   Trzecie narzędzie obok sim.js i stress.js, bo żadne z nich nie dotyka drużyn:
-   sim gra wyłącznie FFA (newGame z humanCount/botCount), a stress fuzzuje ścieżki
-   człowieka w pojedynkę. Tutaj sprawdzamy to, co wchodzi razem ze slotami:
+   Trzecie narzędzie obok sim.js i stress.js. Sim gra wyłącznie FFA (newGame
+   z humanCount/botCount), a stress od 0.7.1 losuje też składy drużynowe — ale losowo
+   i tylko na inwariantach. Tutaj drużyny sprawdzamy SCENARIUSZOWO: pojedyncze reguły
+   na spreparowanym stanie, których fuzz nie trafi przypadkiem (np. zaopatrzenie przez
+   złoże sojusznika albo równość dystansów przy rozstawieniu). Podział pracy jest taki:
+   team-check pilnuje, że reguła jest napisana poprawnie, stress — że nic jej nie łamie
+   w losowej partii. Sprawdzamy to, co wchodzi razem ze slotami:
 
    - skład partii ze slotów (id ciągłe, skiny z wierszy lobby, zamknięte pomijane),
    - reguły sojuszu (brak walki i zajmowania pól, AI nie celuje w sojusznika),

@@ -123,7 +123,36 @@ o kolorach. Notatka na później, nie do doklejenia tutaj.
 Zakres: `src/render.js`; weryfikacja ręczna w przeglądarce (Ctrl+F5), bo żaden harness
 headless nie sięgnie renderu.
 
-## 3. Fuzz drużyn i bossa w `tools/stress.js`
+## 3. Fuzz drużyn i bossa w `tools/stress.js` — ZROBIONE
+
+**Wynik: 500 partii fuzz bez naruszeń i bez wyjątków** — 34 różne układy: 152 składy starą
+drogą (`humanCount`/`botCount`), 64 FFA ze slotów, 172 drużynowe (w tym 57 na trzy drużyny:
+2v2v2, 2v2v1, 2v1v1) i 112 z bossem (w tym 28, w których boss miał sojusznika). 443/500
+rozstrzygniętych, 604 tys. zajęć pola przeszło przez podsłuch reguł sojuszu. Do tego soak po
+6 partii w każdym z układów `ffa/2v2/3v3/boss` z płaskim trendem heapu (< 1,2 MB przy
+`--expose-gc`) i czasem rundy niezależnym od długości sesji. Rozkład układów sprawdza się
+przez `node tools/stress.js --games=60 --shapes`. Szczegóły w
+[09-Przewodnik-developera.md](Documents/09-Przewodnik-developera.md#harness-stabilnościowy-toolsstressjs).
+
+**Przy okazji wyszedł realny błąd gry, nie harnessu:** w partii z bossem i jednym
+człowiekiem klik w stolicę bossa w pierwszej turze zostawiał grę bez ani jednego gracza
+(`switchHuman` nie rusza slotu `kind === 'boss'`, więc boss zostawał bossem, a człowiek
+tracił imperium na rzecz nikogo). Naprawione w `src/input.js` — warunek wyboru imperium
+siedzi teraz w jednej funkcji `canPickEmpireAt()`, wspólnej dla kliknięcia i tooltipa.
+Kontrola negatywna: po cofnięciu poprawki fuzz łapie to jako `single: 0 ludzi zamiast
+jednego` (seed 18).
+
+**Trzy pułapki, które przy okazji wyszły** — pierwsze dwie dają zielony przebieg bez
+pokrycia, trzecia zatrzymuje partię: (1) `normalizeSlots` po cichu NAPRAWIA niegrywalny
+skład (jedna drużyna → rozbicie na FFA), więc fuzz porównuje realny skład z zamierzonym
+i wypisuje rozkład składów; (2) podsłuch reguł sojuszu, który nie wszedł, wygląda
+identycznie jak zero naruszeń, więc sprawdzana jest też tożsamość podmienionych funkcji;
+(3) sterownik musiał zacząć wołać `kickOffAiGame()` po `newGame()` (jak każda ścieżka startu
+w grze) — przy slotach pierwszy gracz nie musi być człowiekiem, a samo `newGame` nikogo
+nie rusza, więc partia stoi w miejscu.
+
+<details>
+<summary>Pierwotny opis zadania</summary>
 
 Wewnętrzne, nie od testerki. `stress.js` losuje konfigurację wyłącznie przez
 `humanCount`/`botCount` (linie ~176-184) — **nigdy nie podaje `slots`**. Czyli cały kod,
@@ -142,6 +171,8 @@ pól i armii przechodzących między sojusznikami), przepuścić ~500 partii + s
 
 **Termin: przed spakowaniem builda dla fali 1** (`node tools/pack-build.js --tag=...`),
 nie przed pozycjami 1-2. Uwagi z fali 0 są twardszym sygnałem niż brak pokrycia testami.
+
+</details>
 
 ---
 

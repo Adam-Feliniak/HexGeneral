@@ -74,6 +74,31 @@ jakości Metal Slug".
   wypełniał pulę. Odstępy podniesione, a dźwięki z `SFX_ALWAYS` zwolnione z limitu
   głosów — nazwa mówi, że mają dojść zawsze.
 
+### Stabilność: fuzz obejmuje wreszcie drużyny i bossa
+
+- **Cały kod z 0.7.0 był poza zasięgiem fuzzu.** `tools/stress.js` losował skład partii
+  wyłącznie przez `humanCount`/`botCount`, czyli **nigdy** nie podawał `slots` — drużyn,
+  sojuszy, bossa, trudności per slot i zamkniętych slotów nie dotykał ani jeden losowy
+  przebieg. Teraz skład losuje się obiema drogami wejścia do `newGame` — FFA, dwie i trzy
+  drużyny z nierównym podziałem, boss (także z sojusznikiem, bo lobby na to pozwala),
+  trudność per slot, zamknięte sloty w losowych miejscach tabeli — a `--mode=soak --slots=`
+  pozwala przepuścić długą sesję każdym z tych układów.
+- **Ślad tej dziury siedział w samych inwariantach.** Warunek „koniec gry przy jednym
+  żywym imperium" był napisany pod świat sprzed drużyn i nie wybuchał tylko dlatego, że
+  fuzz nigdy nie tworzył drużyny — pierwsza wygrana drużynowa zostawia dwóch żywych.
+  Koniec gry liczy się teraz na drużyny, tak jak `checkGameOver`.
+- **Reguły sojuszu sprawdza podsłuch w miejscu zdarzenia**, nie porównanie migawek
+  planszy: pole może legalnie trafić od gracza do jego sojusznika, jeśli po drodze
+  przeszło przez ręce wroga, więc diff dwóch migawek dawałby fałszywe alarmy. Do tego
+  kontrola, że sam podsłuch stoi — podmiana, która nie weszła, wygląda identycznie jak
+  zero naruszeń.
+- **Poprawka znaleziona przy okazji: nie da się już przejąć imperium bossa.** W partii
+  z bossem i jednym człowiekiem klik w stolicę bossa w pierwszej turze (mechanika wyboru
+  imperium) zostawiał grę **bez ani jednego gracza** — `switchHuman` celowo nie rusza
+  slotu `kind === 'boss'`, więc boss zostawał bossem, a człowiek tracił swoje imperium
+  na rzecz nikogo. Partia stawała w miejscu. Warunek wyboru siedzi teraz w jednej
+  funkcji (`canPickEmpireAt`), wspólnej dla kliknięcia i podpowiedzi w tooltipie.
+
 ## [0.7.0] - 2026-07-31
 
 - **Tryb kooperacyjny (drużyny).** Dwoje ludzi może wreszcie zagrać po **tej samej

@@ -214,26 +214,57 @@ starej gry (test osłon `gameId`) oraz timer tury w multi.
 node tools/stress.js --games=200                # fuzz: losowe legalne akcje + inwarianty
 node tools/stress.js --games=1 --seed=123       # reprodukcja konkretnej partii
 node --expose-gc tools/stress.js --mode=soak    # sesja: 10+ partii z rzędu, trend heapu
+node --expose-gc tools/stress.js --mode=soak --slots=2v2   # ffa (domyślnie) | 2v2 | 3v3 | boss
 ```
 
 - **Fuzz** steruje turami ludzi losowymi LEGALNYMI akcjami (w granicach tego, co
   pozwala lobby/UI) i po każdej rundzie oraz po każdym wczytaniu sprawdza
   **inwarianty stanu** (m.in. armie 1..MAX_ARMY z żywym właścicielem, spójność
   stolic z `capitalOf`, żywi właściciele pól/dróg, domknięte projekty dróg,
-  `phase` zgodne z liczbą żywych). Naruszenie/wyjątek → seed do reprodukcji.
+  `phase` zgodne z liczbą żywych **drużyn**). Naruszenie/wyjątek → seed do reprodukcji.
+- **Skład partii też jest losowany** — obiema drogami wejścia do `newGame`, bo obie żyją:
+  `humanCount`/`botCount` (starsze wywołania, zawsze FFA) i `slots` z lobby, czyli drużyny
+  (dwie i trzy, z nierównym podziałem), boss (także **z sojusznikiem** — lobby na to pozwala),
+  trudność per slot i zamknięte sloty w losowych miejscach tabeli. Podsumowanie wypisuje
+  rozkład składów; to nie ozdoba, tylko kontrola, czy drużyny w ogóle weszły do losowania
+  (patrz niżej). `--shapes` rozbija ten rozkład na konkretne układy (`2v2`, `2v1v1`, `boss 3v2`).
 - **Soak** gra wiele partii z rzędu w jednym kontekście (jak gracz bez odświeżania
-  strony) — trend pamięci między partiami ma być płaski, czas rundy stabilny.
+  strony) — trend pamięci między partiami ma być płaski, czas rundy stabilny. Skład jest
+  **stały w obrębie przebiegu** (`--slots=`), a nie losowany po partiach: wynikiem soaka są
+  trendy między partiami jednej sesji, więc zmiana układu w środku psułaby te kolumny
+  z powodu niezwiązanego z wyciekami. Domyślne `ffa` zostaje bit w bit jak dotąd.
 - Deterministyczny per seed (losowość sterownika i gry z mulberry32, kolejka
   timeoutów deterministyczna).
+
+**Dwie pułapki, na które fuzz drużyn ma własne zabezpieczenia** — obie sprawiają, że
+przebieg świeci na zielono, nie sprawdziwszy niczego:
+
+- `normalizeSlots` **naprawia** niegrywalny skład zamiast go odrzucić (jedna drużyna →
+  rozbicie na FFA, mniej niż dwa imperia → `slotsFromCounts(1, 1)`). Dlatego po każdym
+  `newGame` fuzz porównuje **realny** skład z zamierzonym; bez tego „500 partii drużynowych"
+  mogłoby być 500 partiami FFA.
+- Reguły sojuszu sprawdzamy **podsłuchem w miejscu zdarzenia** (podmieniony `captureTile`
+  i `resolveBattle`), a nie porównaniem migawek planszy: pole MOŻE legalnie trafić od gracza
+  do jego sojusznika, jeśli po drodze przeszło przez ręce wroga, więc diff dwóch migawek
+  dałby fałszywy alarm albo przegapił prawdziwe naruszenie. Podmiana, która nie weszła, jest
+  nieodróżnialna od zera naruszeń — więc na koniec partii sprawdzamy jeszcze tożsamość
+  podmienionych funkcji, a podsumowanie wypisuje liczbę przechwyconych zajęć pola.
+
+Sterownik startuje partię tak jak gra: `newGame()` **plus** `kickOffAiGame()`. Przy slotach
+z lobby pierwszy gracz nie musi być człowiekiem, a samo `newGame` nikogo nie rusza — bez tego
+partia z botem na pierwszym slocie stoi w miejscu (fuzz raportuje to jako softlock).
 
 Kiedy uruchamiać: po każdej zmianie w mechanice/AI/zapisie — fuzz ~200 partii jako
 bramka przed wydaniem (obok `sim.js --games=300` dla metryk balansu).
 
 ## Harness drużyn i bossa (`tools/team-check.js`)
 
-Trzeci harness, bo dwa poprzednie **nie dotykają drużyn**: `sim.js` gra wyłącznie FFA
-(`newGame` z `humanCount`/`botCount`), a `stress.js` fuzzuje ścieżki pojedynczego
-człowieka. Ten sprawdza inwarianty, które weszły razem ze slotami:
+Trzeci harness. `sim.js` gra wyłącznie FFA (`newGame` z `humanCount`/`botCount`),
+a `stress.js` od 0.7.1 losuje też składy drużynowe — ale losowo i tylko na inwariantach.
+Podział pracy: **team-check pilnuje, że reguła jest napisana poprawnie** (scenariusz na
+spreparowanym stanie, którego fuzz nie trafi przypadkiem — jak zaopatrzenie przez złoże
+sojusznika czy równość dystansów przy rozstawieniu), **stress — że nic jej nie łamie
+w losowej partii**. Ten sprawdza inwarianty, które weszły razem ze slotami:
 
 ```
 node tools/team-check.js              # 91 sprawdzeń, kod wyjścia 1 przy błędzie
