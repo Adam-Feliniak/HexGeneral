@@ -17,7 +17,7 @@
      node tools/png-to-grid.js rysunek.png            # -> mapa znaków na stdout
      node tools/png-to-grid.js rysunek.png --player=2 # barwy gracza 2 jako b/B/h/m
      node tools/png-to-grid.js --palette              # paleta znak -> kolor do edytora
-     node tools/png-to-grid.js --selftest             # test poprawności na assets/tank_0.png
+     node tools/png-to-grid.js --selftest             # test poprawności na assets/artillery_0.png
 
    Wymagania wobec pliku: PNG bez przeplotu, 8 bitów na kanał (RGBA, RGB, szarość
    albo indeksowany). Piksele o alfie < 128 stają się przezroczystością ('.').
@@ -112,15 +112,20 @@ function pngToRows(file, pal) {
 }
 
 /* ------------------------------ selftest ------------------------------ */
-/* Darmowy test poprawności: assets/tank_0.png powstał jako
-   gridToPixels(tankGrid(), paleta gracza 0) + dropShadow. Jeśli dekoder i mapowanie
-   kolorów są poprawne, przepuszczenie tego pliku z powrotem musi dać dokładnie
-   te same wiersze, które zwraca tankGrid(). Cień jest półprzezroczysty (alfa 90),
-   więc wraca jako '.' — tak jak był przed jego dołożeniem. */
+/* Darmowy test poprawności: assets/artillery_0.png powstał jako
+   gridToPixels(artilleryGrid(), paleta gracza 0) + dropShadow. Jeśli dekoder
+   i mapowanie kolorów są poprawne, przepuszczenie tego pliku z powrotem musi dać
+   dokładnie te same wiersze, które zwraca artilleryGrid(). Cień jest
+   półprzezroczysty (alfa 90), więc wraca jako '.' — tak jak był przed dołożeniem.
+
+   Wzorcem był wcześniej czołg, ale od czasu animacji jazdy assets/tank_*.png to
+   pasek czterech klatek 192x28, a nie pojedynczy obraz — porównanie wiersz
+   w wiersz przestałoby mieć sens. Armata zostaje jednoklatkowa i powstaje
+   dokładnie tym samym potokiem, więc pilnuje dekodera tak samo dobrze. */
 if (args.includes('--selftest')) {
   const pal = playerPalette(0);
-  const expected = gen('tankGrid')();
-  const file = path.join(ROOT, 'assets', 'tank_0.png');
+  const expected = gen('artilleryGrid')();
+  const file = path.join(ROOT, 'assets', 'artillery_0.png');
   const { rows, unknown } = pngToRows(file, pal);
 
   let bad = 0;
@@ -169,7 +174,7 @@ if (args.includes('--selftest')) {
   }
 
   if (bad) { console.error('\nSELFTEST NIE PRZESZEDŁ (' + bad + ' problemów)'); process.exit(1); }
-  console.log('SELFTEST OK — assets/tank_0.png odtworzony znak w znak (' +
+  console.log('SELFTEST OK — assets/artillery_0.png odtworzony znak w znak (' +
     expected.length + ' wierszy x ' + expected[0].length + '), pętla enkoder->dekoder zgodna.');
   process.exit(0);
 }

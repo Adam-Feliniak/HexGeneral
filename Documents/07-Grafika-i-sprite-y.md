@@ -24,7 +24,7 @@ Tym mechanizmem namalowane są m.in.:
 - `resOil/resFarm/resMine()` — złoża surowców
 - drzewa i skały (po 2 warianty każde)
 
-### 1b. Ręczna mapa znaków skalowana 2× (armata polowa, docelowo reszta jednostek)
+### 1b. Ręczna mapa znaków (armata 2×, czołg 1:1 — docelowo reszta jednostek)
 
 Sprite'y składane z `ellipseFill()` dają bryły organiczne, a nie maszyny — stara armata
 czytała się jako „kula z patykiem". Dlatego armata jest dziś **ułożona ręcznie piksel po
@@ -35,6 +35,26 @@ Powiększenie całkowite nie jest oszczędnością, tylko decyzją stylistyczną
 blokiem 2×2, więc sylwetka czyta się z odległości i **nie konkuruje z jednopikselowym
 szumem kafli terenu**. Przy okazji znosi znacznie lepiej skalowanie planszy do okna,
 gdzie przeglądarka wyrzuca całe rzędy pikseli.
+
+**Czołg (`TANK_ROWS`) jest ułożony tak samo ręcznie, ale w skali 1:1 — 28 stringów po 48
+znaków, bez `upscale()`.** Reżimy różnią się jedną rzeczą: tolerancją na skosy. Przy 2×
+przekątna o grubości 3 zostaje po konturze czarnym patykiem (dlatego lufa armaty jest
+pozioma), przy 1:1 skos przeżywa. To dlatego czołg unosi detal, którego armata nie mogła:
+nity, spoinę pancerza, peryskop, zapasowe koło, łopatę.
+
+**Reguła, która o tym decyduje, jest łatwa do przeoczenia:** `outline()` zamienia na kontur
+wyłącznie piksele stykające się z przezroczystością. Minimum „≥3 piksele grubości" obowiązuje
+więc tylko dla elementów **wystających poza obrys** — antenka czołga jest cienka świadomie
+i wychodzi w całości czarna. Detal narysowany **wewnątrz** sylwetki przeżywa w dowolnym
+rozmiarze, łącznie z jednopikselową piastą koła.
+
+Sufit detalu nie leży zresztą w mapie znaków, tylko w polu rysowania: przy `HEX = 28` heks
+ma 48,5 px szerokości, a czołg jest rysowany jako 48×28 — **zajmuje już całą szerokość
+heksa**. Większa mapa przy tym samym polu to wyrzucenie co drugiego piksela
+(`imageSmoothingEnabled = false`). Podniesienie `HEX` jest możliwe na Full HD przy 100%
+skalowania (zostaje ~1588 px na planszę), ale przy 125% skalowania Windows — domyślnym na
+laptopach Full HD — zostaje ~1204 px, co ogranicza `HEX` do ~28. Obecna wartość nie jest
+przypadkowa.
 
 **Kolejność jest wymuszona i łatwa do zepsucia:**
 
@@ -90,11 +110,21 @@ const pal = { ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4) };
 
 Każdy sprite, który ma reprezentować barwy gracza, maluje odpowiednie fragmenty właśnie znakami `b`/`B`/`h`, a cała reszta palety (metal, szkło, cegła, liście...) zostaje neutralna. Stąd np. `tank_0.png` .. `tank_5.png` — ten sam kształt, przemalowany 6 razy.
 
-Dodatkowe narzędzia: `dropShadow()` (miękki cień pod sprite'ami budynków), `composeH()` (sklejanie klatek animacji w jeden poziomy arkusz — używane dla 4-klatkowego marszu piechura i 6-klatkowej eksplozji).
+Dodatkowe narzędzia: `dropShadow()` (miękki cień pod sprite'ami budynków), `composeH()` (sklejanie klatek animacji w jeden poziomy arkusz — używane dla 4-klatkowego marszu piechura, 4-klatkowej jazdy czołgu i 6-klatkowej eksplozji).
+
+Przy klatkach kolejność jest wymuszona: **`hq()` leci per klatka, dopiero potem `composeH()`**. `dropShadow()` przesuwa alfę w prawo-dół, więc na gotowym pasku cień jednej klatki wchodziłby w kolumnę zerową następnej — a `drawImage` wycina dokładnie tyle pikseli, ile ma klatka.
 
 ### Rozmiary i nazewnictwo plików
 
 Każdy sprite zapisywany jest przez `save(name, pixels)` jako `assets/<name>.png`. Konwencja nazw jednostek: `<typ>_<idGracza>` (np. `tank_2`, `artillery_5`, `soldier_0`). Okręty: `ship0_<id>` / `ship1_<id>` / `ship2_<id>`.
+
+Trzy pliki są **paskami klatek**, nie pojedynczymi obrazami — `drawImage` wycina z nich klatkę po indeksie, więc rozmiar pliku to wielokrotność rozmiaru klatki:
+
+| Plik | Rozmiar pliku | Klatka | Klatek |
+|---|---|---|---|
+| `soldier_<id>.png` | 96×30 | 24×30 | 4 (marsz) |
+| `tank_<id>.png` | 192×28 | 48×28 | 4 (jazda) |
+| `explosion.png` | 288×48 | 48×48 | 6 |
 
 ## Wczytywanie (`src/sprites.js`)
 
@@ -160,7 +190,13 @@ każdą wymusza to, co na heksie już jest:
 
 ### `drawArmySprite` — wybór sprite'a jednostki
 
-Na lądzie wybór jest **wprost po `army.type`** (trójstronna gałąź `if/else if/else`): `'infantry'` → `SPR.soldiers` (z animacją marszu — 4 klatki, ale animuje się **tylko** jednostka aktualnie zaznaczona przez gracza, żeby plansza się nie "migotała" masowo), `'tank'` → `SPR.tanks`, `'artillery'` → `SPR.artillery`. Na wodzie wybór jest **wprost po `army.str`** (progi 20/70) i niezależny od `army.type` — klasa okrętu jest czysto kosmetyczna (patrz [Mechanika rozgrywki](04-Mechanika-rozgrywki.md)).
+Na lądzie wybór jest **wprost po `army.type`** (trójstronna gałąź `if/else if/else`): `'infantry'` → `SPR.soldiers` (marsz, 4 klatki), `'tank'` → `SPR.tanks` (jazda, 4 klatki), `'artillery'` → `SPR.artillery` (statyczny). Na wodzie wybór jest **wprost po `army.str`** (progi 20/70) i niezależny od `army.type` — klasa okrętu jest czysto kosmetyczna (patrz [Mechanika rozgrywki](04-Mechanika-rozgrywki.md)).
+
+**Kiedy animowana jednostka faktycznie się rusza** — reguła jest wspólna i ma powód: animuje się **tylko jednostka zaznaczona przez gracza**, bo gdyby ruszały się wszystkie, plansza migotałaby od stojących w miejscu oddziałów.
+
+Czołg ma nad piechurem jeden dodatkowy wyzwalacz: w trakcie przejazdu między heksami klatka jest liczona z **postępu tweenu** (`anims`, 0,18 s), a nie z zegara. Dzięki temu na jeden krok przypada dokładnie jeden pełny obrót gąsienicy, niezależnie od tempa gry — przy zegarze krok trwałby ~1,5 klatki i przejazd byłby migawką, a nie jazdą.
+
+Sama gąsienica przewija się w **przeciwne strony** na górze i na dole (jest pętlą; w tę samą stronę czytałaby się jak ślizg w bok). Uwaga na pułapkę, która już raz to zepsuła: dolny pas ogniw musi leżeć w **przedostatnim** wierszu mapy, bo ostatni styka się z przezroczystością i `outline()` zamienia go w całości na kontur — przewijanie było tam niewidoczne.
 
 ### Elementy HUD rysowane wektorowo (nie sprite'ami)
 

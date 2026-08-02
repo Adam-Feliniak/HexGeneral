@@ -150,62 +150,98 @@ function artilleryGrid() {
   return upscale(toRows(g), 2);
 }
 
-// ---------- czołg 48x28 w duchu SV-001 z Metal Sluga ----------
+/* ---------- czołg 48x28, mapa znaków autorowana 1:1 ----------
 
-function tankGrid() {
-  const g = makeGrid(48, 28);
+   Poprzednia wersja składała sylwetkę z elips (`ellipseFill`) i czytała się jak
+   gładki bochenek: kadłub był jedną plamą barwy gracza, a wzierniki ginęły na
+   styku z gąsienicą. Tutaj piksele są stawiane świadomie.
 
-  // gąsienica: masywna zaokrąglona bryła z bieżnikiem
-  rect(g, 2, 17, 44, 10, 't');
-  rect(g, 4, 16, 40, 12, 't');
-  for (let x = 5; x <= 42; x += 2) { P(g, x, 17, 'T'); P(g, x + 1, 26, 'T'); }
+   Dwie decyzje, które łatwo cofnąć przez nieuwagę:
+   - Autorstwo 1:1, BEZ `upscale()`. Reżim 2x (armata) nie znosi skosów, bo
+     przekątna o grubości 3 zostaje po konturze czarnym patykiem. Przy 1:1 skos
+     przeżywa i dlatego czołg może mieć tyle detalu.
+   - Detal jest wnętrzem sylwetki, więc `outline()` go nie rusza — kontur bierze
+     wyłącznie piksele stykające się z przezroczystością. Minimum „>=3 piksele
+     grubości" dotyczy tylko elementów WYSTAJĄCYCH (stąd antenka, świadomie cienka,
+     wychodzi w całości czarna). Nity, spoiny, szyby i jednopikselowa piasta koła
+     przeżywają w dowolnym rozmiarze.
 
-  // koła: dwa napędowe + trzy jezdne
-  const wheel = (cx, cy, r) => {
-    ellipseFill(g, cx, cy, r, r, 'o');
-    ellipseFill(g, cx, cy, r - 1.2, r - 1.2, 'w');
-    ellipseFill(g, cx - r * 0.3, cy - r * 0.3, (r - 1.2) * 0.55, (r - 1.2) * 0.55, 'W');
-    ellipseFill(g, cx, cy, r * 0.3, r * 0.3, 'e');
-  };
-  wheel(9, 21.5, 4.8);
-  wheel(38, 21.5, 4.8);
-  wheel(17.5, 22.5, 2.8);
-  wheel(23.5, 22.5, 2.8);
-  wheel(29.5, 22.5, 2.8);
+   Pasy gąsienicy (wiersze 18 i 27) są zapisane jednolitym 'T'. To ZNACZNIK
+   MATERIAŁU, nie wzór — fazę ogniw maluje `tankFrame()` osobno dla każdej klatki,
+   żeby wzór nie stał zapisany w dwóch miejscach naraz i nie rozjechał się przy
+   edycji mapy. */
+const TANK_ROWS = [
+  '.........e....hhhhhhh...........................',
+  '.........e...hhhhhbbbb..........................',
+  '.........e...hhhhbbbbb..........................',
+  '.........e..hhhhbbbbbbb.........................',
+  '.........e..BBBBBBBBBBB.........................',
+  '........bbhhhhhhhhhhbbbbbBbbbbbbbb..............',
+  '.......bbGGGGGGhhhhbbbWWWBbbbbbbbbbbb...........',
+  '......bbbgggggghhhbbbbiiiBbbbbbbbbbbbbb.........',
+  '.....bbhhhhhhhhhhbbbbbbbbBbbbbbbbbiiiiiggggg....',
+  '....bwwwhhhhhhhhbbbbbbbbbBbbTTTTTbiiiiigggggWWWW',
+  '....wwwwwbbbbbbbbbbbbbbbbBbbtttttbiiiiigggggWWWW',
+  '.tttwwewwbbbBbbbBbbbBbbbBBbbBbbbbbbWWWbgggggWWWW',
+  '.tttwwwwwbbbAAAbbbbbbbbbbBbbbbbbbbbyyybgggggwwww',
+  '.gggmwwwmmmmmmmmmWWKKKKKKKKmmmmmmmmmmmmgggggwwww',
+  '.tttmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmgggggwwww',
+  '.....BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBggggg....',
+  '.....ggggggggggggggggggggggggggggggggggg........',
+  '....eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.....',
+  '.....TTwwwTTTTTTTTTTTTTTTTTTTTTTTTTTTTwwwTT.....',
+  '...tttwwwwwttttttttttttttttttttttttttwwwwwttt...',
+  '..tttWWWwwwwttttttttttttttttttttttttWWWwwwwttt..',
+  '.tttwwweeewwwtttwwwttttwwwttttwwwttwwweeewwwttt.',
+  '.tttwwweeewwwttwwwwwttwwwwwttwwwwwtwwweeewwwttt.',
+  '.tttwwweeewwwttwwewwttwwewwttwwewwtwwweeewwwttt.',
+  '.ttttwwwwwwwtttwwwwwttwwwwwttwwwwwttwwwwwwwtttt.',
+  '.tttttwwwwwtttttwwwtKKtwwwtKKtwwwttttwwwwwttttt.',
+  '..tttttwwwttttttttttttttttttttttttttttwwwttttt..',
+  '....TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT....',
+];
 
-  // pękata wieża-kadłub (jedna bryła jak w SV-001)
-  ellipseFill(g, 17, 10, 13.5, 7, 'b');
-  ellipseFill(g, 12, 7, 6.5, 2.8, 'h');
-  for (let y = 14; y <= 17; y++) {
-    for (let x = 0; x < 48; x++) if (g[y][x] === 'b') g[y][x] = 'B';
+/* Jedyne wiersze, które rusza animacja — reszta mapy jest we wszystkich klatkach
+   identyczna, więc klatki nie mogą rozjechać się sylwetką.
+
+   Dolny pas to wiersz 26, a NIE 27, choć to 27 jest wizualnie spodem gąsienicy:
+   wiersz 27 dotyka przezroczystości od dołu, więc `outline()` zamienia go w całości
+   na kontur i przewijanie byłoby tam niewidoczne. 27 zostaje tym, czym faktycznie
+   jest — krawędzią sylwetki. */
+const TANK_TREAD_ROWS = [18, 26];
+const TANK_SPROCKETS = [[8, 22], [39, 22]];
+
+/* Klatka jazdy (0..3). Gąsienica jest pętlą, więc oba biegi muszą iść w przeciwne
+   strony — w tę samą czytałoby się jak ślizg w bok, a nie jak jazda. Czołg patrzy
+   w prawo, więc górny bieg przesuwa się w prawo, a dolny w lewo.
+
+   Wzór ogniw ma okres 4 px, więc cztery klatki zapętlają się bez szwu. Faza jest
+   liczona z pozycji x, a nie przechowywana: rosnące `f` przesuwa wzór w lewo,
+   stąd znak `dir` odwrotny do kierunku, który ma być widoczny. */
+function tankFrame(f) {
+  const g = gridFromRows(TANK_ROWS);
+
+  TANK_TREAD_ROWS.forEach((y, i) => {
+    const dir = i === 0 ? -1 : 1;
+    for (let x = 0; x < g[y].length; x++) {
+      if (g[y][x] !== 'T' && g[y][x] !== 't') continue;
+      // +40 (wielokrotność okresu) tylko po to, żeby indeks nie zszedł poniżej zera
+      g[y][x] = (((x + dir * f + 40) >> 1) & 1) ? 'T' : 't';
+    }
+  });
+
+  // szprychy kół napędowych: co druga klatka obrócone o 45 stopni. Koło ma
+  // symetrię czterokrotną, więc taki skok czyta się jako ciągły obrót.
+  const spokes = f % 2
+    ? [[-2, -2], [2, -2], [-2, 2], [2, 2]]
+    : [[0, -3], [0, 3], [-3, 0], [3, 0]];
+  for (const [cx, cy] of TANK_SPROCKETS) {
+    for (const [dx, dy] of spokes) {
+      const row = g[cy + dy];
+      // tylko wewnątrz tarczy koła — inaczej szprycha wyszłaby na gąsienicę
+      if (row && (row[cx + dx] === 'w' || row[cx + dx] === 'W')) row[cx + dx] = 'e';
+    }
   }
-
-  // właz z pokrywą na grzbiecie
-  ellipseFill(g, 23, 3.5, 4, 2, 'b');
-  rect(g, 21, 2, 3, 1, 'h');
-  rect(g, 19, 5, 9, 1, 'B');
-
-  // antenka z kulką
-  rect(g, 14, 0, 3, 2, 'W');
-  rect(g, 15, 2, 1, 3, 'e');
-
-  // przednia płyta z "twarzą" (dwa ciemne wzierniki)
-  rect(g, 26, 13, 8, 3, 'W');
-  rect(g, 26, 15, 8, 1, 'w');
-  P(g, 28, 14, 'e');
-  P(g, 31, 14, 'e');
-
-  // armata: krótka gruba lufa + rozszerzony stożkowy wylot
-  rect(g, 28, 9, 10, 4, 'g');
-  rect(g, 28, 9, 10, 1, 'G');
-  rect(g, 37, 9, 9, 7, 'b');
-  rect(g, 37, 9, 9, 2, 'h');
-  rect(g, 37, 14, 9, 2, 'B');
-  rect(g, 37, 9, 2, 7, 'G');
-  P(g, 45, 9, '.'); P(g, 45, 15, '.');
-
-  // ciemna linia wzdłuż górnej krawędzi gąsienicy
-  for (let x = 0; x < 48; x++) if (g[16][x] !== '.') g[16][x] = 'o';
 
   outline(g);
   return toRows(g);
@@ -1007,7 +1043,11 @@ PLAYERS.forEach((p, i) => {
     ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4),
     m: coolShade(p.color, 0.28),
   };
-  save('tank_' + i, hq(gridToPixels(tankGrid(), pal)));
+  // hq() PER KLATKA, dopiero potem sklejenie — dropShadow() przesuwa alfę
+  // w prawo-dół, więc na gotowym pasku cień wchodziłby w sąsiednią klatkę
+  save('tank_' + i, composeH(
+    [0, 1, 2, 3].map(f => hq(gridToPixels(tankFrame(f), pal)))
+  ));
   save('artillery_' + i, hq(gridToPixels(artilleryGrid(), pal)));
   const top = soldierTop();
   save('soldier_' + i, composeH(

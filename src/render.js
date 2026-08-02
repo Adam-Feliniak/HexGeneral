@@ -228,7 +228,17 @@ function drawArmySprite(t, now) {
     }
   } else if (army.type === 'tank') {
     const spr = SPR.tanks[playerSkin(army.player)];
-    if (sprOk(spr)) ctx.drawImage(spr, x - 24, y - 15, 48, 28);
+    if (sprOk(spr)) {
+      // Animacja jazdy (4 klatki). W trakcie przejazdu między heksami klatka idzie
+      // z POSTĘPU tweenu, nie z zegara — dzięki temu na jeden krok przypada dokładnie
+      // jeden pełny obrót gąsienicy, niezależnie od tempa gry. Poza przejazdem
+      // animuje się tylko jednostka zaznaczona, tak samo jak marsz piechura: gdyby
+      // kręciły się wszystkie, plansza migotałaby od stojących czołgów.
+      const anim = anims.find(a => a.tile === t);
+      const fr = anim ? Math.floor((anim.t / 0.18) * 4) % 4
+        : state.selected === t ? Math.floor(now / 120) % 4 : 0;
+      ctx.drawImage(spr, fr * 48, 0, 48, 28, x - 24, y - 15, 48, 28);
+    }
   } else { // artillery
     const spr = SPR.artillery[playerSkin(army.player)];
     if (sprOk(spr)) ctx.drawImage(spr, x - 22, y - 14, 44, 26);

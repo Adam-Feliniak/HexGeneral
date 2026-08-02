@@ -271,7 +271,8 @@ poprawki grafiki to zmiany w generatorze + regeneracja + commit PNG-ów (patrz
   Rozbudowa funkcji malujących w `tools/gen-sprites.js`; koszt to głównie robota
   artystyczna, architektura już to udźwignie (rejestracja w `loadSprites()` w
   `src/sprites.js`).
-- 🟡 **Animacje jednostek i terenu** — **cel potwierdzony** (animacje terenu w szczególności):
+- 🟡 **Animacje jednostek i terenu** — **częściowo zrobione**: piechur ma 4 klatki marszu,
+  czołg 4 klatki jazdy (v0.7.2). Zostają animacje terenu, o które chodzi w szczególności:
   sprite'y wieloklatkowe (chód, strzał, bezruch), animowana woda/wybrzeże, dym z miast.
   Wymaga klatek w generatorze i pętli animacji w renderze (istnieją już `anims`, `floaters`,
   `effects`, `lastFrame` w `state.js` oraz `frame()`/`draw()` w `render.js`, więc jest na
@@ -363,9 +364,12 @@ naturalnie eksponuje wartość zwiadu.
   vs `PLAYERS`. Warsztat, lokalizacje instalacji i uwaga bezpieczeństwa o
   `run_lua_script` (niesandboxowany kod Lua) — w
   [Przewodniku developera](09-Przewodnik-developera.md).
-  Pozostaje otwarte: **przepisanie `tankGrid()` z kodu na `TANK_ROWS`**, czyli świadoma
-  zamiana parametrycznych kształtów na stawiane piksele — osobna decyzja, wymaga
-  wariantów do wyboru.
+  ✅ Pozycja domknięta w v0.7.2: `tankGrid()` zniknął, czołg jest mapą `TANK_ROWS`
+  stawianą piksel po pikselu. Wniosek wart zapamiętania — **rysunek i tak powstał
+  w mapie tekstowej, nie w Aseprite**: przy sylwetce, którą ma naprawić świadome
+  prowadzenie krzywej, narzędzia kształtów odtwarzają dokładnie ten problem, który
+  psuł starą wersję. Aseprite zostaje przydatne tam, gdzie ma przewagę nie do
+  odtworzenia ręcznie — rampy barwne z hue shiftem i klatki animacji.
 - 🔴 **Ewentualne przejście na Godota** — opcja jest realna i policzona (port nie jest
   apokaliptyczny: logika, kodek zapisu i DSP tłumaczą się mechanicznie, render/UI/input
   do przepisania, pipeline sprite'ów zostaje bez zmian), ale **nie jest planem** — dziś

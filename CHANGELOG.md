@@ -2,6 +2,39 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.7.2] - 2026-08-02
+
+Czołg przemalowany i wprawiony w ruch — druga jednostka po armacie, która przechodzi
+z kształtów składanych z elips na mapę znaków stawianą piksel po pikselu.
+
+- **Nowy sprite czołgu (`TANK_ROWS`).** Stary powstawał z `ellipseFill()` i czytał się
+  jak gładki bochenek: kadłub był jedną plamą barwy gracza, a wzierniki ginęły na styku
+  z gąsienicą. Nowy jest ułożony ręcznie w skali 1:1 (28 wierszy po 48 znaków) i niesie
+  detal, którego armata nie mogła unieść — kopułkę włazu, kratę wydechu, peryskop,
+  przednie okno, reflektor, nitowany pas burty, spoinę pancerza, zapasowe koło, łopatę,
+  rurę wydechową i błoto na gąsienicach.
+- **Dwie poprawki, które zdecydowały o efekcie**, obie wychwycone dopiero po odrzuceniu
+  trzech gładkich wariantów: gąsienica musi sięgać **dalej niż kadłub w obie strony**
+  (przy równej długości cała sylwetka czyta się jak prostokąt), a reguła „≥3 piksele
+  grubości" dotyczy **wyłącznie elementów wystających poza obrys** — `outline()` rusza
+  tylko piksele stykające się z przezroczystością, więc detal wewnątrz sylwetki przeżywa
+  w dowolnym rozmiarze.
+- **Animacja jazdy (4 klatki).** `assets/tank_*.png` to teraz pasek 192×28, wzorem
+  4-klatkowego marszu piechura. Klatki są **wyprowadzane z jednej mapy znaków**, a nie
+  rysowane osobno, więc nie mogą rozjechać się sylwetką. W trakcie przejazdu między
+  heksami klatka idzie z postępu tweenu, nie z zegara — na jeden krok przypada dokładnie
+  jeden pełny obrót gąsienicy. Poza przejazdem animuje się tylko jednostka zaznaczona,
+  tak samo jak piechur, żeby plansza nie migotała od stojących czołgów.
+- **Archiwum poprzednich wersji grafiki** (`tools/archive-assets.js`, katalog `archiwum/`).
+  Generator nadpisuje `assets/*.png` w miejscu, więc przemalowanie kasowało poprzednią
+  wersję — zostawała tylko w historii gita. Katalog leży poza `assets/`, żeby allowlista
+  `pack-build.js` nie mogła go wciągnąć do buildu.
+- **`png-to-grid.js --selftest` przepięty na armatę.** Porównywał `assets/tank_0.png`
+  wiersz w wiersz z `tankGrid()`; po zmianie czołgu w pasek klatek takie porównanie
+  straciło sens. Armata zostaje jednoklatkowa i powstaje tym samym potokiem.
+- Nowy tryb `node tools/png-to-grid.js --palette` (zrzut palety znak → kolor do rysowania
+  poza repo) i podłączony Aseprite przez MCP jako brudnopis graficzny.
+
 ## [0.7.1] - 2026-07-31
 
 Wydanie dźwiękowe, w całości wywołane **pierwszą falą testów zewnętrznych**: jedna

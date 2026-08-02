@@ -67,7 +67,7 @@ So `gen-sounds.js` is not a build step and has no counterpart to "commit the reg
 
 ### Adding/changing a sprite
 0. If you are *replacing* existing art rather than adding new art, run `node tools/archive-assets.js <prefix>` first — `gen-sprites.js` overwrites `assets/*.png` in place, and the previous drawing then survives only in git history. Copies land in `archiwum/` as `tank_0_2026-08-02.png`; that directory is outside `assets/` on purpose, so the allowlist in `pack-build.js` can never pick it up.
-1. Edit `tools/gen-sprites.js` — add a painting function (see `tankGrid()`/`artilleryGrid()` for examples) or modify an existing one.
+1. Edit `tools/gen-sprites.js` — add a painting function (see `artilleryGrid()`/`tankFrame()` for examples, or a hand-authored char map like `ARTILLERY_ROWS`/`TANK_ROWS`) or modify an existing one.
 2. If the sprite needs per-player recoloring, register it in the `PLAYERS.forEach(...)` loop at the end of the file, painting `b`/`B`/`h` palette characters in the player's color.
 3. Run `node tools/gen-sprites.js`.
 4. If it's a new sprite file/category, register it in `loadSprites()` in `src/sprites.js`.

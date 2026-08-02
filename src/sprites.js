@@ -29,7 +29,7 @@ function loadSprites() {
   };
   SPR.ships = [];
   for (let i = 0; i < PLAYERS_DEF.length; i++) {
-    SPR.tanks.push(loadSprite('tank_' + i));
+    SPR.tanks.push(loadSprite('tank_' + i));       // 4 klatki jazdy 48x28 obok siebie
     SPR.artillery.push(loadSprite('artillery_' + i));
     SPR.soldiers.push(loadSprite('soldier_' + i)); // 4 klatki 24x30 obok siebie
     SPR.capitals.push(loadSprite('capital_' + i));
