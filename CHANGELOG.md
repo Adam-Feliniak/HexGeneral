@@ -12,7 +12,9 @@ z kształtów składanych z elips na mapę znaków stawianą piksel po pikselu.
   z gąsienicą. Nowy jest ułożony ręcznie w skali 1:1 (28 wierszy po 48 znaków) i niesie
   detal, którego armata nie mogła unieść — kopułkę włazu, kratę wydechu, peryskop,
   przednie okno, reflektor, nitowany pas burty, spoinę pancerza, zapasowe koło, łopatę,
-  rurę wydechową i błoto na gąsienicach.
+  rurę wydechową i błoto na gąsienicach. Okno dostało światłocień — ukośny refleks
+  i ciemną krawędź od strony jarzma, bo płaska plama jednego koloru czytała się jak
+  naklejony prostokąt, a nie jak szyba.
 - **Dwie poprawki, które zdecydowały o efekcie**, obie wychwycone dopiero po odrzuceniu
   trzech gładkich wariantów: gąsienica musi sięgać **dalej niż kadłub w obie strony**
   (przy równej długości cała sylwetka czyta się jak prostokąt), a reguła „≥3 piksele
