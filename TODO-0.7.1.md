@@ -72,6 +72,10 @@ Szczegóły i pułapki (szew pętli, pogłos ze stanem, kwantyzacja długości d
 
 **Zostaje do rozważenia:** sekcja B (dziś jeden wzór 32-bitowy w kółko), nadpróbkowanie
 stopni nieliniowych przy jaśniejszych barwach, i wciąż otwarte pytanie o głos lektora.
+Do tego **opóźnienie startu muzyki** — dłuższe pętle liczą się 1,14–1,30 s zamiast 440 ms,
+a render zamawia się dokładnie przy wejściu do gry; rozgrzewanie w menu kontra dołączenie
+gotowego dźwięku do buildu rozpisane w
+[14-Dzwiek.md](Documents/14-Dzwiek.md#do-rozważenia-prerender-zamiast-liczenia-w-locie).
 
 **Blokada narzędziowa — ZDJĘTA.** `tools/gen-sounds.js --music` renderuje pętle
 z `MUSIC_TRACKS` do `dist/music/*.wav`, a `--tracks=<plik.js>` bierze tabelę nut spoza
@@ -85,9 +89,17 @@ wzmocnienia z `musicVoice`, ma `--selftest` (15 sprawdzeń) i lintuje partyturę
 > render jest wiarygodną podstawą do wyboru wariantu. Powtórzyć dopiero po zmianie
 > w rendererze albo w `musicVoice`/`musicTick`.
 
-**Pytanie otwarte, blokujące generowanie wariantów:** do czego to ma brzmieć? Ponuro
-i ciężko / sucho i sztabowo, prawie bez melodii / podniośle i marszowo, ale poważnie.
-Bez tej jednej decyzji trzy warianty mogą zostać odrzucone razem.
+**Pytanie o kierunek — ROZSTRZYGNIĘTE, i wyszło szersze niż zadane.** Odpowiedź brzmiała
+„marszowo, poważnie wojskowo, ale niektóre utwory radosne i żywiołowe", czyli nie jeden
+utwór, tylko **pula**. Zaakceptowane po odsłuchu: `game` (bez zmian), `marchHeavy`,
+`marchTight`, `bright`, `ambient`; odrzucony jeden wariant żywiołowy (152 bpm, galop).
+Menu bez zmian. Utwór partii losuje się z `mapSeed`. Szczegóły i trzy pułapki, które
+przy okazji wyszły (tożsamość utworu niesie ostinato basu, nie perkusja; wspólny poziom
+puli wiąże utwór o najwyższym creście; `audioRng` zwraca [-1, 1)) —
+[14-Dzwiek.md](Documents/14-Dzwiek.md#pula-utworów-partii).
+
+**Zostaje wyłącznie odsłuch w grze.** Żaden harness nie sprawdzi, czy 64-bitowa pętla
+utrzymuje uwagę przez partię — to jedyna rzecz w tym punkcie, której nie da się zmierzyć.
 
 Zakres: `src/audio.js` (`MUSIC_TRACKS`, `MUSIC_INSTRUMENTS`), `tools/gen-sounds.js`,
 `Documents/14-Dzwiek.md`.

@@ -384,6 +384,76 @@ function musicBassLine(roots, inst) {
   return out;
 }
 
+/* Wzór taktowy powtórzony na liście stopni. `pattern` to [odstęp, długość,
+   interwał od stopnia] — dzięki temu bas i pad idą za harmonią same, zamiast
+   być przepisywane takt po takcie. */
+function musicBar(start, barLen, roots, pattern, inst) {
+  const out = [];
+  roots.forEach((root, i) => {
+    for (const [off, dur, iv] of pattern) out.push([start + i * barLen + off, dur, root + iv, inst]);
+  });
+  return out;
+}
+
+/* Akord z jawną listą interwałów. Potrzebny tam, gdzie harmonia miesza tercje
+   małe z wielkimi (dorycka: Em ma +15, A ma +16) — `musicBar()` z jednym wzorem
+   dla wszystkich stopni zagrałby wtedy jeden z nich w złym trybie. */
+function musicChord(start, dur, root, ivs, inst) {
+  return ivs.map(iv => [start, dur, root + iv, inst]);
+}
+
+/* Harmonie utworów puli. Stopnie podane per TAKT (4 bity), a nie per fraza,
+   bo tylko wtedy `musicBar()` rozstawia bas i pad bez przepisywania ich ręcznie. */
+const MUSIC_HEAVY_ROOTS = [40, 40, 41, 41, 43, 43, 41, 40,    // E E F F G G F E
+  40, 40, 43, 43, 41, 41, 38, 40];                            // E E G G F F D E
+const MUSIC_TIGHT_ROOTS = [40, 40, 41, 41, 43, 43, 38, 38,
+  40, 40, 41, 41, 43, 43, 38, 40];
+const MUSIC_BRIGHT_ROOTS = [40, 40, 45, 45, 38, 38, 45, 40,
+  45, 45, 38, 38, 40, 40, 45, 40];
+// dorycka miesza tercje: Em ma +15, pozostałe +16 — stąd jawne listy interwałów
+const MUSIC_AMBIENT_CHORDS = [
+  [0, 40, [12, 15, 19]], [8, 45, [12, 16, 19]], [16, 43, [12, 16, 19]], [24, 38, [12, 16, 19]],
+  [32, 40, [12, 15, 19]], [40, 45, [12, 16, 19]], [48, 43, [12, 16, 19]], [56, 38, [12, 16, 19]],
+];
+
+/* Temat `marchTight` — ten sam, którym gra `game`, przedłużony o odpowiedź
+   w drugiej połowie pętli. Trzymany osobno, bo grają go DWA instrumenty
+   (lead i blacha oktawę niżej), a rozjechanie się kopii byłoby cichym błędem. */
+const MUSIC_TIGHT_LEAD = [
+  [0, 1.5, 64], [1.5, 0.5, 67], [2, 1, 71], [3, 1, 69],
+  [4, 2, 67], [6, 1.5, 65],
+  [8, 1.5, 64], [9.5, 0.5, 67], [10, 1, 71], [11, 1, 72],
+  [12, 3.5, 71],
+  [16, 1.5, 71], [17.5, 0.5, 72], [18, 1, 74], [19, 1, 72],
+  [20, 2, 71], [22, 1.5, 67],
+  [24, 1.5, 69], [25.5, 0.5, 67], [26, 1, 65], [27, 1, 64],
+  [28, 3.5, 64],
+  [32, 1.5, 71], [33.5, 0.5, 74], [34, 1, 76], [35, 1, 74],
+  [36, 2, 72], [38, 1.5, 71],
+  [40, 1.5, 69], [41.5, 0.5, 72], [42, 1, 74], [43, 1, 76],
+  [44, 3.5, 74],
+  [48, 1.5, 76], [49.5, 0.5, 74], [50, 1, 72], [51, 1, 71],
+  [52, 2, 72], [54, 1.5, 69],
+  [56, 1.5, 67], [57.5, 0.5, 69], [58, 1, 71], [59, 1, 69],
+  [60, 3.5, 64],
+];
+
+/* WSPÓLNY POZIOM CAŁEJ PULI, i to jest wymóg, nie kosmetyka: skoro utwór partii
+   losuje się z `mapSeed`, dwie partie z różnym ziarnem nie mogą różnić się
+   głośnością — inaczej gracz słyszy „ta mapa ma cichszą muzykę".
+
+   Liczbę wyznacza utwór o najwyższym creście, bo tylko do jego sufitu sięgają
+   wszystkie: sufit szczytu w `musicNormalize` ucina wzmocnienie wcześniej niż
+   zadany RMS (0,95 / crest). Zmierzone maksima: `game` 0,218, `marchTight`
+   0,208, `ambient` 0,167, `marchHeavy` 0,161, `bright` 0,137 — i to `bright`
+   wiąże pulę. Podbicie `drive`, żeby zbić crest, odpadło świadomie: w utworze
+   spokojnym saturację słychać wprost.
+
+   Skutek uboczny, o którym trzeba wiedzieć: `game` grał dotąd na 0,20, więc
+   cała muzyka partii jest o 3,4 dB cichsza niż w 0.7.2. Menu (0,11) zostaje
+   bez zmian, przez co wejście do gry to teraz skok o 1,8 dB zamiast 5,2 dB. */
+const MUSIC_POOL_LEVEL = 0.135;
+
 // nuta: [ćwierćnuta startu, długość w ćwierćnutach, MIDI, instrument]
 const MUSIC_TRACKS = {
   menu: {
@@ -405,7 +475,7 @@ const MUSIC_TRACKS = {
   game: {
     // drive 2,0 nie jest kwestią smaku: dopiero przy nim crest spada na tyle,
     // że pętla dobija do zadanego RMS zamiast opierać się o sufit szczytu
-    bpm: 132, loopBeats: 32, drive: 2.0, reverb: 0.1, reverbTime: 0.7, level: 0.20,
+    bpm: 132, loopBeats: 32, drive: 2.0, reverb: 0.1, reverbTime: 0.7, level: MUSIC_POOL_LEVEL,
     notes: [].concat(
       // rytm: stopa, werbel na 2 i 4, hi-hat ósemkami — trzy różne brzmienia
       // zamiast jednego szumu, i dopiero to daje rytm zamiast metronomu
@@ -426,7 +496,142 @@ const MUSIC_TRACKS = {
         [28, 3.5, 64, 'lead'],
       ]),
   },
+
+  /* --- marchHeavy: marsz ciężki ---
+     Melodia w blasze zamiast w leadzie, 96 bpm, rytm marszowy w czystej postaci:
+     stopa na 1 i 3, werbel na 2 i 4, żadnych ósemek hi-hatu w pierwszej połowie
+     — cisza między uderzeniami jest tu materiałem. 64 bity, bo sekcja B jest
+     warunkiem, a nie ozdobą: 32 bity przy 96 bpm to 20 s i pętla zaczyna uwierać. */
+  marchHeavy: {
+    bpm: 96, loopBeats: 64, drive: 1.6, reverb: 0.22, reverbTime: 1.3, level: MUSIC_POOL_LEVEL,
+    notes: [].concat(
+      // bas: stopień na 1, przednutka, kwinta na 3, stopień na 4 — chód marszowy
+      musicBar(0, 4, MUSIC_HEAVY_ROOTS, [[0, 0.9, 0], [1.5, 0.4, 0], [2, 0.9, 7], [3, 0.9, 0]], 'bass'),
+      musicBar(0, 4, MUSIC_HEAVY_ROOTS, [[0, 4, 12], [0, 4, 19]], 'pad'),
+      musicHits(musicEvery(0, 64, 2), 0.3, 0, 'kick'),
+      musicHits([31.5, 63.5], 0.3, 0, 'kick'),
+      musicHits(musicEvery(1, 64, 2), 0.3, 0, 'snareM'),
+      // werblowe przejście na końcu każdej połowy — sygnał, że fraza się zamyka
+      musicHits([30.5, 30.75, 31.25, 31.5, 31.75, 62.5, 62.75, 63.25, 63.5, 63.75], 0.2, 0, 'snareM'),
+      // hi-hat dopiero w sekcji B: puls jest tu jedynym środkiem, którym B
+      // odróżnia się od A bez podnoszenia głośności
+      musicHits(musicEvery(32.5, 64, 1), 0.2, 0, 'hat'),
+      [
+        [0, 1.5, 64, 'brass'], [1.5, 0.5, 64, 'brass'], [2, 1, 67, 'brass'], [3, 1, 71, 'brass'],
+        [4, 1.5, 72, 'brass'], [5.5, 0.5, 71, 'brass'], [6, 2, 69, 'brass'],
+        [8, 1.5, 69, 'brass'], [9.5, 0.5, 69, 'brass'], [10, 1, 72, 'brass'], [11, 1, 71, 'brass'],
+        [12, 2, 69, 'brass'], [14, 1.5, 67, 'brass'],
+        [16, 1.5, 67, 'brass'], [17.5, 0.5, 69, 'brass'], [18, 2, 71, 'brass'],
+        [20, 1.5, 74, 'brass'], [21.5, 0.5, 72, 'brass'], [22, 2, 71, 'brass'],
+        [24, 1.5, 69, 'brass'], [25.5, 0.5, 72, 'brass'], [26, 2, 69, 'brass'],
+        [28, 1.5, 67, 'brass'], [29.5, 0.5, 65, 'brass'], [30, 2, 64, 'brass'],
+        // sekcja B zaczyna się PAUZĄ — bit 32 jest pusty
+        [33, 1, 76, 'brass'], [34, 2, 74, 'brass'],
+        [36, 1.5, 72, 'brass'], [37.5, 0.5, 71, 'brass'], [38, 2, 69, 'brass'],
+        [40, 1, 71, 'brass'], [41, 1, 74, 'brass'], [42, 2, 74, 'brass'],
+        [44, 2, 74, 'brass'], [46, 1.5, 71, 'brass'],
+        [48, 1.5, 69, 'brass'], [49.5, 0.5, 72, 'brass'], [50, 2, 69, 'brass'],
+        [52, 1.5, 72, 'brass'], [53.5, 0.5, 69, 'brass'], [54, 2, 72, 'brass'],
+        [56, 2, 74, 'brass'], [58, 2, 69, 'brass'],
+        [60, 1, 67, 'brass'], [61, 3, 64, 'brass'],
+      ]),
+  },
+
+  /* --- marchTight: ten sam temat co `game`, ale marszowy ---
+     Wariant istnieje po to, żeby przy znanej melodii słychać było samą zmianę
+     aranżacji. Pierwsze podejście zmieniało wyłącznie perkusję i tempo o 4,5%
+     i odsłuch orzekł „to ten sam utwór" — z czego płynie wniosek wart zapisania:
+     TOŻSAMOŚCI UTWORU NIE NIESIE PERKUSJA, TYLKO OSTINATO BASU I TEMPO. Dlatego
+     bas ósemkowy ustąpił chodowi marszowemu, ósemki hi-hatu zniknęły z pierwszej
+     połowy, blacha dubluje temat oktawę niżej na całej długości, a tempo spadło
+     o 11%. Melodia została nietknięta i to jest cel, nie oszczędność. */
+  marchTight: {
+    bpm: 118, loopBeats: 64, drive: 2.0, reverb: 0.14, reverbTime: 0.9, level: MUSIC_POOL_LEVEL,
+    notes: [].concat(
+      musicBar(0, 4, MUSIC_TIGHT_ROOTS, [[0, 0.9, 0], [1.5, 0.4, 0], [2, 0.9, 7], [3, 0.9, 0]], 'bass'),
+      musicBar(0, 4, MUSIC_TIGHT_ROOTS, [[0, 4, 12], [0, 4, 19]], 'pad'),
+      musicHits(musicEvery(0, 64, 2), 0.3, 0, 'kick'),
+      musicHits(musicEvery(3.5, 64, 8), 0.3, 0, 'kick'),
+      musicHits(musicEvery(1, 64, 2), 0.3, 0, 'snareM'),
+      // podwójne uderzenia werbla przed kreską taktową — to one robią „marsz"
+      musicHits(musicEvery(7.5, 64, 8).concat(musicEvery(7.75, 64, 8)), 0.2, 0, 'snareM'),
+      musicHits(musicEvery(32.5, 64, 1), 0.15, 0, 'hat'),
+      MUSIC_TIGHT_LEAD.map(([b, d, m]) => [b, d, m, 'lead']),
+      MUSIC_TIGHT_LEAD.map(([b, d, m]) => [b, d, m - 12, 'brass']),
+    ),
+  },
+
+  /* --- bright: pogodny ---
+     E MIKSOLIDYJSKA (E-F#-G#-A-B-C#-D), nie frygijska. Tonacja utworów posępnych
+     jest ustalona wyżej i zostaje, ale jasności nie da się z niej wydobyć:
+     półton E-F na początku skali czyta się manicznie, nie wesoło. Ten sam dźwięk
+     centralny E trzyma utwór obok pozostałych. Energia siedzi w melodii, nie
+     w rytmie: bas na półnutach, nuty długie, perkusja wyznacza puls. */
+  bright: {
+    bpm: 100, loopBeats: 64, drive: 1.4, reverb: 0.20, reverbTime: 1.4, level: MUSIC_POOL_LEVEL,
+    notes: [].concat(
+      musicBar(0, 4, MUSIC_BRIGHT_ROOTS, [[0, 2, 0], [2, 2, 7]], 'bass'),
+      // trójdźwięk durowy (+16) na każdym stopniu — miksolidyjska trzyma jasność
+      musicBar(0, 4, MUSIC_BRIGHT_ROOTS, [[0, 4, 12], [0, 4, 16], [0, 4, 19]], 'pad'),
+      musicHits(musicEvery(0, 64, 4), 0.3, 0, 'kick'),
+      musicHits(musicEvery(2, 64, 4), 0.3, 0, 'snareM'),
+      musicHits(musicEvery(1, 64, 1), 0.15, 0, 'hatQ'),
+      [
+        [0, 3, 71, 'brassHi'], [3, 1, 73, 'brassHi'],
+        [4, 2, 76, 'brassHi'], [6, 2, 73, 'brassHi'],
+        [8, 3, 69, 'brassHi'], [11, 1, 71, 'brassHi'],
+        [12, 4, 73, 'brassHi'],
+        [16, 2, 74, 'brassHi'], [18, 2, 71, 'brassHi'],
+        [20, 3, 69, 'brassHi'], [23, 1, 71, 'brassHi'],
+        [24, 2, 73, 'brassHi'], [26, 2, 76, 'brassHi'],
+        [28, 4, 71, 'brassHi'],
+        [32, 2, 76, 'brassHi'], [34, 2, 73, 'brassHi'],
+        [36, 3, 71, 'brassHi'], [39, 1, 69, 'brassHi'],
+        [40, 2, 71, 'brassHi'], [42, 2, 74, 'brassHi'],
+        [44, 4, 76, 'brassHi'],
+        [48, 2, 73, 'brassHi'], [50, 2, 71, 'brassHi'],
+        [52, 3, 68, 'brassHi'], [55, 1, 69, 'brassHi'],
+        [56, 2, 71, 'brassHi'], [58, 2, 73, 'brassHi'],
+        [60, 4, 64, 'brassHi'],
+      ]),
+  },
+
+  /* --- ambient: tło ---
+     Zadanie tego utworu brzmi: NIE ZWRACAĆ NA SIEBIE UWAGI. To nie jest to samo
+     co „ciszej", więc robią to trzy decyzje kompozycyjne:
+     - E DORYCKA (E-F#-G-A-B-C#-D) — molowa, więc nie słodzi przy 300 turach,
+       ale sekstą wielką (C#) ucieka od ciemności: tryb neutralny, nie smutny;
+     - 76 bpm i akordy co 8 bitów, czyli pętla 50-sekundowa, najdłuższa w puli.
+       Im rzadziej coś się powtarza, tym później zaczyna uwierać;
+     - melodia z DZIURAMI: osiem fraz, trzynaście nut, reszta to cisza pod padem.
+       Melodia grająca bez przerwy jest pierwszym planem niezależnie od tego,
+       jak cicho gra. */
+  ambient: {
+    bpm: 76, loopBeats: 64, drive: 1.2, reverb: 0.28, reverbTime: 2.0, level: MUSIC_POOL_LEVEL,
+    notes: [].concat(
+      MUSIC_AMBIENT_CHORDS.reduce((out, [at, root, ivs]) => out.concat(
+        musicChord(at, 8, root, ivs, 'pad'),
+        [[at, 4, root, 'bass'], [at + 4, 3.5, root + 7, 'bass']]), []),
+      // puls, nie rytm: stopa raz na dwa takty, hi-hat na ćwierćnutach parzystych
+      musicHits(musicEvery(0, 64, 8), 0.3, 0, 'kickQ'),
+      musicHits(musicEvery(2, 64, 4), 0.2, 0, 'hatQ'),
+      [
+        [2, 4, 71, 'leadSoft'], [6, 2, 69, 'leadSoft'],
+        [10, 4, 73, 'leadSoft'], [15, 1, 71, 'leadSoft'],
+        [18, 4, 74, 'leadSoft'], [23, 1, 71, 'leadSoft'],
+        [26, 5, 69, 'leadSoft'],
+        [34, 4, 76, 'leadSoft'], [38, 2, 74, 'leadSoft'],
+        [42, 4, 73, 'leadSoft'],
+        [50, 3, 71, 'leadSoft'], [54, 2, 74, 'leadSoft'],
+        [58, 5, 64, 'leadSoft'],
+      ]),
+  },
 };
+
+/* Pula utworów partii. JAWNA LISTA, a nie `Object.keys(MUSIC_TRACKS)` bez 'menu'
+   — inaczej każdy przyszły utwór (np. osobny na ekran zwycięstwa) wpadłby do
+   losowania sam z siebie. */
+const MUSIC_GAME_POOL = ['game', 'marchHeavy', 'marchTight', 'bright', 'ambient'];
 
 /* Instrumenty. Do 0.6.x były trzy fale z jedną obwiednią — czyli zestaw NES-a,
    i to on odpowiadał za „8-bitowe" brzmienie, nie kompozycja. Teraz: synteza FM
@@ -439,6 +644,24 @@ const MUSIC_INSTRUMENTS = {
   kick: { type: 'kick', len: 0.34, gain: 0.95, seed: 41 },
   snare: { type: 'snare', len: 0.24, gain: 0.50, seed: 53 },
   hat: { type: 'hat', len: 0.06, decay: 30, gain: 0.16, seed: 67 },
+  /* Blacha: FM o stosunku 1:1 z głęboką, wolno opadającą modulacją — ostre
+     wejście i miękkie podtrzymanie, czyli to, po czym poznaje się sekcję dętą,
+     a czego filtrem się nie uzyska. Atak 30 ms, bo natychmiastowy czyta się
+     jak organy. */
+  brass: { type: 'fm', ratio: 1, index: 3.4, indexDecay: 0.42, a: 0.03, d: 0.28, s: 0.68, r: 0.22, gain: 0.17 },
+  // wyższy stosunek = więcej harmonicznych, krótsze opadanie modulacji =
+  // mniej „dęcia", więcej blasku
+  brassHi: { type: 'fm', ratio: 3, index: 1.9, indexDecay: 0.13, a: 0.006, d: 0.14, s: 0.55, r: 0.13, gain: 0.16 },
+  /* Głos do utworów spokojnych: FM o niskim wskaźniku modulacji jest blisko
+     sinusa, więc niesie melodię, nie tembr — plus długi atak i długie
+     wybrzmienie, żeby nuta nie „zaczynała się" słyszalnie. Ostry atak jest tym,
+     co robi z tła pierwszy plan. */
+  leadSoft: { type: 'fm', ratio: 2, index: 1.0, indexDecay: 0.6, a: 0.08, d: 0.5, s: 0.6, r: 0.5, gain: 0.15 },
+  // werbel marszowy: krótszy i twardszy, żeby wybijał krok zamiast go rozmywać
+  snareM: { type: 'snare', len: 0.17, gain: 0.52, seed: 53 },
+  // perkusja tła: obecna jako puls, nie jako rytm
+  kickQ: { type: 'kick', len: 0.34, gain: 0.42, seed: 41 },
+  hatQ: { type: 'hat', len: 0.06, decay: 30, gain: 0.07, seed: 67 },
 };
 
 /* ==================== synteza muzyki (czysta arytmetyka) ====================
@@ -829,10 +1052,32 @@ function initAudio() {
   });
 }
 
+/* Utwór partii losowany Z ZIARNA MAPY, a nie z `Math.random()`. Powód jest
+   praktyczny: dzięki temu wybór jest funkcją stanu, który już istnieje i już
+   przechodzi przez zapis (`mapSeed` jest w kodeku w `save.js`), więc wczytana
+   partia wraca z tą samą muzyką i NIE trzeba niczego dokładać do `SAVE_FORMAT`.
+   Losowanie w locie wymagałoby zapamiętania wyniku, czyli nowego pola stanu
+   i bumpa formatu — za coś, co da się wyprowadzić.
+
+   `audioRng`, a nie `makeRng` z utils.js: `tools/gen-sounds.js` ładuje do
+   sandboxa sam `audio.js`, więc sięgnięcie po utils zerwałoby własność, dla
+   której narzędzie i gra liczą z jednego pliku. */
+function musicTrackForGame() {
+  if (!state || state.mapSeed == null) return 'game';
+  const rng = audioRng(state.mapSeed + 1);
+  /* Dwie rzeczy, na których łatwo się tu przejechać: `audioRng` zwraca [-1, 1),
+     bo powstał do szumu (indeks wyszedłby ujemny, a `%` w JS tego nie naprawia),
+     a pierwsze wyjście generatora liniowego jest niemal liniowe w ziarnie —
+     przy ziarnach po kolei (1, 2, 3…) dawałoby utwory po kolei. */
+  rng(); rng();
+  const u = (rng() + 1) / 2;
+  return MUSIC_GAME_POOL[Math.min(MUSIC_GAME_POOL.length - 1, Math.floor(u * MUSIC_GAME_POOL.length))];
+}
+
 // pętla dobrana do ekranu; wołane z applyScreen(), więc reaguje też na powrót do menu
 function updateMusicForScreen() {
   if (!state) return;
-  setMusicTrack(state.screen === 'game' ? 'game' : 'menu');
+  setMusicTrack(state.screen === 'game' ? musicTrackForGame() : 'menu');
 }
 
 // Throttling jest wymogiem, nie polerką: tempo AI 4x/16x dzieli thinkDelay,

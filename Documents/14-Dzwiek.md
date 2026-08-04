@@ -215,26 +215,69 @@ zlecenie renderu nowej pętli, a zadanie startowe porzucało ją, bo `musicWante
 zmienił. Efekt: **muzyka nie startowała w ogóle** — i to w scenariuszu, który gracz robi
 przy każdym wejściu do partii.
 
+### Pula utworów partii
+
+Partia nie ma jednej ścieżki dźwiękowej, tylko losuje ją z `MUSIC_GAME_POOL`
+(`game`, `marchHeavy`, `marchTight`, `bright`, `ambient`). Menu ma własną, stałą pętlę
+i do puli nie należy.
+
+**Losowanie idzie z `mapSeed`, a nie z `Math.random()`, i to jest decyzja o zapisie
+gry, nie o dźwięku.** Wybór wyprowadzony z ziarna jest funkcją stanu, który już istnieje
+i już przechodzi przez kodek w `save.js` — więc wczytana partia wraca z tą samą muzyką,
+a `SAVE_FORMAT` zostaje bez zmian. Losowanie w locie wymagałoby zapamiętania wyniku,
+czyli nowego pola stanu i bumpa formatu, za coś, co da się policzyć.
+
+Dwie pułapki w samym losowaniu, obie wyłapane dopiero pomiarem rozkładu na 400 partiach:
+`audioRng()` zwraca **[-1, 1)**, bo powstał do szumu (indeks wychodzi ujemny, a `%` w JS
+tego nie naprawia), a pierwsze wyjście generatora liniowego jest niemal liniowe w ziarnie
+— przy ziarnach po kolei dawałoby utwory po kolei. Stąd dwa odrzucone wyjścia i mapowanie
+na [0, 1).
+
+`MUSIC_GAME_POOL` jest **jawną listą**, a nie `Object.keys(MUSIC_TRACKS)` bez `menu`:
+przyszły utwór na ekran zwycięstwa nie ma prawa wpaść do losowania sam z siebie.
+
 ### Poziom pętli: ta sama pułapka co przy SFX
 
 `level` w partyturze mówi, o jaki RMS pętla *prosi*. Jeśli crest jest wysoki, wcześniej
 zadziała sufit szczytu i zadany poziom pozostanie fikcją — dokładnie tak, jak było
 z `explosion`. Sprawdzian jest ten sam: jeśli szczyt stoi równo na 0,95, to poziom
-**nie** został osiągnięty. Dlatego `game` ma `drive: 2.0` (dopiero przy tym nasyceniu
-crest spada na tyle, że pętla dobija do `level: 0.20`), a `menu` — rzadkie i o wysokim
-creście — ma jawnie niższy `level: 0.11`, bo 0,20 jest dla niego nieosiągalne nawet
-przy mocnym nasyceniu.
+**nie** został osiągnięty.
+
+**Przy puli ta pułapka zmienia charakter: poziom przestaje być sprawą jednego utworu.**
+Skoro utwór losuje się z ziarna, dwie partie nie mogą różnić się głośnością — inaczej
+gracz słyszy „ta mapa ma cichszą muzykę". Dlatego cała pula stoi na jednym
+`MUSIC_POOL_LEVEL`, a jego wartość wyznacza utwór o **najwyższym creście**, bo tylko do
+jego sufitu (0,95 / crest) sięgają wszystkie. Zmierzone maksima: `game` 0,218,
+`marchTight` 0,208, `ambient` 0,167, `marchHeavy` 0,161, `bright` 0,137 — pulę wiąże
+`bright`, stąd 0,135.
+
+Podbicie `drive`, żeby zbić crest i podnieść sufit, odrzucono świadomie: `bright` dobija
+do 0,163 dopiero przy `drive: 2.2`, a w utworze spokojnym saturację słychać wprost.
+Konsekwencja, o której trzeba wiedzieć: `game` grał do 0.7.2 na `level: 0.20`, więc
+**muzyka partii jest o 3,4 dB cichsza niż wcześniej**. `menu` zostaje na 0,11, przez co
+wejście do gry to skok o 1,8 dB zamiast dawnych 5,2 dB.
 
 ### Koszt i kiedy się liczy
 
 | | czas renderu | pamięć |
 |---|---|---|
-| pętla `game` (178 nut, 48 kHz) | ~440 ms | 2,8 MB |
-| pętla `menu` (30 nut, 48 kHz) | ~300 ms | 3,8 MB |
+| pętla `menu` (30 nut, 32 bity, 48 kHz) | ~300 ms | 3,8 MB |
+| pętla `game` (178 nut, 32 bity) | ~450 ms | 2,8 MB |
+| pętla `bright` (203 nuty, 64 bity) | ~960 ms | 7,2 MB |
+| pętla `marchHeavy` (249 nut, 64 bity) | ~1120 ms | 7,5 MB |
+| pętla `marchTight` (304 nuty, 64 bity) | ~1310 ms | 6,1 MB |
+| pętla `ambient` (77 nut, 64 bity) | ~840 ms | 9,5 MB |
 
 Render idzie **raz na sesję i jest odłożony poza obsługę kliknięcia** (`setTimeout` 0
 w `musicPlaybackStart`): pierwszy gest użytkownika i tak uruchamia syntezę wszystkich
 SFX, a doliczenie do tego pętli zamroziłoby reakcję na przycisk na pół sekundy.
+
+Dwie liczby, które zmieniła pula. Po pierwsze, pętle 64-bitowe liczą się **2–3× dłużej**
+niż 32-bitowe — opóźnienie startu muzyki rośnie z ~0,45 s do ~1,3 s (patrz „Do rozważenia:
+prerender…" niżej). Po drugie, `musicBuffers` **nie ma eksmisji**: sesja, w której gracz
+rozegra pięć partii z różnymi ziarnami, dojdzie do ~34 MB buforów muzyki plus menu.
+Na desktopie to nieistotne, ale jest to liczba, która wcześniej nie mogła przekroczyć
+6,6 MB.
 
 Dwie optymalizacje, bez których to nie miałoby sensu (zmierzone: 2650 ms → 440 ms):
 
@@ -244,6 +287,46 @@ Dwie optymalizacje, bez których to nie miałoby sensu (zmierzone: 2650 ms → 4
   i `Math.tan` na współczynniki filtra były głównym kosztem. Obwiednia liczy się raz na
   nutę i jest współdzielona przez oscylator i filtr, a współczynniki filtra przeliczają
   się co 32 próbki (obwiednia zmienia się o rzędy wielkości wolniej).
+
+### Do rozważenia: prerender zamiast liczenia w locie
+
+Render pętli kosztuje dziś ~440 ms, ale to liczba dla utworu 32-bitowego. Kandydaci
+na nową ścieżkę mają 64 bity i gęstszą aranżację — zmierzone **1,14–1,30 s**. Dopóki
+render jest odłożony `setTimeout`-em, nic się nie zacina, ale muzyka wchodzi z opóźnieniem,
+i to **dokładnie w najgorszym momencie**: `updateMusicForScreen()` liczy pętlę bieżącego
+ekranu, więc wejście do gry zamawia render `game` w chwili, w której gracz właśnie patrzy
+na świeżą mapę. Stąd pomysł, żeby muzykę dostarczać gotową.
+
+Są dwie drogi i dzieli je to, czy łamią zasadę „zero plików audio".
+
+**Tania i bez konsekwencji: rozgrzewanie przed czasem.** Pętla gry nie musi czekać na
+wejście do gry — nic nie stoi na przeszkodzie, żeby policzyć ją w tle, gdy gracz siedzi
+w menu albo układa skład w lobby. `musicBufferFor()` cache'uje po nazwie, więc wystarczy
+zawołać go wcześniej — a gdy utwór jest losowany z puli na partię, wiadomo którą pętlę
+liczyć, zanim mapa się w ogóle pokaże. Kosztuje zero bajtów w repo i nie rusza żadnej
+zasady — to jest pierwsza rzecz do sprawdzenia, jeśli opóźnienie zacznie przeszkadzać.
+
+**Droga i z konsekwencjami: dołączenie policzonego dźwięku do buildu.** Tu prerender
+przestaje być optymalizacją, a staje się zmianą architektury:
+
+- `fetch()` na `file://` jest zablokowany, więc plik nie może być `.wav` obok `index.html`
+  — musiałby wejść jako **base64 w pliku `.js`**, tak jak rozważane próbki perkusji;
+- rozmiar: 40-sekundowa pętla jako 16-bit mono to ~1,7 MB przy 22 kHz i ~3,8 MB przy
+  48 kHz, a base64 dokłada jedną trzecią. Przy buildzie ważącym ~204 KB to nie jest
+  „trochę większy build", tylko inny rząd wielkości — i to **na każdy utwór w puli**;
+- **pułapka, która nie jest oczywista: prerender zamraża częstotliwość próbkowania.**
+  Gra liczy pętlę w częstotliwości `AudioContextu`, a tablice falowe są obcinane do
+  Nyquista *dla tej częstotliwości* (patrz `musicWavetable`). Plik wyrenderowany w 22 kHz
+  i przepróbkowany przez przeglądarkę do 48 kHz nie jest tym samym sygnałem, który
+  strojono na słuch — czyli traci się dokładnie tę własność, dla której `renderMusicLoop()`
+  jest czystą funkcją wspólną z narzędziem;
+- zostaje też powód prawny z początku tego dokumentu: plik audio w repo to plik, którego
+  pochodzenie trzeba udokumentować. Przy własnym renderze własnej partytury jest to
+  formalność, ale przestaje być automatyczne.
+
+Wniosek roboczy: **najpierw rozgrzewanie**, plik dopiero gdyby okazało się, że i to nie
+wystarcza — ta sama kolejność, co przy próbkach perkusji (najpierw synteza, pliki tylko
+jeśli synteza nie da rady).
 
 ### Porównywanie wariantów bez ruszania gry
 
@@ -265,7 +348,8 @@ przenosi się do `src/audio.js` kopiuj-wklej.
 | `city` | zdobycie lub zajęcie miasta | `captureTile` (`empire.js`) |
 | `annex` | aneksja imperium | `conquerEmpire` (`empire.js`) |
 | `victory` / `defeat` | ekran końcowy | `checkGameOver` (`empire.js`) |
-| muzyka `menu` / `game` | zmiana ekranu | `updateMusicForScreen()` z `applyScreen()` |
+| muzyka `menu` | menu i wszystkie ekrany poza grą | `updateMusicForScreen()` z `applyScreen()` |
+| muzyka z `MUSIC_GAME_POOL` | partia; utwór losowany z `mapSeed` | `musicTrackForGame()` |
 
 **Pułapka `captureTile`:** funkcja odpala się przy **każdym** zajętym polu, nie tylko przy
 mieście — dlatego dźwięk `city` jest bramkowany warunkiem na `t.city`. Bez tego grałby przy
