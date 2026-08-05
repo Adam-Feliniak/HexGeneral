@@ -2,6 +2,81 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.8.0] - 2026-08-05
+
+Dwie rzeczy, których gracz nie mógł nie zauważyć: partia nie ma już jednej ścieżki
+dźwiękowej, a miasta widać spod jednostek, nie psując przy tym mapy.
+
+### Muzyka: pula pięciu utworów zamiast jednego
+
+- **Partia losuje ścieżkę dźwiękową z `MUSIC_GAME_POOL`** — dotychczasowy `game` plus
+  cztery nowe: dwa marsze (ciężki 96 bpm z melodią w blasze, zwarty 118 bpm na znanym
+  temacie), pogodny (E miksolidyjska) i tło (E dorycka, 76 bpm, najdłuższa pętla
+  w stawce). Menu ma własną, stałą pętlę i do puli nie należy.
+- **Wybór idzie z `mapSeed`, a nie z `Math.random()`, i to jest decyzja o zapisie gry.**
+  Wyprowadzenie z ziarna znaczy, że wczytana partia wraca z tą samą muzyką, a
+  `SAVE_FORMAT` zostaje bez zmian. Losowanie w locie wymagałoby zapamiętania wyniku,
+  czyli nowego pola stanu i bumpa formatu — za coś, co da się policzyć.
+- **Tonacja przestała być jedna.** Utwory posępne zostają w E frygijskiej (półton E-F to
+  najciemniejszy interwał w diatonice), ale jasności nie da się z niej wydobyć — w niej
+  radość czyta się manicznie. Stąd miksolidyjska i dorycka przy tym samym dźwięku
+  centralnym E, żeby pula nie brzmiała jak z dwóch różnych gier.
+- **Cała pula stoi na jednym poziomie, i to jest wymóg, nie kosmetyka**: skoro utwór
+  losuje się z ziarna, dwie partie nie mogą różnić się głośnością. Wartość wyznacza utwór
+  o najwyższym creście, bo tylko do jego sufitu (0,95 / crest) sięgają wszystkie.
+  Konsekwencja: **muzyka partii jest o 3,4 dB cichsza niż w 0.7.2**, a wejście do gry to
+  skok o 1,8 dB zamiast 5,2 dB.
+- **Sekcja B przestała być ozdobą.** Utwory mają 64 bity zamiast 32 — przy 96 bpm
+  32-bitowa pętla trwa 20 s i zaczyna uwierać, a utwór żywiołowy zużywa uwagę szybciej
+  niż posępny. Koszt: render 0,84–1,31 s zamiast 0,45 s, raz na sesję, poza obsługą
+  kliknięcia.
+- Odrzucony po odsłuchu: piąty wariant, żywiołowy przy 152 bpm z basem w galopie.
+
+### Widać, gdzie są miasta — i mapa na tym nie traci
+
+- **Znacznik z 0.7.1 przepisany od zera.** Miasto to **gwiazdka** (złota — stolica,
+  srebrna — miasto, granatowa — port), złoże to **klin** (zielony — farma, czarny — ropa,
+  brązowy — kopalnia), oba w korytarzu górnego wierzchołka heksa.
+- **Domyślnie znacznik pojawia się TYLKO tam, gdzie jednostka faktycznie coś zasłania.**
+  Puste miasto pokazuje swój sprite i nie nosi nic — i to ta zmiana odzyskuje estetykę
+  mapy. Przycisk **Znaczniki miast** w panelu bocznym (klawisz **D**) pokazuje wszystkie;
+  preferencja żyje w `localStorage`, nie w zapisie gry.
+- **Łuk odpadł na arytmetyce, nie na guście.** Zamalowywał 33% obwodu każdego z trzech
+  pierścieni podświetleń (zasięg ruchu, zaznaczenie, hover), a **żaden** łuk styczny nie
+  może ich ominąć: `hexPath()` i `hexArcPath()` kreślą ten sam sześciokąt w różnych
+  skalach, a dwa współśrodkowe sześciokąty o tej samej orientacji nigdy się nie
+  przecinają. Ominięcie wszystkich trzech wymaga skali `< 0,726` (wnętrze sprite'a
+  jednostki) albo `> 1,084` (poza kaflem). Znacznik żyje więc **promieniowo**, z regułą
+  `0,866·r + 0,5·|d| ≤ 20,10`.
+- **Góra, bo to jedyny wolny korytarz** — dół zajmują liczba siły i pasek morale, górny
+  lewy odznaka weterana. A ponieważ w widoku domyślnym znacznik zawsze współistnieje
+  z HUD-em, kolizja z nim przestała być przypadkiem brzegowym i stała się jedynym.
+- **Kontur zależy od jasności wypełnienia.** Zieleń farmy pada na trawę, brąz kopalni na
+  piasek, a czerń ropy na ciemny teren — każdy kolor trafia dokładnie na to tło, z którym
+  się zlewa. Jasne glify dostają kontur ciemny, ciemne jasny. Do tego alfa zamiast pełnego
+  krycia: do 0.7.2 znacznik był **jedynym** w pełni nieprzezroczystym elementem przy
+  krawędzi heksa i to dlatego czytał się jako ciało obce.
+- Dwa świadome odstępstwa, oba opisane w [07-Grafika](Documents/07-Grafika-i-sprite-y.md):
+  barwa niesie informację mimo że zieleń, złoto, granat i czerń są już kolorami imperiów
+  (barwa imperium występuje wyłącznie jako kalka na całym heksie, nigdy jako mały glif),
+  a złota gwiazdka stolicy zderza się z odznaką elitarnego weterana — zaakceptowane, bo
+  elita w stolicy zdarza się rzadko.
+
+### Narzędzia
+
+- **`marker-preview.html` przebudowany, bo poprzedni arkusz nie mógł pokazać wady, którą
+  miał wykrywać.** `buildSheet()` czyścił planszę i żaden z 16 przypadków nie malował
+  własnego sąsiedztwa, więc arkusz nie zawierał ani jednej drogi, drzewa ani sąsiada pod
+  pierścieniem zasięgu ruchu. Teraz 25 przypadków, przełącznik trójstanowy (wył. /
+  domyślne / wszystkie) sterowany tą samą globalną co gra, oraz warstwa **„strefy zajęte"**
+  dorysowująca pierścienie i pudełka HUD-u także tam, gdzie gra ich nie rysuje.
+- `visual-test.html` przypina `markDetailView = false` przed przebiegiem — bez tego ten
+  sam kod dawałby inne hasze u kogoś, kto włączył widok szczegółowy.
+- `node tools/palette-import.js` (nowe) — czyta pobraną paletę (`.hex`/`.gpl`/`.txt`/
+  `.pal`/`.png`/`.json`) do listy hexów, czyli pozwala obejrzeć sprite'y w cudzej palecie
+  bez rysowania czegokolwiek. Do tego `png-to-grid.js --palette` wychodzi teraz w trzech
+  postaciach (znak → hex, lista, `.gpl`).
+
 ## [0.7.2] - 2026-08-02
 
 Czołg przemalowany i wprawiony w ruch — druga jednostka po armacie, która przechodzi
