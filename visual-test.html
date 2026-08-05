@@ -204,6 +204,14 @@ async function run() {
   if (!SPR) loadSprites();
   await waitSprites();
 
+  /* Wzorzec NIE MOŻE zależeć od preferencji gracza. `markDetailView` render.js czyta
+     z localStorage, więc bez przypięcia ten sam kod dawałby inne hasze na maszynie,
+     gdzie ktoś włączył widok szczegółowy. Przypisanie gołą nazwą jest tu jedyną
+     działającą formą: `let` na poziomie skryptu klasycznego tworzy wiązanie
+     leksykalne, a NIE właściwość window — `window.markDetailView = false` po cichu
+     utworzyłoby inną zmienną i wyglądało na działające. */
+  markDetailView = false;
+
   const baseline = loadBaseline();
   const run = { hashes: {}, thumbs: {} };
   let ok = 0, fail = 0, fresh = 0;

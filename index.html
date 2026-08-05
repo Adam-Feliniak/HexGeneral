@@ -110,7 +110,8 @@
       <li data-i18n-html="help.annex">Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
       <li data-i18n-html="help.teams">W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą, nie zajmują sobie pól, jeżdżą po swoich drogach jak po własnych, a zwycięstwo liczy się dla całej drużyny.</li>
       <li data-i18n-html="help.boss"><b>Boss</b> (czarne imperium) gra inaczej niż bot: nie traci morale z odległości od swoich miast, a po własnym terenie porusza się jak po drodze. Bij go blisko jego granic, nie na swoim zapleczu.</li>
-      <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
+      <li data-i18n-html="help.marks">Jednostka stojąca na mieście lub złożu zasłania je, więc taki heks dostaje <b>znacznik przy górnej krawędzi</b>. Przełącznik <b>Znaczniki miast</b> (klawisz <b>D</b>) pokazuje je na wszystkich miastach i złożach, także pustych.</li>
+      <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz, <b>D</b> — znaczniki szczegółowe.</li>
     </ul>
     <button id="tutorial-back" data-i18n="lobby.common.back">Wróć</button>
   </div>
@@ -195,6 +196,13 @@
         <button data-speed="16">16×</button>
       </div>
     </div>
+    <div class="menu-field" id="mark-view-field">
+      <span data-i18n="game.markView">Znaczniki miast</span>
+      <div id="mark-view-group" class="choice-group">
+        <button data-detail="0" data-i18n="game.markViewNormal">Zwykłe</button>
+        <button data-detail="1" data-i18n="game.markViewDetail">Szczegółowe</button>
+      </div>
+    </div>
     <button id="end-turn" data-i18n="game.endTurn">Zakończ turę ⏎</button>
     <button id="new-game" data-i18n="game.newMap">Nowa mapa</button>
     <button id="menu-btn" data-i18n="game.mainMenu">Menu główne</button>
@@ -217,7 +225,8 @@
         <li data-i18n-html="help.annex">Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.</li>
         <li data-i18n-html="help.teams">W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą, nie zajmują sobie pól, jeżdżą po swoich drogach jak po własnych, a zwycięstwo liczy się dla całej drużyny.</li>
         <li data-i18n-html="help.boss"><b>Boss</b> (czarne imperium) gra inaczej niż bot: nie traci morale z odległości od swoich miast, a po własnym terenie porusza się jak po drodze. Bij go blisko jego granic, nie na swoim zapleczu.</li>
-        <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz.</li>
+        <li data-i18n-html="help.marks">Jednostka stojąca na mieście lub złożu zasłania je, więc taki heks dostaje <b>znacznik przy górnej krawędzi</b>. Przełącznik <b>Znaczniki miast</b> (klawisz <b>D</b>) pokazuje je na wszystkich miastach i złożach, także pustych.</li>
+        <li data-i18n-html="help.shortcuts">Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz, <b>D</b> — znaczniki szczegółowe.</li>
       </ul>
     </details>
     <div id="seed-footer"></div>

@@ -84,7 +84,50 @@ te same warunki co ręcznie pisana mapa znaków:
 - **Maluj wyłącznie kolorami z palety.** `node tools/png-to-grid.js --palette` wypisuje
   ją jako JSON, rozwiązaną dokładnie tak, jak zrobi to mapowanie z powrotem — dzięki temu
   obie strony nie mogą się rozjechać. Kolor spoza palety wraca jako `?` wraz z listą
-  nierozpoznanych wartości.
+  nierozpoznanych wartości. Nie musi to jednak zostać kwestią dyscypliny — patrz
+  wymuszanie palety niżej.
+
+### Wymuszanie palety (i podmiana jej na cudzą)
+
+Sprawdzone empirycznie na `diivi/aseprite-mcp` v1.6.0, bo intuicja myli tu w obie strony:
+
+- **`set_palette` samo z siebie nie wymusza niczego.** W trybie RGB `draw_pixels` maluje
+  dowolnym kolorem, także takim, który mija się z paletą o trzy punkty — a takiego błędu
+  nie widać na oko, wychodzi dopiero jako `?` na końcu łańcucha.
+- **Tryb `indexed` nie jest rozwiązaniem, tylko nową awarią.** Wymusza paletę, ale psuje
+  drogę powrotną: `get_pixels_rect` zwraca wtedy surowy indeks palety podany jako kanał R
+  (`#1b0000`, `a: 0`) zamiast koloru. Odczyt przestaje działać.
+- **Działa: RGB + `set_palette` + `quantize_to_palette` przed eksportem.** Kwantyzacja
+  przyciąga każdy piksel do najbliższego koloru palety (odległość RGB) i **nie rusza
+  kanału alfa** — sprawdzone na `assets/artillery_0.png`, którego półprzezroczysty cień
+  (alfa 90) przeżył w 100% pikseli. Po niej `png-to-grid.js` nie zgłasza już ani jednego
+  `?`.
+
+Listę kolorów do `set_palette` daje `node tools/png-to-grid.js --palette --format=list`.
+
+**Podmiana palety na cudzą** (oglądanie naszych sprite'ów w palecie z internetu) to ta sama
+mechanika z inną listą: `node tools/palette-import.js paleta.hex` sprowadza plik
+z Lospeca — `.hex`, `.gpl`, `.txt` (paint.net), `.pal` (JASC), `.png` z próbkami albo
+`.json` — do listy hexów, którą wkłada się w `set_palette`. Potem `quantize_to_palette`
+przemalowuje **istniejący** asset, więc wariant powstaje bez rysowania czegokolwiek.
+Paleta o mniej niż ~24 kolorach sklei ze sobą role z `BASE_PAL` (beton z kamieniem,
+skóra z cegłą) — skrypt o tym ostrzega. To narzędzie do oglądania wariantów;
+paletą gry zostaje `BASE_PAL`, a jej pełny opis jest w
+[Grafice i sprite'ach](07-Grafika-i-sprite-y.md).
+
+### Pułapki samego serwera MCP
+
+- **`draw_pixels` maluje na warstwie aktywnej, a `import_image_as_layer` jej nie
+  przełącza.** Po zaimportowaniu obrazka na nową warstwę rysowanie trafia na *poprzednią*
+  (`Layer 1`), która leży **pod** grafiką — piksele znikają bez żadnego błędu, a eksport
+  wygląda na nietknięty. `set_layer` tego nie naprawia, bo każde wywołanie MCP to osobny
+  proces Aseprite w trybie wsadowym i „aktywna warstwa" nie przeżywa między wywołaniami.
+  Obejście: importuj wprost na `Layer 1`
+  (`import_image_as_layer(..., layer_name="Layer 1")`) i pracuj jednowarstwowo.
+- **Weryfikuj eksportem, nie założeniem.** Powyższy błąd przeszedł przez cały test
+  „bez zarzutu": kwantyzacja raportowała przetworzone piksele, `png-to-grid.js` nie
+  zgłaszał `?` — bo malowane piksele w ogóle nie istniały w obrazie. Jedynym wiarygodnym
+  sprawdzeniem jest `export_frame` i przepuszczenie wyniku przez `png-to-grid.js`.
 - Rozdzielczość autorska zależy od sprite'a: czołg jest autorowany 1:1 w 48×28, armata
   22×13 i skalowana 2×. Reżimy różnią się **tolerancją na skosy**, i to jedyna zasada,
   która nie jest wspólna: przy 2× przekątna o grubości 3 zostaje po konturze czarnym
@@ -435,22 +478,42 @@ Uzupełnia `visual-test.html` od drugiej strony: tamten pilnuje, **czy** coś si
 sytuacji, w których może się z czymś zlać. Działa z `file://` (nie czyta pikseli, więc
 serwer niepotrzebny).
 
-- **Arkusz przypadków** (widok domyślny) — 16 spreparowanych heksów: miasto/stolica/port
-  × czołg/piechota/artyleria, trzy złoża, weteran z gwiazdką, zaznaczona jednostka, piana
-  wybrzeża, kalka koloru właściciela i puste pole jako kontrola. Szukanie tych sytuacji na
-  losowej mapie to loteria — tutaj każda stoi obok drugiej, z podpisem.
-- **Przełącznik „Znaczniki"** wyłącza samo `drawTileMarks()` (reszta renderu bez zmian),
-  czyli daje porównanie „przed/po" bez cofania kodu.
+- **Arkusz przypadków** (widok domyślny) — 25 spreparowanych heksów: komplet sześciu
+  glifów obok siebie, każda barwa na najtrudniejszym dla siebie tle, sylwetka pod glifem
+  dla trzech typów jednostek, obie skrajności szerokości liczby siły, cztery pierścienie
+  podświetleń, droga w kaflu, piana, kalka właściciela i puste pola jako kontrola.
+  Szukanie tych sytuacji na losowej mapie to loteria — tutaj każda stoi obok drugiej.
+- **Przełącznik „Znaczniki" jest TRÓJSTANOWY**, bo produkcja też taka jest: `wył.` (jak
+  wygląda mapa bez niczego), `domyślne` (tylko heksy zasłonięte jednostką) i `wszystkie`
+  (widok szczegółowy). Stany „domyślne/wszystkie" steruje **tą samą globalną co gra**
+  (`markDetailView`), więc podgląd nie może się z nią rozjechać — przypisaniem gołą nazwą
+  i **nie** przez setter, żeby nie nadpisać preferencji gracza w `localStorage`.
+- **Warstwa „Strefy zajęte"** dorysowuje pierścienie 0,86/0,92/0,95 oraz pudełka liczby
+  siły, paska morale i odznaki weterana **nawet tam, gdzie gra ich nie rysuje**. Bez niej
+  kolizję trzeba liczyć na kartce — i to dlatego poprzednia wersja arkusza przepuściła
+  znacznik zamalowujący wszystkie trzy pierścienie.
 - **Widok losowej mapy** stawia jednostkę na każdym mieście i złożu — zgłoszony przypadek
   w najostrzejszej postaci.
-- Adres przyjmuje `?zoom=&sx=&sy=&marks=0&view=map&seed=`, więc zrzuty da się robić
-  z wiersza poleceń (`chrome --headless=new --screenshot=... --window-size=...`).
+- Adres przyjmuje `?zoom=&sx=&sy=&view=map&seed=&marks=off|def|all&zones=1`, więc zrzuty
+  da się robić z wiersza poleceń (`chrome --headless=new --screenshot=... --window-size=...`).
   Wycinek przesuwa **ujemny margines**, nie scroll: scroll ustawiony przed końcem układu
   strony bywa przycinany do zera i po cichu daje inny kadr, niż się prosiło.
 
-Powstał przy znacznikach miast i złóż i od razu zarobił na siebie: pokazał, że pierwsza
-wersja znaczników zasłania liczbę siły i pasek morale (stąd podział `drawArmy()` na sprite
-i HUD). Do oceny nowego elementu HUD-u albo sprite'a dopisz przypadek do tablicy `CASES`.
+**Pułapka, przez którą arkusz raz już skłamał.** `buildSheet()` czyści całą planszę
+(`land=true`, reszta na `null`/`-1`, `shade=0.3`) PRZED wywołaniem przypadków. Do 0.7.2
+żaden przypadek tego nie wykorzystywał, więc arkusz nie zawierał ani jednej drogi, drzewa,
+skały, ani sąsiada pod pierścieniem zasięgu ruchu — czyli nie mógł pokazać **żadnej**
+z kolizji, o które chodziło. Przypadki mogą malować własne sąsiedztwo (`neighborsOf` jest
+globalne, a rozstaw 4 kolumny / 3 wiersze daje na to zapas) i teraz to robią.
+
+Uwaga przy dopisywaniu przypadków: `state.selected`, `state.roadPickFrom` i `hoverTile`
+to **pojedyncze globalne** — może je ustawić tylko jeden przypadek na arkusz. Stąd jeden
+przypadek pokazujący naraz obrys 0,92 i oba warianty 0,86 zamiast trzech osobnych.
+
+Powstał przy znacznikach miast i złóż i zarobił na siebie dwa razy: najpierw pokazał, że
+pierwsza wersja znaczników zasłania liczbę siły i pasek morale (stąd podział `drawArmy()`
+na sprite i HUD), a przy przebudowie w 0.8.0 — że łuk zamalowuje pierścienie podświetleń.
+Do oceny nowego elementu HUD-u albo sprite'a dopisz przypadek do tablicy `CASES`.
 
 ## Weryfikacja UI/wizualna
 

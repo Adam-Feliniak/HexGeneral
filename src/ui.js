@@ -60,6 +60,15 @@ function updateUI() {
     });
   }
 
+  /* Panel znaczników jest ZAWSZE widoczny, w odróżnieniu od tempa AI: tempo ma sens
+     tylko z botami, a czytelność mapy dotyczy każdej partii. Osłona typeof, bo
+     harness headless ładuje ui.js bez render.js. */
+  if (typeof isMarkDetailView === 'function') {
+    document.querySelectorAll('#mark-view-group button').forEach(btn => {
+      btn.className = (btn.dataset.detail === '1') === isMarkDetailView() ? 'selected' : '';
+    });
+  }
+
   updateBuildPanel(cp);
 
   const footer = document.getElementById('seed-footer');

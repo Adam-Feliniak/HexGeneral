@@ -17,6 +17,9 @@
      node tools/png-to-grid.js rysunek.png            # -> mapa znaków na stdout
      node tools/png-to-grid.js rysunek.png --player=2 # barwy gracza 2 jako b/B/h/m
      node tools/png-to-grid.js --palette              # paleta znak -> kolor do edytora
+     node tools/png-to-grid.js --palette --format=list  # sama lista hexów (Aseprite set_palette)
+     node tools/png-to-grid.js --palette --format=gpl   # plik .gpl (GIMP/Aseprite/Krita)
+     node tools/png-to-grid.js --palette --format=gpl --write  # -> dist/palette/ (gitignored)
      node tools/png-to-grid.js --selftest             # test poprawności na assets/artillery_0.png
 
    Wymagania wobec pliku: PNG bez przeplotu, 8 bitów na kanał (RGBA, RGB, szarość
@@ -173,6 +176,24 @@ if (args.includes('--selftest')) {
     if (round[y] !== expected[y]) { console.error('BŁĄD w pętli enkoder->dekoder, wiersz ' + y); bad++; break; }
   }
 
+  /* Trzecia runda: rozróżnialność palety u każdego gracza. reverseMap() mapuje
+     hex -> znak, więc dwa znaki o tym samym kolorze są nierozróżnialne w drodze
+     powrotnej — jeden po cichu znika i PNG wraca z podmienionym znakiem. Barwy
+     b/B/h/m są liczone z koloru gracza, więc kolizja może pojawić się u jednego
+     gracza i nie istnieć u pozostałych; stąd pętla po wszystkich. */
+  for (let p = 0; p < PLAYERS.length; p++) {
+    const pal = playerPalette(p);
+    const byHex = new Map();
+    for (const [ch, hex] of Object.entries(pal)) {
+      const k = hex.toLowerCase();
+      if (byHex.has(k)) {
+        console.error('BŁĄD: gracz ' + p + ' — znaki "' + byHex.get(k) + '" i "' + ch +
+          '" mają ten sam kolor ' + hex + ' (drugi zniknie przy PNG -> siatka)');
+        bad++;
+      } else byHex.set(k, ch);
+    }
+  }
+
   if (bad) { console.error('\nSELFTEST NIE PRZESZEDŁ (' + bad + ' problemów)'); process.exit(1); }
   console.log('SELFTEST OK — assets/artillery_0.png odtworzony znak w znak (' +
     expected.length + ' wierszy x ' + expected[0].length + '), pętla enkoder->dekoder zgodna.');
@@ -186,9 +207,51 @@ if (args.includes('--selftest')) {
    łańcucha. Ten tryb podaje dokładnie tę samą paletę, której użyje mapowanie
    z powrotem, więc obie strony nie mogą się rozjechać.
 
-   Musi być PRZED sprawdzeniem nazwy pliku niżej, bo nie bierze żadnego pliku. */
+   Musi być PRZED sprawdzeniem nazwy pliku niżej, bo nie bierze żadnego pliku.
+
+   Trzy formaty tego samego: obiekt znak -> hex (domyślny, do rysowania ręcznego),
+   płaska lista hexów (`--format=list`, wprost do `set_palette` w Aseprite przez MCP)
+   i plik .gpl (`--format=gpl`, do wczytania w Aseprite/GIMP/Kricie jako plik).
+   Lista gubi znaczenie znaków — i tak ma być, bo `set_palette` przyjmuje tylko
+   kolory; rolę każdego z nich opisuje Documents/07-Grafika-i-sprite-y.md. */
 if (args.includes('--palette')) {
-  console.log(JSON.stringify(playerPalette(PLAYER), null, 2));
+  const pal = playerPalette(PLAYER);
+  const fmt = argVal('format') || 'json';
+  let out;
+  if (fmt === 'json') {
+    out = JSON.stringify(pal, null, 2);
+  } else if (fmt === 'list') {
+    // kolejność wpisów palety = kolejność definicji w BASE_PAL, więc lista jest
+    // stabilna między uruchomieniami — indeks koloru w Aseprite się nie przesuwa
+    out = JSON.stringify([...new Set(Object.values(pal))]);
+  } else if (fmt === 'gpl') {
+    const lines = ['GIMP Palette', 'Name: Hex General (gracz ' + PLAYER + ')', 'Columns: 8', '#'];
+    for (const [ch, hex] of Object.entries(pal)) {
+      const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+      lines.push([r, g, b].map(v => String(v).padStart(3, ' ')).join(' ') + '\t' + ch + ' ' + hex);
+    }
+    out = lines.join('\n');
+  } else {
+    console.error('nieznany --format=' + fmt + ' (json | list | gpl)');
+    process.exit(1);
+  }
+
+  /* --write kładzie to samo w dist/ — tam, gdzie gen-sounds.js kładzie .wav-y
+     do odsłuchania. Katalog jest w .gitignore i gra nigdy z niego nie czyta:
+     plik palety jest do otwarcia w edytorze, a nie drugim źródłem prawdy.
+     Paleta w repo to BASE_PAL w gen-sprites.js i nic poza tym. */
+  if (args.includes('--write')) {
+    const dir = path.join(ROOT, 'dist', 'palette');
+    // json i list to oba JSON, ale o różnej strukturze (obiekt znak->hex vs płaska
+    // tablica) — bez rozróżnienia w nazwie drugi zapis po cichu nadpisałby pierwszy
+    const file = path.join(dir, 'hexgeneral-p' + PLAYER +
+      (fmt === 'list' ? '-list.json' : '.' + fmt));
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(file, out + '\n');
+    console.log(file);
+  } else {
+    console.log(out);
+  }
   process.exit(0);
 }
 

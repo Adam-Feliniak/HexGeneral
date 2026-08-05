@@ -96,6 +96,89 @@ paleta nie była nigdzie przepisywana ręcznie — literówka w hexie wyszłaby 
 łańcucha, jako `?` w siatce znaków. Warsztat opisuje
 [Przewodnik developera](09-Przewodnik-developera.md).
 
+### Paleta — specyfikacja odtworzeniowa
+
+Poniższe jest opisem stanu, nie drugim źródłem prawdy: **źródłem prawdy zostaje `BASE_PAL`
+w `tools/gen-sprites.js`**. Tabela istnieje po to, żeby dało się odtworzyć paletę, gdyby
+plik przepadł, oraz żeby wiadomo było **za co odpowiada każdy znak** — bo sam hex tego nie
+mówi, a przy 37 kolorach nie da się tego trzymać w głowie. Zrzut maszynowy zawsze bierz
+z `node tools/png-to-grid.js --palette`.
+
+33 kolory bazowe (wspólne dla wszystkich graczy):
+
+| Rola | Znaki | Kolory |
+|---|---|---|
+| Kontur | `o` | `#16140c` |
+| Metal / gąsienice | `g` `G` `t` | `#4a4a42` `#6a6a5e` `#2e2c24` |
+| Bieżnik gąsienic | `T` | `#4a3e2c` |
+| Koła / jasny metal | `w` `W` | `#8f8d7a` `#b8b4a0` |
+| Worki / piaskowiec | `s` `S` `z` | `#cbb36a` `#a89050` `#e0cc8a` |
+| Mrok wnętrza | `e` | `#241f14` |
+| Szyby | `i` | `#7aa0b8` |
+| Beton | `c` `C` `x` | `#9aa38f` `#6e7566` `#b8bfa8` |
+| Cegła | `d` `D` `q` | `#a8663c` `#7a4628` `#c07a48` |
+| Liście | `l` `L` `p` | `#3f7a33` `#2c5c24` `#5a9c48` |
+| Pień / skóra ekwipunku | `k` `K` | `#6b4a2a` `#4a3018` |
+| Skała | `r` `R` | `#8f8a76` `#6e6a58` |
+| Skóra | `n` `N` | `#e8b98a` `#b8845a` |
+| Markiza / jasny akcent | `a` `A` | `#c04a32` `#e8d8b0` |
+| Ciemna czerwień kontenera | `u` | `#8f3222` |
+| Żółte akcenty | `y` `Y` | `#ffd91c` `#b89410` |
+| Piana / kilwater | `F` | `#dff0fa` |
+
+4 kolory liczone z barwy gracza — **to je trzeba umieć odtworzyć wzorem, nie z tabeli**,
+bo są inne dla każdego z 7 graczy:
+
+| Znak | Rola | Wzór |
+|---|---|---|
+| `b` | baza | `PLAYERS[i].color` |
+| `B` | cień głęboki | `PLAYERS[i].dark` |
+| `h` | światło | `lighten(color, 0.4)` — każdy kanał `v + (255-v)·0.4` |
+| `m` | cień | `coolShade(color, 0.28)` — mieszanie z granatem `[42, 36, 72]`, `v·0.72 + tint·0.28` |
+
+**`coolShade` jest decyzją, nie szczegółem implementacyjnym.** Cień barwy gracza liczony
+zwykłym przyciemnieniem (tak było kiedyś: `m` nie istniało, cieniem było `B: p.dark`)
+czyta się jak brud na sprite, a nie jak brak światła. Dlatego cień idzie w chłodne barwy.
+Kto kiedyś „uprości" to do mnożnika, cofnie zmianę, której nie widać w kodzie — widać ją
+dopiero na sprite.
+
+Kolory graczy (`PLAYERS` w `tools/gen-sprites.js`) — **duplikat `PLAYERS_DEF`
+z `src/config.js`, synchronizowany ręcznie**, bo generator nie może zrobić `require`
+na pliku bez modułów:
+
+| # | `color` | `dark` | |
+|---|---|---|---|
+| 0 | `#d64550` | `#8c2530` | czerwony |
+| 1 | `#3f7fd6` | `#24518f` | niebieski |
+| 2 | `#3fae62` | `#22703c` | zielony |
+| 3 | `#d6a53f` | `#8f6a1f` | żółty |
+| 4 | `#8a4fd6` | `#5a2f8f` | fioletowy |
+| 5 | `#3fc9c2` | `#1f7f7a` | turkusowy |
+| 6 | `#3c3c46` | `#15151a` | boss (Czarna Legia), indeks `BOSS_SKIN` |
+
+Dla gracza 0 daje to `h = #e68f96`, `m = #a63c4e` — dobry test, czy wzory zostały
+odtworzone poprawnie.
+
+**Wykonywalna połowa tej gwarancji to `node tools/png-to-grid.js --selftest`.** Sprawdza
+trzy rzeczy naraz: że `assets/artillery_0.png` odtwarza się z `BASE_PAL` + `artilleryGrid()`
+znak w znak, że pętla enkoder → dekoder jest stratna zerowo, oraz że **u żadnego z 7 graczy
+dwa znaki nie mają tego samego hexa**. Ta ostatnia kontrola jest mniej oczywista, niż
+wygląda: `reverseMap()` mapuje hex → znak, więc kolizja kolorów oznacza, że jeden ze znaków
+po cichu znika w drodze powrotnej z PNG, a `b`/`B`/`h`/`m` liczą się z barwy gracza —
+kolizja może istnieć u jednego gracza i nie istnieć u pozostałych. Stan na dziś: 37 różnych
+kolorów, zero kolizji u wszystkich siedmiu.
+
+Paleta wychodzi na zewnątrz w trzech postaciach:
+
+```
+node tools/png-to-grid.js --palette                 # znak -> hex (rysowanie ręczne)
+node tools/png-to-grid.js --palette --format=list   # ["#16140c", ...] wprost do set_palette
+node tools/png-to-grid.js --palette --format=gpl    # plik .gpl (Aseprite/GIMP/Krita)
+```
+
+Wszystkie trzy liczą się z tego samego `playerPalette()`, więc nie mogą się rozjechać.
+`--player=N` przełącza barwy gracza.
+
 ### 2. Painter per-piksel (teren)
 
 Kafle heksów terenu (`hexTilePixels(seed, paint)`) używają osobnego, proceduralnego mechanizmu rysującego bezpośrednio piksel po pikselu (nie przez siatkę znaków) — stąd `hex_sand/grass/water_0..2` (po 3 warianty) i `hex_shallow`.
@@ -105,10 +188,13 @@ Kafle heksów terenu (`hexTilePixels(seed, paint)`) używają osobnego, procedur
 Kolory graczy (`PLAYERS` — lista `{color, dark}`, **musi być ręcznie zsynchronizowana** z `PLAYERS_DEF` w `src/config.js`, generator nie ma do niego dostępu przez `require`) są aplikowane przez podmianę trzech znaków palety na kolor gracza:
 
 ```js
-const pal = { ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4) };
+const pal = {
+  ...BASE_PAL, b: p.color, B: p.dark, h: lighten(p.color, 0.4),
+  m: coolShade(p.color, 0.28),
+};
 ```
 
-Każdy sprite, który ma reprezentować barwy gracza, maluje odpowiednie fragmenty właśnie znakami `b`/`B`/`h`, a cała reszta palety (metal, szkło, cegła, liście...) zostaje neutralna. Stąd np. `tank_0.png` .. `tank_5.png` — ten sam kształt, przemalowany 6 razy.
+Każdy sprite, który ma reprezentować barwy gracza, maluje odpowiednie fragmenty właśnie znakami `b`/`B`/`h`/`m`, a cała reszta palety (metal, szkło, cegła, liście...) zostaje neutralna. Stąd np. `tank_0.png` .. `tank_5.png` — ten sam kształt, przemalowany 6 razy.
 
 Dodatkowe narzędzia: `dropShadow()` (miękki cień pod sprite'ami budynków), `composeH()` (sklejanie klatek animacji w jeden poziomy arkusz — używane dla 4-klatkowego marszu piechura, 4-klatkowej jazdy czołgu i 6-klatkowej eksplozji).
 
@@ -161,7 +247,7 @@ tło (kolor bazowy)
 → podświetlenia (zaznaczone pole + dostępne ruchy — czerwonawe dla wrogich, białe dla pustych/własnych + hover)
 → miasta i dekoracje (drawCity / drawDecor — drzewa/skały tylko gdy pole puste)
 → sprite'y armii (drawArmySprite — sprite typu jednostki albo klasy okrętu)
-→ znaczniki miast i złóż (drawTileMarks — łuk przy krawędzi heksa)
+→ znaczniki miast i złóż (drawTileMarks — gwiazdka/klin przy górnym wierzchołku)
 → HUD armii (drawArmyHud — liczba siły, pasek morale, odznaka weterana, puls zaznaczenia)
 → eksplozje (arkusz 6 klatek, indeksowany po czasie trwania efektu)
 → floatery strat (unoszący się tekst "-N" z zanikającą przezroczystością)
@@ -173,20 +259,88 @@ nie rozwiązuje problemu, dla którego powstał (czołg 48×28 zasłania miasto 
 iść pod liczbą siły i paskiem morale, bo pierwsza wersja szła na samym wierzchu i zjadała
 liczbę siły. Zasłonić sprite wolno, zasłonić danych nie.
 
+Ta kolejność ma jeszcze jedną konsekwencję, którą łatwo przeoczyć: skoro znacznik pojawia
+się domyślnie tylko na heksie z jednostką, to **zawsze** współistnieje z HUD-em. Kolizja
+z liczbą siły i paskiem morale przestaje być przypadkiem brzegowym i staje się jedynym
+przypadkiem — dlatego glify siedzą u góry (patrz niżej).
+
 ### Znaczniki miast i złóż (`drawTileMarks`)
 
-Dolny łuk przy krawędzi heksa = miasto (podwójny = stolica), górny = złoże. Trzy decyzje,
-każdą wymusza to, co na heksie już jest:
+**Miasto to gwiazdka, złoże to klin**, oba w korytarzu **górnego wierzchołka** heksa.
+Kształt niesie kategorię, barwa rodzaj: gwiazdka złota = stolica, srebrna = miasto,
+granatowa = port; klin zielony = farma, czarny = ropa, brązowy = kopalnia.
 
-- **łuk przy krawędzi, nie ikona w środku** — środek należy do sprite'a jednostki,
-  a krawędzi nie dosięga bounding box żadnego z nich (także przyszłego);
-- **promień 0,88 zamiast 1,0** — na samej krawędzi siedzą już obrys heksa, piana wybrzeża
-  i granica imperium;
-- **rozróżnianie kształtem i położeniem, nie barwą** — prawie każdy odcień jest kolorem
-  któregoś imperium (`PLAYERS_DEF`), a z rzeczy rysowanych przy krawędzi biały pełny obrys
-  to zaznaczenie (0,92), biały przerywany to zasięg ruchu (0,86), a złoty to wybór celu
-  drogi. Stąd też linia zawsze ciągła i stolica oznaczona drugim łukiem do wewnątrz,
-  a nie dłuższym obrysem — ten zlałby się z ramką zaznaczenia i hoveru.
+**Domyślnie znacznik pojawia się TYLKO na heksie z jednostką** — czyli tam, gdzie coś
+faktycznie zasłania. Puste miasto pokazuje swój sprite i znacznik nic by tam nie wniósł
+poza bałaganem, a to właśnie bałagan przesądził o odrzuceniu pierwszej wersji. Przycisk
+**Znaczniki miast** w panelu bocznym (klawisz **D**) pokazuje wszystkie; preferencja żyje
+w `localStorage` pod kluczem `hexgeneral.view` i nie wchodzi do zapisu gry.
+
+#### Reguła, która zastąpiła „łuk przy krawędzi"
+
+Wersja z 0.7.1 kładła łuk przy krawędzi, uzasadniając to tym, że krawędź jest wolna.
+**Nie jest** — siedzą tam trzy pierścienie podświetleń: zasięg ruchu (0,86), zaznaczenie
+(0,92) i hover (0,95). Co gorsza, żaden łuk nie może ich ominąć: `hexPath()` i dawne
+`hexArcPath()` kreślą TEN SAM sześciokąt w różnych skalach, a dwa współśrodkowe
+sześciokąty o tej samej orientacji nigdy się nie przecinają. Kreska o półgrubości `w/2`
+wokół skali `s` pokrywa pas skal `s ± (w/2)/24,249`, więc ominięcie wszystkich trzech
+wymaga `s < 0,726` (wnętrze sprite'a jednostki) albo `s > 1,084` (poza kaflem). Cała
+rodzina łuków odpada na arytmetyce, nie na guście — stary łuk zamalowywał **33% obwodu
+każdego pierścienia**.
+
+Dlatego znacznik żyje **promieniowo**, a nie stycznie, i obowiązuje go:
+
+> **`0,866·r + 0,5·|d| ≤ 20,10`** — `r` to promień punktu z półgrubością konturu,
+> `d` odchylenie boczne od osi wierzchołka, a 20,10 to wewnętrzna krawędź pierścienia 0,86.
+
+#### Dlaczego akurat górny wierzchołek
+
+HUD jednostki rysuje się **po** znacznikach, więc każdy jego piksel wygrywa. To zamyka
+dwa z trzech korytarzy:
+
+| korytarz | co tam siedzi |
+|---|---|
+| 90° (dół) | liczba siły (x−1…x+19, y+12,5…y+25) i pasek morale (x−17…x−1, y+15…y+19) |
+| 210° (górny lewy) | odznaka weterana (x−21,75…x−10,25, y−22…y−7,5) |
+| **270° (góra)** | **wolny** — i jako jedyny leży NAD sprite'em każdej jednostki (czołg kończy się na y−16, piechota y−15, artyleria y−13) |
+
+Skoro miasto i złoże nigdy nie dzielą heksa (mapgen sadzi złoża tylko na polach bez
+miasta), oba mogą zająć ten sam korytarz.
+
+#### Dwa świadome odstępstwa
+
+- **Barwa niesie informację**, choć prawie każdy odcień jest już kolorem imperium:
+  Werdania `#3fae62` (zieleń złoża), Aurelia `#d6a53f` (złoto stolicy), Lazuria `#3f7fd6`
+  (granat portu), Czarna Legia `#3c3c46` (czerń ropy). Do zniesienia, bo barwa imperium
+  pojawia się WYŁĄCZNIE jako 30-procentowa kalka na całym heksie i obwódka granicy —
+  nigdy jako mały glif przy wierzchołku. To inny kanał, a kategorię i tak niesie kształt.
+- **Złota gwiazdka stolicy zderza się z odznaką elitarnego weterana** (`vet >= 15`), która
+  jest tą samą gwiazdką z `drawStarPath()`. Na stolicy z elitą są więc dwie, 16 px od
+  siebie. Zaakceptowane: elita w stolicy zdarza się rzadko, a pozycja i rozmiar (6 vs 5 px)
+  je rozróżniają.
+
+#### Kontur zależy od jasności wypełnienia
+
+To nie kosmetyka: zieleń farmy pada na trawę, brąz kopalni na piasek, a czerń ropy na
+ciemny teren — każdy kolor trafia dokładnie na to tło, z którym się zlewa. Jasne glify
+dostają więc kontur ciemny (`rgba(22,20,12,0.62)`), ciemne — ropa i port — jasny
+(`rgba(240,236,220,0.72)`). Pole `dark` w `MARK_STAR`/`MARK_WEDGE` opisuje jasność
+**wypełnienia**, a kontur wychodzi z niej przez negację, więc nowy glif wymaga jednej
+decyzji, nie dwóch.
+
+Alfa zamiast pełnego krycia jest osobną poprawką z tej samej rundy: do 0.7.2 znacznik był
+JEDYNYM w pełni nieprzezroczystym elementem przy krawędzi heksa (obrys 0,35, piana 0,75,
+kalka właściciela 0,30, podświetlenia 0,22–0,9) i to dlatego czytał się jako ciało obce.
+Zawsze przez `rgba()`, **nigdy** przez `globalAlpha` — te funkcje nie mają `save/restore`,
+a `draw()` zeruje alfę dopiero przy floaterach, więc ustawienie wyciekłoby na HUD.
+
+#### Promienie są dosunięte do sufitu
+
+Zmierzone zapasy do pierścienia 0,86: gwiazdka **0,08 px**, klin **0,03 px**. Podniesienie
+glifu choćby o pół piksela zaczyna zjadać pierścień. Kto chce wyżej, musi najpierw glif
+zmniejszyć albo ścienić kontur — przy klinie 0,1 px zabrane z szerokości podstawy kupuje
+0,058 px wysokości (przy odwróconym grocie to narożniki podstawy leżą najdalej od środka,
+a nie wierzchołek).
 
 ### `drawArmySprite` — wybór sprite'a jednostki
 

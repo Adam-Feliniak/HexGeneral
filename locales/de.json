@@ -89,6 +89,9 @@
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Bot-Schwierigkeit: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
   "game.aiSpeed": "KI-Tempo",
+  "game.markView": "Stadtmarkierungen",
+  "game.markViewNormal": "Normal",
+  "game.markViewDetail": "Detailliert",
 
   "unit.infantry": "Infanterie",
   "unit.tank": "Panzer",
@@ -171,5 +174,6 @@
   "help.annex": "Die Eroberung einer feindlichen Hauptstadt <b>annektiert</b> ihr gesamtes Reich.",
   "help.teams": "Im Mehrspielermodus können Slots <b>Teams</b> bilden: Verbündete kämpfen nicht gegeneinander, nehmen sich keine Felder, nutzen die Straßen der anderen wie eigene, und der Sieg zählt für das ganze Team.",
   "help.boss": "Der <b>Boss</b> (schwarzes Reich) spielt anders als ein Bot: Er verliert keine Moral mit der Entfernung zu seinen Städten und bewegt sich auf eigenem Gebiet wie auf einer Straße. Schlage ihn nahe seiner Grenzen, nicht im eigenen Hinterland.",
-  "help.shortcuts": "Tastenkürzel: <b>Enter</b> — Zug beenden, <b>Esc</b> — Auswahl aufheben."
+  "help.marks": "Eine Einheit auf einer Stadt oder einem Rohstoff verdeckt sie, deshalb erhält dieses Feld eine <b>Markierung an der oberen Kante</b>. Der Schalter <b>Stadtmarkierungen</b> (Taste <b>D</b>) zeigt sie auf allen Städten und Rohstoffen, auch auf leeren.",
+  "help.shortcuts": "Tastenkürzel: <b>Enter</b> — Zug beenden, <b>Esc</b> — Auswahl aufheben, <b>D</b> — detaillierte Markierungen."
 }

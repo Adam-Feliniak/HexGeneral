@@ -89,6 +89,9 @@
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Trudność botów: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
   "game.aiSpeed": "Tempo AI",
+  "game.markView": "Znaczniki miast",
+  "game.markViewNormal": "Zwykłe",
+  "game.markViewDetail": "Szczegółowe",
 
   "unit.infantry": "Piechota",
   "unit.tank": "Czołg",
@@ -171,5 +174,6 @@
   "help.annex": "Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.",
   "help.teams": "W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą, nie zajmują sobie pól, jeżdżą po swoich drogach jak po własnych, a zwycięstwo liczy się dla całej drużyny.",
   "help.boss": "<b>Boss</b> (czarne imperium) gra inaczej niż bot: nie traci morale z odległości od swoich miast, a po własnym terenie porusza się jak po drodze. Bij go blisko jego granic, nie na swoim zapleczu.",
-  "help.shortcuts": "Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz."
+  "help.marks": "Jednostka stojąca na mieście lub złożu zasłania je, więc taki heks dostaje <b>znacznik przy górnej krawędzi</b>. Przełącznik <b>Znaczniki miast</b> (klawisz <b>D</b>) pokazuje je na wszystkich miastach i złożach, także pustych.",
+  "help.shortcuts": "Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz, <b>D</b> — znaczniki szczegółowe."
 }

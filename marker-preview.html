@@ -21,17 +21,25 @@
 <header>
   <h1>⬡ Podgląd znaczników miast i złóż</h1>
   <div class="controls">
-    <button id="toggle" class="on">Znaczniki: WŁĄCZONE</button>
+    <button id="toggle" class="on">Znaczniki: domyślne (tylko zasłonięte)</button>
+    <button id="zones">Strefy zajęte: wył.</button>
     <button id="mode">Widok: arkusz przypadków</button>
     <button id="reseed">Nowa mapa (tylko w widoku mapy)</button>
     <span id="info"></span>
   </div>
 </header>
 <div class="hint">
-  <b class="k">Dolny łuk = miasto</b> (podwójny = stolica), <b class="k">górny łuk = złoże</b>.
-  Znacznik rysuje się nad sprite'em jednostki, ale pod jej HUD-em — liczba siły i pasek morale
-  muszą zostać czytelne. Przełącznik „Znaczniki" wyłącza samo <code>drawTileMarks()</code>,
-  reszta renderu jest bez zmian. Adres przyjmuje <code>?zoom=3&amp;sx=&amp;sy=&amp;marks=0&amp;view=map</code>.
+  Wszystkie znaczniki siedzą w <b class="k">korytarzu górnego wierzchołka</b> — jako jedynym
+  wolnym zarówno od HUD-u jednostki (liczba siły, pasek morale u dołu; odznaka weterana po
+  lewej), jak i od sprite'ów jednostek.
+  <b class="k">Miasto to gwiazdka</b> (złota — stolica, srebrna — miasto, granatowa — port),
+  <b class="k">złoże to klin</b> (zielony — farma, czarny — ropa, brązowy — kopalnia).
+  Kształt niesie kategorię, barwa rodzaj; kontur jest ciemny przy jasnych glifach i jasny
+  przy ciemnych, żeby czerń ropy nie ginęła na ciemnym terenie, a zieleń farmy na trawie.
+  <b class="k">Strefy zajęte</b> dorysowują pierścienie 0,86 / 0,92 / 0,95 i pudełka HUD-u
+  nawet tam, gdzie gra ich nie rysuje — po to, żeby kolizję było widać, a nie trzeba się jej
+  domyślać. Adres przyjmuje
+  <code>?zoom=3&amp;sx=&amp;sy=&amp;view=map&amp;marks=off|def|all&amp;variant=0..3&amp;zones=1</code>.
 </div>
 <div id="wrap"><canvas id="board"></canvas></div>
 
@@ -69,37 +77,110 @@ function autosave() {}
 function clearAutosave() {}
 
 const q = new URLSearchParams(location.search);
-let marksOn = true;
 let view = q.get('view') === 'map' ? 'map' : 'sheet';
 const realMarks = drawTileMarks;
 let labels = [];
+let showZones = q.get('zones') === '1';
+
+/* Tryb znaczników jest TRÓJSTANOWY, bo produkcja też taka jest: „wył." to kontrola
+   (jak wygląda mapa bez niczego), „domyślne" to stan gry po instalacji (tylko heksy
+   zasłonięte jednostką), „wszystkie" to widok szczegółowy z panelu bocznego.
+   Stan „domyślne"/„wszystkie" sterujemy TĄ SAMĄ globalną co gra (markDetailView),
+   więc podgląd nie może się z nią rozjechać. Przypisujemy gołą nazwą i NIE przez
+   setMarkDetailView() — podgląd nie ma prawa nadpisać preferencji gracza w localStorage. */
+const MARK_MODES = ['off', 'def', 'all'];
+const MARK_MODE_LABEL = { off: 'wyłączone', def: 'domyślne (tylko zasłonięte)', all: 'wszystkie (widok szczegółowy)' };
+let markMode = MARK_MODES.includes(q.get('marks')) ? q.get('marks')
+  : (q.get('marks') === '0' ? 'off' : 'def');   // wstecznie: dawne ?marks=0
 
 setupCanvas();
 loadSprites();
 
-function army(type, str, vet) {
-  return { player: 0, str, vet, type, mp: 2, activated: false };
+function army(type, str, vet, player) {
+  return { player: player === undefined ? 0 : player, str, vet, type, mp: 2, activated: false };
 }
+
+/* Sąsiad w tym samym wierszu. Przypadki budują własne otoczenie — dopiero to pozwala
+   pokazać pierścień zasięgu ruchu, wybór celu drogi i drogę wchodzącą w kafel, czyli
+   trzy kolizje, których poprzedni arkusz nie mógł pokazać.
+   Świadomie w poziomie, a nie przez neighborsOf(): sąsiedztwo w poziomie nie zależy
+   od parzystości wiersza (odd-r), a indeksowanie listy z neighborsOf() jest zwodnicze,
+   bo przy krawędzi mapy lista jest krótsza i numer kierunku przestaje się zgadzać. */
+function side(t, dc) { return state.tiles[t.r][t.c + dc]; }
 
 /* Arkusz przypadków: zamiast szukać ich na losowej mapie, stawiamy każdy z osobna.
    Chodzi o komplet sytuacji, w których znacznik może się z czymś zlać — kalka koloru
    właściciela, piana wybrzeża, ramka zaznaczenia, odznaka weterana, pasek morale. */
+const city = (v) => ({ name: 'X', capitalOf: -1, variant: v || 0 });
+
 const CASES = [
-  ['miasto', t => { t.city = { name: 'X', capitalOf: -1, variant: 0 }; }],
-  ['miasto + czołg', t => { t.city = { name: 'X', capitalOf: -1, variant: 0 }; t.army = army('tank', 38, 0); }],
-  ['miasto + piechota', t => { t.city = { name: 'X', capitalOf: -1, variant: 1 }; t.army = army('infantry', 7, 0); }],
-  ['miasto + artyleria', t => { t.city = { name: 'X', capitalOf: -1, variant: 2 }; t.army = army('artillery', 120, 0); }],
-  ['STOLICA', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; }],
-  ['STOLICA + czołg', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; t.army = army('tank', 55, 0); }],
-  ['port', t => { t.city = { name: 'X', capitalOf: -1, port: true }; }],
-  ['port + czołg', t => { t.city = { name: 'X', capitalOf: -1, port: true }; t.army = army('tank', 9, 0); }],
-  ['złoże: ropa', t => { t.resource = 'oil'; }],
-  ['złoże: farma + czołg', t => { t.resource = 'farm'; t.army = army('tank', 44, 0); }],
-  ['złoże: kopalnia + piechota', t => { t.resource = 'mine'; t.army = army('infantry', 61, 0); }],
-  ['złoże + weteran (gwiazdka)', t => { t.resource = 'oil'; t.army = army('tank', 88, 15); }],
-  ['miasto na terenie gracza', t => { t.city = { name: 'X', capitalOf: -1, variant: 0 }; t.owner = 2; t.army = army('tank', 23, 8); }],
-  ['miasto + zaznaczenie', t => { t.city = { name: 'X', capitalOf: -1, variant: 1 }; t.army = army('tank', 31, 0); state.selected = t; }],
-  ['miasto przy wybrzeżu (piana)', t => { t.city = { name: 'X', capitalOf: -1, variant: 2 }; t.coast = [1, 2]; t.army = army('tank', 12, 0); }],
+  /* --- RZĄD 1: komplet sześciu glifów obok siebie. To jest główny test tego arkusza:
+     czy barwy da się od siebie odróżnić przy zoomie 1, skoro kształt rozdziela już
+     tylko miasto od złoża. --- */
+  ['STOLICA (złota)', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; t.army = army('tank', 55, 0); }],
+  ['miasto (srebrna)', t => { t.city = city(0); t.army = army('tank', 38, 0); }],
+  ['PORT (granatowa)', t => { t.city = { name: 'X', capitalOf: -1, port: true }; t.army = army('tank', 9, 0); }],
+  ['farma (zielony)', t => { t.resource = 'farm'; t.army = army('tank', 44, 0); }],
+  ['ropa (czarny)', t => { t.resource = 'oil'; t.army = army('tank', 61, 0); }],
+
+  // --- kontrast barw na najtrudniejszych tłach: zieleń na trawie, brąz na piasku ---
+  ['kopalnia (brąz) na piasku', t => { t.resource = 'mine'; t.shade = 0.1; t.army = army('tank', 27, 0); }],
+  ['farma na ciemnej trawie', t => { t.resource = 'farm'; t.shade = 0.45; t.army = army('tank', 35, 0); }],
+  // owner 5, nie 6: przy botCount=5 gra ma sześciu graczy o id 0..5, a drawTile
+  // sięga po state.players[t.owner] bez osłony — id spoza zakresu wywala render
+  ['ropa + ciemna kalka', t => { t.resource = 'oil'; t.shade = 0.5; t.owner = 5; t.army = army('tank', 42, 0); }],
+
+  // --- sylwetka pod glifem zmienia się z typem jednostki (kontrast konturu) ---
+  ['miasto + piechota', t => { t.city = city(1); t.army = army('infantry', 7, 0); }],
+  ['miasto + artyleria', t => { t.city = city(2); t.army = army('artillery', 73, 0); }],
+
+  // --- skrajności szerokości liczby siły (MAX_ARMY = 99, więc 120 było nierealne) ---
+  ['siła 99 (dwie cyfry)', t => { t.city = city(0); t.army = army('tank', 99, 0); }],
+  ['siła 5 (jedna cyfra)', t => { t.city = city(0); t.army = army('tank', 5, 0); }],
+
+  /* --- KOLIZJA 1: pierścienie podświetleń w paśmie znacznika ---
+     Jeden przypadek na wszystkie trzy pierścienie, bo `state.selected` to POJEDYNCZA
+     globalna — dwa przypadki nie mogą jej mieć naraz. Zaznaczone miasto w środku daje
+     obrys 0,92, oba sąsiednie miasta dostają 0,86: własne w bieli, wrogie w czerwieni
+     z wypełnieniem. */
+  ['zaznaczenie 0,92 + zasięg 0,86 (biały i czerwony)', t => {
+    t.city = city(1); t.army = army('tank', 31, 0);
+    state.selected = t;
+    // ten sam typ i str < MAX_ARMY, inaczej blockedByFriendly wytnie pole z validMoves
+    const own = side(t, -1); own.city = city(0); own.army = army('tank', 40, 0);
+    const foe = side(t, 1); foe.city = city(2); foe.army = army('tank', 40, 0, 1);
+  }],
+  ['miasto + hover (0,95)', t => { t.city = city(2); t.army = army('tank', 62, 0); hoverTile = t; }],
+  ['miasto + cel drogi (złoto)', t => {
+    t.city = city(0); t.owner = 0; t.army = army('tank', 18, 0);
+    const tgt = side(t, 1);
+    tgt.owner = 0; tgt.resource = 'mine'; tgt.army = army('infantry', 24, 0);
+    state.roadPickFrom = t;
+  }],
+
+  // --- KOLIZJA 2: barwa znacznika kontra barwy planszy ---
+  ['złoże + droga w kaflu', t => {
+    t.resource = 'oil'; t.owner = 0; t.road = { owner: 0 }; t.army = army('tank', 51, 0);
+    const n = side(t, 1); n.owner = 0; n.road = { owner: 0 };
+  }],
+  ['miasto na jasnym piasku', t => { t.city = city(1); t.shade = 0.1; t.army = army('tank', 33, 0); }],
+  ['miasto + najciemniejsza kalka', t => { t.city = city(0); t.owner = 5; t.army = army('tank', 29, 0); }],
+  ['złoże + piana u GÓRY', t => { t.resource = 'mine'; t.coast = [4, 5]; t.army = army('tank', 12, 0); }],
+  ['złoże + drzewa obok', t => {
+    t.resource = 'oil'; t.army = army('tank', 47, 0);
+    side(t, -1).shade = 0.7; side(t, 1).shade = -0.8;
+  }],
+
+  /* --- ZDERZENIE DWÓCH ZŁOTYCH GWIAZDEK: odznaka elitarnego weterana (vet >= 15)
+     to też złota gwiazdka, rysowana z tego samego drawStarPath. Na stolicy obsadzonej
+     elitą są więc dwie — przy wierzchołku i po lewej. Ten przypadek jest po to,
+     żeby ocenić, czy 16 px odstępu wystarcza. --- */
+  ['STOLICA + elitarny weteran', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; t.army = army('tank', 88, 15); }],
+  ['miasto + weteran (szewrony)', t => { t.city = city(2); t.army = army('tank', 64, 8); }],
+
+  // --- weryfikacja decyzji „domyślnie tylko zasłonięte" ---
+  ['PUSTA stolica (bez armii)', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; }],
+  ['PUSTE złoże (bez armii)', t => { t.resource = 'mine'; }],
   ['puste pole + czołg (kontrola)', t => { t.army = army('tank', 5, 0); }],
 ];
 
@@ -111,18 +192,53 @@ function buildSheet() {
     t.owner = -1; t.coast = []; t.shallow = false; t.shade = 0.3; t.supplyCity = null;
   }
   state.selected = null;
+  state.roadPickFrom = null;
+  hoverTile = null;
   labels = [];
+  /* Rozstaw 4 kolumny / 3 wiersze, a nie 5/3: przypadki malują teraz WŁASNE sąsiedztwo
+     (±1 kolumna), więc slot musi mieć zapas z obu stron, żeby otoczenia się nie stykały. */
   CASES.forEach((cs, i) => {
-    const c = 2 + (i % 4) * 5, r = 1 + Math.floor(i / 4) * 3;
+    const c = 2 + (i % 5) * 4, r = 1 + Math.floor(i / 5) * 3;
     const t = state.tiles[r][c];
     cs[1](t);
     labels.push([cs[0], hexCenter(c, r)]);
   });
-  document.getElementById('info').textContent = CASES.length + ' przypadków';
+  // szerokość "99" jest testem, czy wstał Arial Black: cała geometria glifów była
+  // liczona przy założeniu ~17,3 px, a fallback na Impact/sans daje inną liczbę
+  ctx.font = 'bold 12px "Arial Black", Impact, sans-serif';
+  const w99 = ctx.measureText('99').width;
+  document.getElementById('info').textContent =
+    CASES.length + ' przypadków · szerokość „99" = ' + w99.toFixed(1) + ' px';
+}
+
+/* Warstwa „strefy zajęte" — rysowana PO draw(), w warstwie podglądu, NIGDY w render.js.
+   Pokazuje pierścienie i pudełka HUD-u także tam, gdzie gra ich w danej chwili nie
+   rysuje. Bez tego kolizję trzeba wyliczać na kartce — a to właśnie dlatego poprzedni
+   arkusz przepuścił znacznik zamalowujący wszystkie trzy pierścienie. */
+function drawZones() {
+  for (const [, p] of labels) {
+    const x = Math.round(p.x), y = Math.round(p.y);
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1;
+    for (const [scale, color] of [[0.86, '#ff5c5c'], [0.92, '#5cd0ff'], [0.95, '#9cff5c']]) {
+      hexPath(x, y, scale);
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,140,255,0.85)';
+    ctx.strokeRect(x - 1, y + 12.5, 20, 12.5);        // liczba siły "99"
+    ctx.strokeRect(x - 17, y + 15, 16, 4);            // pasek morale
+    ctx.strokeRect(x - 21.75, y - 22, 11.5, 14.5);    // odznaka weterana
+  }
 }
 
 function buildMap(seed) {
   newGame({ humanCount: 1, botCount: 5, aiDifficulty: 'normal', seed, timeLimit: Infinity });
+  // te trzy to globalne poza `state`, więc newGame ich nie zeruje — bez tego zaznaczenie
+  // i hover z arkusza zostawałyby na losowej mapie
+  state.selected = null;
+  state.roadPickFrom = null;
+  hoverTile = null;
   labels = [];
   let i = 0;
   for (const row of state.tiles) for (const t of row) {
@@ -138,11 +254,21 @@ function rebuild() {
   if (view === 'sheet') buildSheet(); else buildMap(Number(q.get('seed')) || 4242);
 }
 
-document.getElementById('toggle').addEventListener('click', ev => {
-  marksOn = !marksOn;
-  drawTileMarks = marksOn ? realMarks : function () {};
-  ev.target.textContent = 'Znaczniki: ' + (marksOn ? 'WŁĄCZONE' : 'wyłączone');
-  ev.target.classList.toggle('on', marksOn);
+function applyMarkMode() {
+  drawTileMarks = markMode === 'off' ? function () {} : realMarks;
+  markDetailView = markMode === 'all';   // gołą nazwą, nie window.* i nie przez setter
+  const btn = document.getElementById('toggle');
+  btn.textContent = 'Znaczniki: ' + MARK_MODE_LABEL[markMode];
+  btn.classList.toggle('on', markMode !== 'off');
+}
+document.getElementById('toggle').addEventListener('click', () => {
+  markMode = MARK_MODES[(MARK_MODES.indexOf(markMode) + 1) % MARK_MODES.length];
+  applyMarkMode();
+});
+document.getElementById('zones').addEventListener('click', ev => {
+  showZones = !showZones;
+  ev.target.textContent = 'Strefy zajęte: ' + (showZones ? 'WŁ.' : 'wył.');
+  ev.target.classList.toggle('on', showZones);
 });
 document.getElementById('mode').addEventListener('click', ev => {
   view = view === 'sheet' ? 'map' : 'sheet';
@@ -158,12 +284,15 @@ document.getElementById('reseed').addEventListener('click', () => {
 const zoom = Math.max(1, Number(q.get('zoom')) || 1);
 canvas.style.width = Math.round(BOARD_PX_W * zoom) + 'px';
 canvas.style.height = Math.round(BOARD_PX_H * zoom) + 'px';
-if (q.get('marks') === '0') document.getElementById('toggle').click();
+applyMarkMode();
+document.getElementById('zones').textContent = 'Strefy zajęte: ' + (showZones ? 'WŁ.' : 'wył.');
+document.getElementById('zones').classList.toggle('on', showZones);
 document.getElementById('mode').textContent = 'Widok: ' + (view === 'sheet' ? 'arkusz przypadków' : 'losowa mapa');
 rebuild();
 
 requestAnimationFrame(function loop(now) {
   draw(now);
+  if (showZones) drawZones();
   // podpisy przypadków dorysowujemy PO draw(), bo to warstwa podglądu, nie gry
   if (labels.length) {
     ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';

@@ -9,6 +9,48 @@ const ctx = canvas ? canvas.getContext('2d') : null;
 const BOARD_PX_W = Math.ceil(HEX_W * (MAP_W + 1.2));
 const BOARD_PX_H = Math.ceil(1.5 * HEX * (MAP_H - 1) + HEX * 2.5);
 
+/* ---------------------- preferencja widoku ----------------------
+   „Widok szczegółowy" pokazuje znaczniki na WSZYSTKICH miastach i złożach, a nie
+   tylko na zasłoniętych (patrz drawTileMarks). Trzymamy to wzorem ustawień dźwięku
+   z audio.js — w localStorage, a nie w `state`:
+
+   - to preferencja czytelności, nie stan partii: gracz, który raz ją włączył, nie
+     powinien włączać jej po każdym uruchomieniu gry (dlatego nie jak `state.aiSpeed`,
+     które jest świadomie sesyjne), ani tracić jej między partiami (dlatego nie jak
+     `state.options`, którego brak trwałości jest w 10-Przyszle-plany.md opisany jako
+     defekt do naprawy — kopiowanie go byłoby kopiowaniem znanej wady);
+   - NIE wchodzi do serializeGame(), więc SAVE_FORMAT zostaje bez zmian;
+   - render.js nie jest w LOGIC_FILES w tools/check-portability.js, więc nieosłonięty
+     localStorage jest tu legalny; w state.js wymagałby strażnika bez żadnego zysku.
+
+   Zapisujemy obiekt, nie gołą flagę — kolejne ustawienie widoku dopisze się polem,
+   zamiast zakładać czwarty klucz w localStorage.
+
+   UWAGA dla marker-preview.html i visual-test.html: `markDetailView` to wiązanie
+   leksykalne skryptu, a NIE właściwość globalThis. `window.markDetailView = X` po
+   cichu utworzy inną zmienną i niczego nie ustawi — przypisywać wyłącznie gołą nazwą. */
+const VIEW_STORAGE_KEY = 'hexgeneral.view';
+
+function loadMarkView() {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    return !!(s && typeof s === 'object' && s.detail);
+  } catch (e) { return false; /* uszkodzony wpis albo tryb prywatny — zostaje domyślny */ }
+}
+
+let markDetailView = loadMarkView();
+
+function isMarkDetailView() { return markDetailView; }
+
+function setMarkDetailView(on) {
+  markDetailView = !!on;
+  if (typeof localStorage === 'undefined') return;
+  try { localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify({ detail: markDetailView })); } catch (e) { /* jw. */ }
+}
+
 function setupCanvas() {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = BOARD_PX_W * dpr;
@@ -283,70 +325,159 @@ function drawArmyHud(t, now) {
   ctx.restore();
 }
 
-/* Znaczniki miasta i złoża — rysowane PO sprite'ach armii, bo na tym polega cały problem:
-   czołg (48×28) jest szerszy niż miasto (46×38) i zjada mu dolną połowę, a heks
-   z miastem i jednostką wyglądał dokładnie jak pusty heks z jednostką. Autor tego nie
-   widzi, bo pamięta mapę — zgłosiła to dopiero osoba grająca pierwszy raz.
+/* ======================= znaczniki miasta i złoża =======================
 
-   ...ale PRZED HUD-em jednostki (liczba siły, morale, weteran). Pierwsza wersja szła
-   na samym wierzchu i zjadała liczbę siły — dolna krawędź heksa to jedyne miejsce
-   czytelne dla znacznika, ale siedzą tam też liczba (x+9, y+19) i pasek morale
-   (x-17..x-1, y+15..y+19). Zasłonić sprite wolno, zasłonić danych nie.
+   PO CO SĄ. Jednostka stojąca na mieście zasłania je na tyle, że heks z miastem
+   wygląda jak pusty heks z jednostką. Autor tego nie widzi, bo pamięta mapę —
+   zgłosiła to dopiero osoba grająca pierwszy raz.
 
-   Trzy decyzje, każdą wymusza to, co na heksie już jest:
-   - łuk przy KRAWĘDZI, nie ikona w środku: środek należy do sprite'a jednostki,
-     a krawędzi nie dosięga bounding box żadnego z nich (także przyszłego);
-   - promień 0,88 zamiast 1,0: na samej krawędzi siedzą już obrys heksa, piana
-     wybrzeża i granica imperium;
-   - rozróżnianie KSZTAŁTEM I POŁOŻENIEM, nie barwą. Prawie każdy odcień jest już
-     kolorem któregoś imperium (PLAYERS_DEF), a z rzeczy rysowanych na krawędzi:
-     biały pełny obrys to zaznaczenie (0,92), biały przerywany to zasięg ruchu (0,86),
-     złoty to wybór celu drogi. Stąd: miasto = łuk u dołu, złoże = łuk u góry,
-     stolica = drugi łuk wewnątrz. Linia zawsze ciągła — przerywana czytałaby się
-     jako zasięg ruchu; a stolicy NIE wydłużamy obrysu, bo łuk przez 4 krawędzie
-     zlałby się z ramką zaznaczenia i hoveru (0,95). */
-const MARK_CITY = '#f2ead2';
-const MARK_RES = '#cfc79a';
-const MARK_CASE = '#16140c';   // czarny kontur jak przy reszcie HUD-u (patrz 07-Grafika)
+   GDZIE SIĘ RYSUJĄ W KOLEJCE. Po sprite'ach armii (inaczej nie rozwiązywałyby
+   problemu, dla którego powstały), ale PRZED HUD-em jednostki. Zasłonić sprite
+   wolno, zasłonić danych nie.
 
-// łuk po `count` krawędziach heksa, licząc od rogu `from`; hexCorner() ma promień na
-// sztywno, więc skalowaną wersję liczymy tutaj
-function hexArcPath(cx, cy, from, count, scale) {
-  ctx.beginPath();
-  for (let k = 0; k <= count; k++) {
-    const ang = Math.PI / 180 * (60 * ((from + k) % 6) - 30);
-    const x = cx + HEX * scale * Math.cos(ang);
-    const y = cy + HEX * scale * Math.sin(ang);
-    if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
+   KIEDY SIĘ RYSUJĄ. Domyślnie TYLKO tam, gdzie coś faktycznie zasłania, czyli na
+   heksie z jednostką. Puste miasto pokazuje swój sprite i znacznik nic by tam nie
+   wniósł poza bałaganem — a to bałagan kosztował pierwszą wersję akceptację.
+   `markDetailView` (przycisk „widok szczegółowy" w panelu bocznym) pokazuje
+   wszystkie.
+
+   GDZIE NA HEKSIE — i to jest jedyna reguła, którą trzeba znać przy zmianach.
+   Pierwsza wersja kładła łuk przy krawędzi, uzasadniając to tym, że krawędź jest
+   wolna. NIE JEST. Siedzą tam trzy pierścienie podświetleń: zasięg ruchu (0,86),
+   zaznaczenie (0,92) i hover (0,95). Co gorsza, żaden łuk nie może ich ominąć:
+   `hexPath()` i `hexArcPath()` kreślą TEN SAM sześciokąt w różnych skalach, a dwa
+   współśrodkowe sześciokąty o tej samej orientacji nigdy się nie przecinają —
+   jeden leży w całości w drugim. Kreska o półgrubości `w/2` wokół skali `s`
+   pokrywa pas skal `s ± (w/2)/24,249` (apotema = HEX·cos30°), więc ominięcie
+   wszystkich trzech wymaga `s < 0,726` (wnętrze sprite'a jednostki) albo
+   `s > 1,084` (poza kaflem). Cała rodzina łuków odpada na arytmetyce, nie na
+   guście — a stary łuk zamalowywał 33% obwodu każdego pierścienia.
+
+   Znacznik żyje więc PROMIENIOWO, w korytarzu wierzchołkowym, i musi spełniać:
+
+       0,866·r + 0,5·|d| <= 19,5        (r z półgrubością obrysu, d — odchylenie boczne)
+
+   Korytarze są zajęte przez HUD, który rysuje się PO znacznikach, więc wygrywa:
+     -  90° (dół)        — liczba siły (x-1..x+19, y+12,5..y+25) i pasek morale
+                           (x-17..x-1, y+15..y+19). ZAJĘTY, i to jest powód, dla
+                           którego „kreska przy dolnym wierzchołku" jest niewykonalna.
+     - 210° (górny lewy) — odznaka weterana (x-21,75..x-10,25, y-22..y-7,5). ZAJĘTY.
+     - 270° (GÓRA)       — wolny, i jako jedyny leży NAD sprite'em każdej jednostki
+                           (czołg kończy się na y-16, piechota y-15, artyleria y-13).
+
+   Stąd wszystko siedzi na 270°. Miasto i złoże nie trafiają się na jednym heksie
+   (mapgen sadzi złoża tylko na polach bez miasta), więc dzielą ten korytarz:
+   MIASTO TO GWIAZDKA, ZŁOŻE TO KLIN. Kształt niesie kategorię, barwa — rodzaj
+   w obrębie kategorii (stolica/miasto/port, farma/ropa/kopalnia).
+
+   BARWA JAKO NOŚNIK INFORMACJI — świadome odstępstwo i warto wiedzieć, czym jest
+   opłacone. Prawie każdy odcień jest już kolorem imperium: Werdania #3fae62 (zieleń
+   złoża), Aurelia #d6a53f (złoto stolicy), Lazuria #3f7fd6 (granat portu), Czarna
+   Legia #3c3c46 (czerń ropy). Kolizja jest do zniesienia, bo barwa imperium pojawia
+   się na mapie WYŁĄCZNIE jako 30-procentowa kalka na całym heksie i jako obwódka
+   granicy — nigdy jako mały glif przy wierzchołku. To inny kanał, a kategorię
+   (miasto vs złoże) i tak niesie kształt, nie kolor.
+
+   KONTUR ZALEŻY OD JASNOŚCI GLIFU i to nie jest kosmetyka: zieleń złoża pada na
+   trawę, brąz kopalni na piasek, a czerń ropy na ciemny teren — czyli każdy kolor
+   trafia dokładnie na to tło, z którym się zlewa. Jasne glify dostają więc kontur
+   ciemny, ciemne (ropa, port) — jasny. Dzięki temu krawędź kontrastuje z własnym
+   wypełnieniem niezależnie od tego, co jest pod spodem. */
+
+const MARK_ANG = 270;                        // korytarz górnego wierzchołka
+const MARK_CASE_DARK = 'rgba(22,20,12,0.62)';
+const MARK_CASE_LIGHT = 'rgba(240,236,220,0.72)';
+/* Alfa, nie krycie: do 0.7.2 znacznik był JEDYNYM w pełni nieprzezroczystym
+   elementem przy krawędzi heksa (obrys 0,35, piana 0,75, kalka właściciela 0,30,
+   podświetlenia 0,22-0,9) i to dlatego czytał się jako ciało obce.
+   Zawsze przez rgba(), NIGDY przez globalAlpha: te funkcje nie mają save/restore,
+   a draw() zeruje alfę dopiero przy floaterach — wyciekłoby na HUD. */
+
+/* `dark` mówi o jasności WYPEŁNIENIA, nie o barwie konturu — kontur wychodzi z niej
+   przez negację, więc dodanie glifu wymaga jednej decyzji, nie dwóch. */
+const MARK_STAR = {
+  capital: { ink: '#ffd21e', dark: false },   // złota
+  city:    { ink: '#dfe3ea', dark: false },   // srebrna
+  port:    { ink: '#2c4fb0', dark: true },    // granatowa
+};
+const MARK_WEDGE = {
+  farm: { ink: '#5fd13a', dark: false },
+  oil:  { ink: '#17161a', dark: true },
+  mine: { ink: '#b5793a', dark: false },
+};
+
+/* Punkt w układzie wierzchołka: `r` wzdłuż promienia, `lat` w poprzek.
+   Kąty jak w hexCorner() (60i-30), więc 270° to wierzchołek górny. */
+function markPt(cx, cy, angDeg, r, lat) {
+  const a = Math.PI / 180 * angDeg;
+  const ux = Math.cos(a), uy = Math.sin(a);
+  return { x: cx + ux * r - uy * (lat || 0), y: cy + uy * r + ux * (lat || 0) };
 }
 
-function strokeMark(cx, cy, from, count, scale, color, width) {
-  // stan pędzla ustawiamy jawnie: drawRoads/drawBorders zostawiają po sobie lineCap
-  // i lineJoin, a gałęzie podświetleń bywają pominięte, więc dziedziczenie różniłoby
-  // się między klatkami
-  ctx.lineCap = 'round';
+/* Kontur PRZED wypełnieniem, żeby wypełnienie zjadło jego wewnętrzną połowę —
+   inaczej mały glif zostaje samym konturem. Stan pędzla ustawiamy jawnie:
+   drawRoads/drawBorders zostawiają po sobie lineJoin i dash, a gałęzie podświetleń
+   bywają pominięte, więc dziedziczenie różniłoby się między klatkami. */
+function markFill(style) {
   ctx.lineJoin = 'round';
   ctx.setLineDash([]);
-  hexArcPath(cx, cy, from, count, scale);
-  ctx.strokeStyle = MARK_CASE;
-  ctx.lineWidth = width + 2;
+  ctx.strokeStyle = style.dark ? MARK_CASE_LIGHT : MARK_CASE_DARK;
+  ctx.lineWidth = 3;
   ctx.stroke();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.stroke();
+  ctx.fillStyle = style.ink;
+  ctx.fill();
+}
+
+/* Promienie glifów są DOSUNIĘTE DO SUFITU, a nie dobrane na oko. Sufit to wewnętrzna
+   krawędź pierścienia zasięgu ruchu (0,86), czyli 20,10 px w mierze `0,866·r + 0,5·|d|`
+   powiększonej o półgrubość konturu. Zmierzone zapasy przy tych wartościach:
+   gwiazdka 0,02 px, klin 0,03 px — czyli podniesienie glifu choćby o pół piksela
+   zaczyna zjadać pierścień, a to dokładnie ta wada, dla której cała ta przebudowa
+   powstała. Kto chce wyżej, musi najpierw glif zmniejszyć albo ścienić kontur. */
+
+// gwiazdka miasta — TA SAMA drawStarPath, którą rysuje się odznaka weterana
+function markGlyphStar(x, y, style) {
+  const p = markPt(x, y, MARK_ANG, 15.4);
+  drawStarPath(ctx, p.x, p.y, 6);
+  markFill(style);
+}
+
+/* Klin złoża: grot W DÓŁ. Przy odwróconym grocie to NAROŻNIKI podstawy leżą najdalej
+   od środka, a nie wierzchołek — więc to one wiążą wysokość. Podstawa jest węższa
+   niż w pierwszej wersji (±3,2 zamiast ±3,5) właśnie po to, żeby klin dało się
+   podnieść: każde 0,1 px zabrane z boku kupuje 0,058 px wysokości. */
+function markGlyphWedge(x, y, style) {
+  const pts = [markPt(x, y, MARK_ANG, 14.6),
+    markPt(x, y, MARK_ANG, 19.6, -3.2), markPt(x, y, MARK_ANG, 19.6, 3.2)];
+  ctx.beginPath();
+  pts.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y)));
+  ctx.closePath();
+  markFill(style);
 }
 
 function drawTileMarks(t) {
+  // warunki od najtańszego: funkcja leci przez wszystkie kafle w każdej klatce
   if (!t.land) return;
-  const { x, y } = hexCenter(t.c, t.r);
+  if (!t.city && !t.resource) return;
+  /* Domyślnie tylko to, co zasłonięte. Świadomie BEZ filtra na t.army.player —
+     wroga jednostka zasłania miasto dokładnie tak samo, a zgłoszenie brzmiało
+     „nie widzę, gdzie są miasta", nie „gdzie są moje".
+     Tryb szczegółowy niczego nie ujawnia: pokazuje to, co gracz i tak zobaczy,
+     przewijając wzrokiem mapę. Mgły wojny w grze nie ma. */
+  if (!markDetailView && !t.army) return;
+
+  /* Zaokrąglenie środka RAZ, wzorem drawCity(): hexCenter() daje niecałkowite x
+     w nieparszystych wierszach, a 2,5-pikselowa kreska na półpikselu jest miękka. */
+  const p = hexCenter(t.c, t.r);
+  const x = Math.round(p.x), y = Math.round(p.y);
+
   if (t.city) {
-    strokeMark(x, y, 1, 2, 0.88, MARK_CITY, 3);          // dwie dolne krawędzie
-    if (t.city.capitalOf >= 0) strokeMark(x, y, 1, 2, 0.74, MARK_CITY, 2.5);
-  } else if (t.resource) {
-    // miasto i złoże nie trafiają się na jednym heksie (mapgen sadzi złoża tylko na
-    // polach bez miasta i min. 2 heksy od każdego), więc gałęzie mogą się wykluczać
-    strokeMark(x, y, 4, 2, 0.88, MARK_RES, 2.5);          // dwie górne krawędzie
+    /* Stolica z portem zostaje ZŁOTA. Ranga bije funkcję, a port przy stolicy i tak
+       ma własny znak — żuraw dorysowany przez drawCity(). */
+    markGlyphStar(x, y, MARK_STAR[t.city.capitalOf >= 0 ? 'capital' : (t.city.port ? 'port' : 'city')]);
+  } else {
+    // fallback na kopalnię: nieznany rodzaj złoża lepiej pokazać niż pominąć
+    markGlyphWedge(x, y, MARK_WEDGE[t.resource] || MARK_WEDGE.mine);
   }
 }
 

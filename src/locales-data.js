@@ -88,6 +88,9 @@ const I18N_DATA = {
     "game.seedFooterWithDifficulty": "Seed: {{seed}} · Trudność botów: {{difficulty}}",
     "game.timer": "⏱ {{s}}s",
     "game.aiSpeed": "Tempo AI",
+    "game.markView": "Znaczniki miast",
+    "game.markViewNormal": "Zwykłe",
+    "game.markViewDetail": "Szczegółowe",
     "unit.infantry": "Piechota",
     "unit.tank": "Czołg",
     "unit.artillery": "Artyleria",
@@ -164,7 +167,8 @@ const I18N_DATA = {
     "help.annex": "Zdobycie stolicy wroga <b>anektuje</b> całe jego imperium.",
     "help.teams": "W grze wieloosobowej sloty mogą tworzyć <b>drużyny</b>: sojusznicy nie walczą ze sobą, nie zajmują sobie pól, jeżdżą po swoich drogach jak po własnych, a zwycięstwo liczy się dla całej drużyny.",
     "help.boss": "<b>Boss</b> (czarne imperium) gra inaczej niż bot: nie traci morale z odległości od swoich miast, a po własnym terenie porusza się jak po drodze. Bij go blisko jego granic, nie na swoim zapleczu.",
-    "help.shortcuts": "Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz."
+    "help.marks": "Jednostka stojąca na mieście lub złożu zasłania je, więc taki heks dostaje <b>znacznik przy górnej krawędzi</b>. Przełącznik <b>Znaczniki miast</b> (klawisz <b>D</b>) pokazuje je na wszystkich miastach i złożach, także pustych.",
+    "help.shortcuts": "Skróty: <b>Enter</b> — koniec tury, <b>Esc</b> — odznacz, <b>D</b> — znaczniki szczegółowe."
   },
   "en": {
     "app.pageTitle": "Hex General — hex strategy game",
@@ -248,6 +252,9 @@ const I18N_DATA = {
     "game.seedFooterWithDifficulty": "Seed: {{seed}} · Bot Difficulty: {{difficulty}}",
     "game.timer": "⏱ {{s}}s",
     "game.aiSpeed": "AI Speed",
+    "game.markView": "City markers",
+    "game.markViewNormal": "Normal",
+    "game.markViewDetail": "Detailed",
     "unit.infantry": "Infantry",
     "unit.tank": "Tank",
     "unit.artillery": "Artillery",
@@ -324,7 +331,8 @@ const I18N_DATA = {
     "help.annex": "Capturing an enemy capital <b>annexes</b> their entire empire.",
     "help.teams": "In multiplayer, slots can form <b>teams</b>: allies never fight each other, never take each other's tiles, drive on each other's roads as if they were their own, and victory counts for the whole team.",
     "help.boss": "The <b>boss</b> (black empire) plays unlike a bot: it loses no morale with distance from its cities, and moves across its own territory as if on a road. Fight it near its borders, not in your own backyard.",
-    "help.shortcuts": "Shortcuts: <b>Enter</b> — end turn, <b>Esc</b> — deselect."
+    "help.marks": "A unit standing on a city or resource hides it, so that hex gets a <b>marker at its top edge</b>. The <b>City markers</b> toggle (key <b>D</b>) shows them on every city and resource, empty ones included.",
+    "help.shortcuts": "Shortcuts: <b>Enter</b> — end turn, <b>Esc</b> — deselect, <b>D</b> — detailed markers."
   },
   "de": {
     "app.pageTitle": "Hex General — Hexfeld-Strategiespiel",
@@ -408,6 +416,9 @@ const I18N_DATA = {
     "game.seedFooterWithDifficulty": "Seed: {{seed}} · Bot-Schwierigkeit: {{difficulty}}",
     "game.timer": "⏱ {{s}}s",
     "game.aiSpeed": "KI-Tempo",
+    "game.markView": "Stadtmarkierungen",
+    "game.markViewNormal": "Normal",
+    "game.markViewDetail": "Detailliert",
     "unit.infantry": "Infanterie",
     "unit.tank": "Panzer",
     "unit.artillery": "Artillerie",
@@ -484,6 +495,7 @@ const I18N_DATA = {
     "help.annex": "Die Eroberung einer feindlichen Hauptstadt <b>annektiert</b> ihr gesamtes Reich.",
     "help.teams": "Im Mehrspielermodus können Slots <b>Teams</b> bilden: Verbündete kämpfen nicht gegeneinander, nehmen sich keine Felder, nutzen die Straßen der anderen wie eigene, und der Sieg zählt für das ganze Team.",
     "help.boss": "Der <b>Boss</b> (schwarzes Reich) spielt anders als ein Bot: Er verliert keine Moral mit der Entfernung zu seinen Städten und bewegt sich auf eigenem Gebiet wie auf einer Straße. Schlage ihn nahe seiner Grenzen, nicht im eigenen Hinterland.",
-    "help.shortcuts": "Tastenkürzel: <b>Enter</b> — Zug beenden, <b>Esc</b> — Auswahl aufheben."
+    "help.marks": "Eine Einheit auf einer Stadt oder einem Rohstoff verdeckt sie, deshalb erhält dieses Feld eine <b>Markierung an der oberen Kante</b>. Der Schalter <b>Stadtmarkierungen</b> (Taste <b>D</b>) zeigt sie auf allen Städten und Rohstoffen, auch auf leeren.",
+    "help.shortcuts": "Tastenkürzel: <b>Enter</b> — Zug beenden, <b>Esc</b> — Auswahl aufheben, <b>D</b> — detaillierte Markierungen."
   }
 };

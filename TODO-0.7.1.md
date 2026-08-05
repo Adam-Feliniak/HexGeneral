@@ -104,15 +104,25 @@ utrzymuje uwagę przez partię — to jedyna rzecz w tym punkcie, której nie da
 Zakres: `src/audio.js` (`MUSIC_TRACKS`, `MUSIC_INSTRUMENTS`), `tools/gen-sounds.js`,
 `Documents/14-Dzwiek.md`.
 
-## 2. Miasta niewidoczne pod jednostkami — MECHANIZM ZROBIONY, WYGLĄD DO DOSTROJENIA
+## 2. Miasta niewidoczne pod jednostkami — ZROBIONE
 
-> **Stan po pierwszym podejściu:** sam pomysł zaakceptowany (znacznik przy krawędzi,
-> rozróżnianie kształtem i położeniem, warstwa nad sprite'em a pod HUD-em), ale
-> **konkretne wykonanie odrzucone** — obecny łuk się nie podoba. Do dostrojenia w kolejnej
-> sesji: grubość, barwa, kształt i to, czy stolica ma być podwójnym łukiem. Kod jest tak
-> ustawiony, że rusza się wyłącznie `drawTileMarks()` w `src/render.js` — kolejność
-> rysowania i podział `drawArmy()` zostają bez zmian niezależnie od wybranego wyglądu.
-> Warianty oglądać w `marker-preview.html` (przełącznik „przed/po" + arkusz 16 przypadków).
+**Wykonanie z 0.7.1 odrzucone i przepisane.** Łuk przy krawędzi zastąpiła **gwiazdka nad
+miastem** (złota — stolica, srebrna — miasto, granatowa — port) i **klin nad złożem**
+(zielony — farma, czarny — ropa, brązowy — kopalnia), oba w korytarzu górnego wierzchołka.
+Domyślnie znacznik pojawia się **tylko tam, gdzie jednostka faktycznie coś zasłania** —
+przycisk „Znaczniki miast" w panelu bocznym (klawisz **D**) pokazuje wszystkie. To ta
+zmiana odzyskała estetykę mapy: pusty heks z miastem nie nosi już nic.
+
+**Odrzucenie łuku miało twardy powód, nie estetyczny.** Łuk zamalowywał 33% obwodu
+każdego z trzech pierścieni podświetleń (zasięg ruchu, zaznaczenie, hover), a arytmetyka
+pokazuje, że **żaden** łuk styczny nie może ich ominąć — dwa współśrodkowe sześciokąty
+o tej samej orientacji nigdy się nie przecinają. Cała rodzina odpadła na liczbach.
+Szczegóły i reguła, która ją zastąpiła: [07-Grafika-i-sprite-y.md](Documents/07-Grafika-i-sprite-y.md#znaczniki-miast-i-złóż-drawtilemarks).
+
+**Dwie rzeczy warte zapamiętania:** arkusz `marker-preview.html` przez cały czas nie mógł
+pokazać tych kolizji, bo czyścił planszę i żaden przypadek nie malował własnego
+sąsiedztwa — dorobione, plus warstwa „strefy zajęte". A sonda mierząca zasięg glifu
+złapała trzy kolizje w nowych wariantach, zanim ktokolwiek je zobaczył.
 
 **Znacznik na krawędzi heksa: dolny łuk = miasto (podwójny = stolica), górny = złoże.**
 Zgodnie z rozpisanym niżej kierunkiem — łuk przy krawędzi, promień 0,88 (żeby nie siadać na
@@ -225,9 +235,14 @@ z `Documents/12-Protokol-smoke.md` (obie pozycje 1-2 to zmiany renderu i audio, 
 nie pokrywa żaden harness), `node tools/check-portability.js`, `node tools/team-check.js`,
 bump `GAME_VERSION` w `src/config.js` + wpis w `CHANGELOG.md` w tym samym commicie.
 
-**Wzorzec regresji wizualnej do przestawienia — świadomie odłożone.** Znaczniki miast
-i złóż zmieniły piksele każdego heksa z miastem i złożem, więc zapisany wzorzec
-`visual-test.html` już nie pasuje i do czasu przestawienia każdy przebieg będzie ścianą
-fałszywych błędów. Przestawiać dopiero, gdy render przestanie się ruszać (`node tools/serve.js`
-→ „Ustaw jako wzorzec") — robienie tego w trakcie pracy nad wyglądem tylko zabetonowałoby
-stan pośredni.
+**Wzorzec regresji wizualnej do przestawienia — TERAZ JEST NA TO PORA.** Warunek „render
+przestał się ruszać" jest spełniony: znaczniki są zamknięte, czołg przemalowany w 0.7.2,
+muzyka nie dotyka pikseli. Zapisany wzorzec nie pasuje z trzech niezależnych powodów
+(znaczniki 0.7.1, czołg 0.7.2, przebudowa znaczników w 0.8.0), więc do czasu przestawienia
+każdy przebieg jest ścianą fałszywych błędów.
+
+Przestawia się **ręcznie w przeglądarce**, bo wzorzec siedzi w `localStorage` konkretnej
+maszyny: `node tools/serve.js` → `visual-test.html` → „Ustaw jako wzorzec". Żaden skrypt
+tego za nas nie zrobi. Uwaga przy okazji: `visual-test.html` przypina teraz
+`markDetailView = false` przed przebiegiem — bez tego ten sam kod dawałby inne hasze
+u kogoś, kto włączył widok szczegółowy.

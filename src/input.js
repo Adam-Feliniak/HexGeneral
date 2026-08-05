@@ -190,9 +190,21 @@ function initInput() {
       updateUI();
     });
   });
+  document.querySelectorAll('#mark-view-group button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setMarkDetailView(btn.dataset.detail === '1');
+      updateUI();
+    });
+  });
   document.addEventListener('keydown', ev => {
     if (!state || state.screen !== 'game') return;
     if (ev.key === 'Enter') requestEndTurn();
     if (ev.key === 'Escape') { state.selected = null; state.selectedCity = null; state.roadPickFrom = null; state.selectedResource = null; updateUI(); }
+    // sprawdzenie modyfikatorów, którego Enter i Esc nie potrzebują: bez niego
+    // zjadamy Ctrl+D (zakładka). ev.key, nie ev.code — w pomocy stoi litera „D"
+    if ((ev.key === 'd' || ev.key === 'D') && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
+      setMarkDetailView(!isMarkDetailView());
+      updateUI();
+    }
   });
 }

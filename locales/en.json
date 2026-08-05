@@ -89,6 +89,9 @@
   "game.seedFooterWithDifficulty": "Seed: {{seed}} · Bot Difficulty: {{difficulty}}",
   "game.timer": "⏱ {{s}}s",
   "game.aiSpeed": "AI Speed",
+  "game.markView": "City markers",
+  "game.markViewNormal": "Normal",
+  "game.markViewDetail": "Detailed",
 
   "unit.infantry": "Infantry",
   "unit.tank": "Tank",
@@ -171,5 +174,6 @@
   "help.annex": "Capturing an enemy capital <b>annexes</b> their entire empire.",
   "help.teams": "In multiplayer, slots can form <b>teams</b>: allies never fight each other, never take each other's tiles, drive on each other's roads as if they were their own, and victory counts for the whole team.",
   "help.boss": "The <b>boss</b> (black empire) plays unlike a bot: it loses no morale with distance from its cities, and moves across its own territory as if on a road. Fight it near its borders, not in your own backyard.",
-  "help.shortcuts": "Shortcuts: <b>Enter</b> — end turn, <b>Esc</b> — deselect."
+  "help.marks": "A unit standing on a city or resource hides it, so that hex gets a <b>marker at its top edge</b>. The <b>City markers</b> toggle (key <b>D</b>) shows them on every city and resource, empty ones included.",
+  "help.shortcuts": "Shortcuts: <b>Enter</b> — end turn, <b>Esc</b> — deselect, <b>D</b> — detailed markers."
 }
