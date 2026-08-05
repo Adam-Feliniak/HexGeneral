@@ -153,11 +153,13 @@ function runSeed(seed, checkpoints, difficulty) {
         const p = state.players[i];
         if (!p.alive || state.phase === 'over') continue;
         resetMoved(p.id);
-        let moves = MOVES_PER_TURN, guard = 0;
-        while (moves > 0 && guard++ < 200) {
+        // ACTIVATIONS_PER_TURN, nie dawne MOVES_PER_TURN — nazwa zmieniła się w config.js,
+        // a ta strona została z martwym odwołaniem i wywalała się na pierwszym seedzie
+        let activations = ACTIVATIONS_PER_TURN, guard = 0;
+        while (activations > 0 && guard++ < 200) {
           const mv = aiPickMove(p.id, diffCache[p.id]);
           if (!mv) break;
-          moves -= executeMove(mv.from, mv.to);
+          activations -= executeMove(mv.from, mv.to);
           if (state.phase === 'over') break;
         }
         if (state.phase !== 'over') produce(p.id);

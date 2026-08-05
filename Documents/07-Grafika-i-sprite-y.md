@@ -266,9 +266,11 @@ przypadkiem — dlatego glify siedzą u góry (patrz niżej).
 
 ### Znaczniki miast i złóż (`drawTileMarks`)
 
-**Miasto to gwiazdka, złoże to klin**, oba w korytarzu **górnego wierzchołka** heksa.
-Kształt niesie kategorię, barwa rodzaj: gwiazdka złota = stolica, srebrna = miasto,
-granatowa = port; klin zielony = farma, czarny = ropa, brązowy = kopalnia.
+**Stolica to korona, miasto to gwiazdka, złoże to klin**, wszystkie w korytarzu
+**górnego wierzchołka** heksa. Kształt niesie kategorię, barwa rodzaj: gwiazdka srebrna =
+miasto, granatowa = port; klin zielony = farma, czarny = ropa, brązowy = kopalnia.
+Stolica jest jedynym rodzajem wyjętym z kanału barwy — patrz „Dlaczego stolica ma własny
+kształt" niżej; jej złoto (`#ffd21e`) zostało to samo, co przy gwiazdce z 0.8.0.
 
 **Domyślnie znacznik pojawia się TYLKO na heksie z jednostką** — czyli tam, gdzie coś
 faktycznie zasłania. Puste miasto pokazuje swój sprite i znacznik nic by tam nie wniósł
@@ -307,24 +309,45 @@ dwa z trzech korytarzy:
 Skoro miasto i złoże nigdy nie dzielą heksa (mapgen sadzi złoża tylko na polach bez
 miasta), oba mogą zająć ten sam korytarz.
 
-#### Dwa świadome odstępstwa
+#### Świadome odstępstwo: barwa niesie informację
 
-- **Barwa niesie informację**, choć prawie każdy odcień jest już kolorem imperium:
-  Werdania `#3fae62` (zieleń złoża), Aurelia `#d6a53f` (złoto stolicy), Lazuria `#3f7fd6`
-  (granat portu), Czarna Legia `#3c3c46` (czerń ropy). Do zniesienia, bo barwa imperium
-  pojawia się WYŁĄCZNIE jako 30-procentowa kalka na całym heksie i obwódka granicy —
-  nigdy jako mały glif przy wierzchołku. To inny kanał, a kategorię i tak niesie kształt.
-- **Złota gwiazdka stolicy zderza się z odznaką elitarnego weterana** (`vet >= 15`), która
-  jest tą samą gwiazdką z `drawStarPath()`. Na stolicy z elitą są więc dwie, 16 px od
-  siebie. Zaakceptowane: elita w stolicy zdarza się rzadko, a pozycja i rozmiar (6 vs 5 px)
-  je rozróżniają.
+Prawie każdy odcień jest już kolorem imperium: Werdania `#3fae62` (zieleń złoża), Aurelia
+`#d6a53f` (złoto stolicy), Lazuria `#3f7fd6` (granat portu), Czarna Legia `#3c3c46` (czerń
+ropy). Do zniesienia, bo barwa imperium pojawia się WYŁĄCZNIE jako 30-procentowa kalka na
+całym heksie i obwódka granicy — nigdy jako mały glif przy wierzchołku. To inny kanał,
+a kategorię i tak niesie kształt.
+
+#### Dlaczego stolica ma własny kształt (0.8.1)
+
+W 0.8.0 stolica była **złotą gwiazdką** i zapisaliśmy to jako świadome ryzyko: odznaka
+elitarnego weterana (`vet >= 15`) jest tą samą gwiazdką z `drawStarPath()`, więc stolica
+obsadzona elitą nosiła dwie złote gwiazdki 16 px od siebie — „elita w stolicy zdarza się
+rzadko". Pierwsza osoba testująca odrzuciła gwiazdkę na stolicy od razu. Warto rozdzielić
+dwie rzeczy: te glify **nie zasłaniały się** (pozycja i rozmiar 6 vs 5 px je rozróżniały),
+tylko **myliły** — a przy 12 px różnica złoto/srebro i tak była słabszym nośnikiem rangi
+niż sylwetka. Stolica dostała więc koronę i jako jedyna niesie rodzaj kształtem.
+
+Korona (`MARK_CROWN_PTS`) to trzy zęby, środkowy wyższy — i ta asymetria jest wymuszona
+budżetem, nie stylizacją. Ząb boczny stoi na `r = 17,5`, bo odsunięcie o 6,8 px w bok zjada
+3,4 px z tej samej nierówności; środkowy, na osi, dochodzi do 20,5. Przy zębach równej
+wysokości cała korona musiałaby zejść do 17,5 i wyglądałaby na wciśniętą w sprite jednostki.
+Półszerokość 6,8 ma jeszcze drugi sufit — pudełko odznaki weterana zaczyna się na `x−10,25`,
+a kontur dokłada 1,5 px, więc 8,75 to koniec niezależnie od promienia.
+
+**Wcięcia są tu wielkością krytyczną**, bo `markFill()` kreśli kontur 3 px PRZED
+wypełnieniem: każda ściana wcięcia wrzuca do środka 1,5 px ciemnego, więc przy prześwicie
+poniżej ~3 px obwódki schodzą się i ząb znika. Odrzucone w audycji warianty przegrały
+dokładnie na tym — blanki z prostokątnymi zębami (prześwit 4,2 px) czytały się jako złota
+sztabka, a obręcz z trzema kulkami zlała się we wspólnym konturze w plamę. Kto chce
+gęstszą koronę, musi najpierw ścienić kontur — a to jest ta sama decyzja, co u złóż:
+kontur jest po to, żeby glif odkleił się od tła.
 
 #### Kontur zależy od jasności wypełnienia
 
 To nie kosmetyka: zieleń farmy pada na trawę, brąz kopalni na piasek, a czerń ropy na
 ciemny teren — każdy kolor trafia dokładnie na to tło, z którym się zlewa. Jasne glify
 dostają więc kontur ciemny (`rgba(22,20,12,0.62)`), ciemne — ropa i port — jasny
-(`rgba(240,236,220,0.72)`). Pole `dark` w `MARK_STAR`/`MARK_WEDGE` opisuje jasność
+(`rgba(240,236,220,0.72)`). Pole `dark` w `MARK_CITY`/`MARK_WEDGE` opisuje jasność
 **wypełnienia**, a kontur wychodzi z niej przez negację, więc nowy glif wymaga jednej
 decyzji, nie dwóch.
 
@@ -336,7 +359,8 @@ a `draw()` zeruje alfę dopiero przy floaterach, więc ustawienie wyciekłoby na
 
 #### Promienie są dosunięte do sufitu
 
-Zmierzone zapasy do pierścienia 0,86: gwiazdka **0,08 px**, klin **0,03 px**. Podniesienie
+Zmierzone zapasy do pierścienia 0,86: gwiazdka **0,08 px**, klin **0,03 px**, korona
+**0,04 px** — i to zębem bocznym, nie środkowym, który ma jeszcze 0,85 px luzu. Podniesienie
 glifu choćby o pół piksela zaczyna zjadać pierścień. Kto chce wyżej, musi najpierw glif
 zmniejszyć albo ścienić kontur — przy klinie 0,1 px zabrane z szerokości podstawy kupuje
 0,058 px wysokości (przy odwróconym grocie to narożniki podstawy leżą najdalej od środka,

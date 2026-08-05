@@ -32,14 +32,16 @@
   Wszystkie znaczniki siedzą w <b class="k">korytarzu górnego wierzchołka</b> — jako jedynym
   wolnym zarówno od HUD-u jednostki (liczba siły, pasek morale u dołu; odznaka weterana po
   lewej), jak i od sprite'ów jednostek.
-  <b class="k">Miasto to gwiazdka</b> (złota — stolica, srebrna — miasto, granatowa — port),
-  <b class="k">złoże to klin</b> (zielony — farma, czarny — ropa, brązowy — kopalnia).
+  <b class="k">Stolica to złota korona</b>, <b class="k">miasto to gwiazdka</b> (srebrna — miasto,
+  granatowa — port), <b class="k">złoże to klin</b> (zielony — farma, czarny — ropa, brązowy —
+  kopalnia). Stolica wyszła z kanału barwy, bo złota gwiazdka myliła się z odznaką elitarnego
+  weterana — patrz przypadek „STOLICA + elitarny weteran".
   Kształt niesie kategorię, barwa rodzaj; kontur jest ciemny przy jasnych glifach i jasny
   przy ciemnych, żeby czerń ropy nie ginęła na ciemnym terenie, a zieleń farmy na trawie.
   <b class="k">Strefy zajęte</b> dorysowują pierścienie 0,86 / 0,92 / 0,95 i pudełka HUD-u
   nawet tam, gdzie gra ich nie rysuje — po to, żeby kolizję było widać, a nie trzeba się jej
   domyślać. Adres przyjmuje
-  <code>?zoom=3&amp;sx=&amp;sy=&amp;view=map&amp;marks=off|def|all&amp;variant=0..3&amp;zones=1</code>.
+  <code>?zoom=3&amp;sx=&amp;sy=&amp;view=map&amp;seed=&amp;marks=off|def|all&amp;zones=1</code>.
 </div>
 <div id="wrap"><canvas id="board"></canvas></div>
 
@@ -114,10 +116,9 @@ function side(t, dc) { return state.tiles[t.r][t.c + dc]; }
 const city = (v) => ({ name: 'X', capitalOf: -1, variant: v || 0 });
 
 const CASES = [
-  /* --- RZĄD 1: komplet sześciu glifów obok siebie. To jest główny test tego arkusza:
-     czy barwy da się od siebie odróżnić przy zoomie 1, skoro kształt rozdziela już
-     tylko miasto od złoża. --- */
-  ['STOLICA (złota)', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; t.army = army('tank', 55, 0); }],
+  /* --- RZĄD 1: komplet glifów obok siebie. To jest główny test tego arkusza: czy przy
+     zoomie 1 korona stolicy nie myli się z gwiazdką miasta, a barwy między sobą. --- */
+  ['STOLICA (złota korona)', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; t.army = army('tank', 55, 0); }],
   ['miasto (srebrna)', t => { t.city = city(0); t.army = army('tank', 38, 0); }],
   ['PORT (granatowa)', t => { t.city = { name: 'X', capitalOf: -1, port: true }; t.army = army('tank', 9, 0); }],
   ['farma (zielony)', t => { t.resource = 'farm'; t.army = army('tank', 44, 0); }],
@@ -171,10 +172,11 @@ const CASES = [
     side(t, -1).shade = 0.7; side(t, 1).shade = -0.8;
   }],
 
-  /* --- ZDERZENIE DWÓCH ZŁOTYCH GWIAZDEK: odznaka elitarnego weterana (vet >= 15)
-     to też złota gwiazdka, rysowana z tego samego drawStarPath. Na stolicy obsadzonej
-     elitą są więc dwie — przy wierzchołku i po lewej. Ten przypadek jest po to,
-     żeby ocenić, czy 16 px odstępu wystarcza. --- */
+  /* --- POWÓD, DLA KTÓREGO POWSTAJE KORONA: odznaka elitarnego weterana (vet >= 15) to
+     złota gwiazdka z tego samego drawStarPath co znacznik. Na stolicy obsadzonej elitą
+     były więc dwie, 16 px od siebie — nie zasłaniały się, ale myliły. Commit df77948
+     zapisał to jako świadome ryzyko („elita w stolicy zdarza się rzadko"), po czym
+     testerka trafiła w nie od razu. Ten przypadek sprawdza, czy korona je rozdziela. --- */
   ['STOLICA + elitarny weteran', t => { t.city = { name: 'X', capitalOf: 0 }; t.owner = 0; t.army = army('tank', 88, 15); }],
   ['miasto + weteran (szewrony)', t => { t.city = city(2); t.army = army('tank', 64, 8); }],
 
@@ -196,7 +198,9 @@ function buildSheet() {
   hoverTile = null;
   labels = [];
   /* Rozstaw 4 kolumny / 3 wiersze, a nie 5/3: przypadki malują teraz WŁASNE sąsiedztwo
-     (±1 kolumna), więc slot musi mieć zapas z obu stron, żeby otoczenia się nie stykały. */
+     (±1 kolumna), więc slot musi mieć zapas z obu stron, żeby otoczenia się nie stykały.
+     Przy MAP_H=14 pięć rzędów po pięć przypadków wyczerpuje planszę co do kafla —
+     26. przypadek trafiłby w tiles[16], czyli poza tablicę. */
   CASES.forEach((cs, i) => {
     const c = 2 + (i % 5) * 4, r = 1 + Math.floor(i / 5) * 3;
     const t = state.tiles[r][c];

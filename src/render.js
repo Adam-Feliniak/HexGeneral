@@ -367,8 +367,15 @@ function drawArmyHud(t, now) {
 
    Stąd wszystko siedzi na 270°. Miasto i złoże nie trafiają się na jednym heksie
    (mapgen sadzi złoża tylko na polach bez miasta), więc dzielą ten korytarz:
-   MIASTO TO GWIAZDKA, ZŁOŻE TO KLIN. Kształt niesie kategorię, barwa — rodzaj
-   w obrębie kategorii (stolica/miasto/port, farma/ropa/kopalnia).
+   STOLICA TO KORONA, MIASTO TO GWIAZDKA, ZŁOŻE TO KLIN.
+
+   STOLICA WYSZŁA Z KANAŁU BARWY i to jedyne miejsce, gdzie rodzaj w obrębie kategorii
+   niesie kształt, a nie kolor. Powód jest konkretny: odznaka elitarnego weterana
+   (vet >= 15) to złota gwiazdka z tego samego `drawStarPath`, więc stolica obsadzona
+   elitą nosiła dwie złote gwiazdki 16 px od siebie. Nie zasłaniały się — myliły.
+   0.8.0 zapisało to jako świadome ryzyko („elita w stolicy zdarza się rzadko"),
+   po czym pierwsza osoba testująca odrzuciła gwiazdkę na stolicy od razu. Przy 12 px
+   różnica złoto/srebro i tak była słabszym nośnikiem rangi niż sylwetka.
 
    BARWA JAKO NOŚNIK INFORMACJI — świadome odstępstwo i warto wiedzieć, czym jest
    opłacone. Prawie każdy odcień jest już kolorem imperium: Werdania #3fae62 (zieleń
@@ -395,10 +402,12 @@ const MARK_CASE_LIGHT = 'rgba(240,236,220,0.72)';
 
 /* `dark` mówi o jasności WYPEŁNIENIA, nie o barwie konturu — kontur wychodzi z niej
    przez negację, więc dodanie glifu wymaga jednej decyzji, nie dwóch. */
-const MARK_STAR = {
-  capital: { ink: '#ffd21e', dark: false },   // złota
-  city:    { ink: '#dfe3ea', dark: false },   // srebrna
-  port:    { ink: '#2c4fb0', dark: true },    // granatowa
+/* MARK_CITY, nie MARK_STAR: od 0.8.1 stolica jest koroną, więc ta tabela trzyma style
+   dwóch kształtów naraz. Złoto stolicy zostaje dokładnie to samo co przy gwiazdce. */
+const MARK_CITY = {
+  capital: { ink: '#ffd21e', dark: false },   // złota korona
+  city:    { ink: '#dfe3ea', dark: false },   // srebrna gwiazdka
+  port:    { ink: '#2c4fb0', dark: true },    // granatowa gwiazdka
 };
 const MARK_WEDGE = {
   farm: { ink: '#5fd13a', dark: false },
@@ -431,14 +440,38 @@ function markFill(style) {
 /* Promienie glifów są DOSUNIĘTE DO SUFITU, a nie dobrane na oko. Sufit to wewnętrzna
    krawędź pierścienia zasięgu ruchu (0,86), czyli 20,10 px w mierze `0,866·r + 0,5·|d|`
    powiększonej o półgrubość konturu. Zmierzone zapasy przy tych wartościach:
-   gwiazdka 0,02 px, klin 0,03 px — czyli podniesienie glifu choćby o pół piksela
+   gwiazdka 0,02 px, klin 0,03 px, korona 0,04 px (zębem bocznym, nie środkowym)
+   — czyli podniesienie glifu choćby o pół piksela
    zaczyna zjadać pierścień, a to dokładnie ta wada, dla której cała ta przebudowa
    powstała. Kto chce wyżej, musi najpierw glif zmniejszyć albo ścienić kontur. */
 
-// gwiazdka miasta — TA SAMA drawStarPath, którą rysuje się odznaka weterana
+// gwiazdka miasta i portu — TA SAMA drawStarPath, którą rysuje się odznaka weterana.
+// Stolica jej NIE używa (markGlyphCrown), bo to zderzenie było powodem przebudowy.
 function markGlyphStar(x, y, style) {
   const p = markPt(x, y, MARK_ANG, 15.4);
   drawStarPath(ctx, p.x, p.y, 6);
+  markFill(style);
+}
+
+/* Korona stolicy. Punkty jako [odchylenie w bok, promień] — w tym układzie od razu widać,
+   czym płaci się za kształt: ząb boczny stoi na 17,5 a środkowy na 20,5 nie dla urody,
+   tylko dlatego, że odsunięcie o 6,8 px w bok zjada 3,4 px z tego samego budżetu
+   (0,866·r + 0,5·|d| + 1,5 <= 20,10). Przy zębach równej wysokości korona musiałaby
+   zejść cała do 17,5 i wyglądałaby na wciśniętą w sprite jednostki.
+   Półszerokość 6,8 ma jeszcze drugi sufit: pudełko odznaki weterana zaczyna się
+   na x-10,25, a kontur dokłada 1,5 — czyli 8,75 to koniec, niezależnie od promienia.
+   Wcięcia są tak głębokie, jak pozwala kontur 3 px: przy prześwicie węższym niż 3 px
+   ciemne obwódki obu ścian schodzą się i ząb znika. */
+const MARK_CROWN_PTS = [[-6.8, 11.4], [-6.8, 17.5], [-3.3, 14.3], [0, 20.5],
+  [3.3, 14.3], [6.8, 17.5], [6.8, 11.4]];
+
+function markGlyphCrown(x, y, style) {
+  ctx.beginPath();
+  MARK_CROWN_PTS.forEach((pt, i) => {
+    const p = markPt(x, y, MARK_ANG, pt[1], pt[0]);
+    if (i) ctx.lineTo(p.x, p.y); else ctx.moveTo(p.x, p.y);
+  });
+  ctx.closePath();
   markFill(style);
 }
 
@@ -472,9 +505,10 @@ function drawTileMarks(t) {
   const x = Math.round(p.x), y = Math.round(p.y);
 
   if (t.city) {
-    /* Stolica z portem zostaje ZŁOTA. Ranga bije funkcję, a port przy stolicy i tak
-       ma własny znak — żuraw dorysowany przez drawCity(). */
-    markGlyphStar(x, y, MARK_STAR[t.city.capitalOf >= 0 ? 'capital' : (t.city.port ? 'port' : 'city')]);
+    /* Stolica z portem dostaje KORONĘ, nie granatową gwiazdkę. Ranga bije funkcję,
+       a port przy stolicy i tak ma własny znak — żuraw dorysowany przez drawCity(). */
+    if (t.city.capitalOf >= 0) markGlyphCrown(x, y, MARK_CITY.capital);
+    else markGlyphStar(x, y, MARK_CITY[t.city.port ? 'port' : 'city']);
   } else {
     // fallback na kopalnię: nieznany rodzaj złoża lepiej pokazać niż pominąć
     markGlyphWedge(x, y, MARK_WEDGE[t.resource] || MARK_WEDGE.mine);

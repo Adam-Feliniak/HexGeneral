@@ -2,6 +2,37 @@
 
 Znaczące zmiany w Hex General są odnotowywane w tym pliku. Wersjonowanie: SemVer (MAJOR.MINOR.PATCH).
 
+## [0.8.1] - 2026-08-05
+
+Poprawka po pierwszych testach 0.8.0.
+
+### Stolica ma koronę zamiast złotej gwiazdki
+
+- **Znacznik stolicy to korona** (`markGlyphCrown`) — trzy zęby ze środkowym wyższym,
+  w tym samym złocie `#ffd21e`, co gwiazdka z 0.8.0. Miasto i port zostają gwiazdkami
+  (srebrną i granatową), złoża klinami.
+- **Powód jest ten, który 0.8.0 zapisało jako świadome ryzyko.** Odznaka elitarnego
+  weterana (`vet >= 15`) to ta sama gwiazdka z `drawStarPath()`, więc stolica obsadzona
+  elitą nosiła dwie złote gwiazdki 16 px od siebie — „elita w stolicy zdarza się rzadko"
+  nie przetrwało zderzenia z pierwszą osobą testującą. Glify się nie zasłaniały, tylko
+  myliły; przy 12 px różnica złoto/srebro i tak niosła rangę słabiej niż sylwetka.
+- **Stolica jako jedyna niesie rodzaj kształtem**, nie barwą — odstępstwo od reguły
+  „kształt to kategoria, barwa to rodzaj", opisane w `Documents/07-Grafika-i-sprite-y.md`.
+- Asymetria zębów wynika z budżetu korytarza (`0,866·r + 0,5·|d| + 1,5 <= 20,10`), nie ze
+  stylizacji: ząb boczny odsunięty o 6,8 px w bok traci 3,4 px z tej samej nierówności,
+  więc stoi na 17,5, a środkowy sięga 20,5. Zapas do pierścienia zasięgu ruchu: 0,04 px.
+- `MARK_STAR` → `MARK_CITY`: tabela trzyma teraz style dwóch kształtów naraz.
+- `marker-preview.html` pokazuje koronę w rzędzie z gwiazdkami i w przypadku
+  „STOLICA + elitarny weteran", czyli dokładnie tam, gdzie zapadła decyzja.
+
+### Naprawione narzędzie
+
+- **`visual-test.html` nie działał w ogóle** — pętla AI wołała `MOVES_PER_TURN`, nazwę
+  zmienioną w `config.js` na `ACTIVATIONS_PER_TURN`, więc strona wywalała się na pierwszym
+  seedzie i nie dochodziła nawet do miniatur. To dlatego wzorzec regresji wizualnej nie
+  dał się przestawić wcześniej. Po poprawce domyślny przebieg (24 partie, checkpointy
+  1/30/80, 72 klatki) idzie bez wyjątków, a wzorzec został przestawiony.
+
 ## [0.8.0] - 2026-08-05
 
 Dwie rzeczy, których gracz nie mógł nie zauważyć: partia nie ma już jednej ścieżki

@@ -107,7 +107,8 @@ Zakres: `src/audio.js` (`MUSIC_TRACKS`, `MUSIC_INSTRUMENTS`), `tools/gen-sounds.
 ## 2. Miasta niewidoczne pod jednostkami — ZROBIONE
 
 **Wykonanie z 0.7.1 odrzucone i przepisane.** Łuk przy krawędzi zastąpiła **gwiazdka nad
-miastem** (złota — stolica, srebrna — miasto, granatowa — port) i **klin nad złożem**
+miastem** (srebrna — miasto, granatowa — port; złota gwiazdka stolicy przetrwała tylko
+0.8.0 — od 0.8.1 stolica ma koronę, bo złoto myliło się z odznaką elity) i **klin nad złożem**
 (zielony — farma, czarny — ropa, brązowy — kopalnia), oba w korytarzu górnego wierzchołka.
 Domyślnie znacznik pojawia się **tylko tam, gdzie jednostka faktycznie coś zasłania** —
 przycisk „Znaczniki miast" w panelu bocznym (klawisz **D**) pokazuje wszystkie. To ta
@@ -235,14 +236,20 @@ z `Documents/12-Protokol-smoke.md` (obie pozycje 1-2 to zmiany renderu i audio, 
 nie pokrywa żaden harness), `node tools/check-portability.js`, `node tools/team-check.js`,
 bump `GAME_VERSION` w `src/config.js` + wpis w `CHANGELOG.md` w tym samym commicie.
 
-**Wzorzec regresji wizualnej do przestawienia — TERAZ JEST NA TO PORA.** Warunek „render
-przestał się ruszać" jest spełniony: znaczniki są zamknięte, czołg przemalowany w 0.7.2,
-muzyka nie dotyka pikseli. Zapisany wzorzec nie pasuje z trzech niezależnych powodów
-(znaczniki 0.7.1, czołg 0.7.2, przebudowa znaczników w 0.8.0), więc do czasu przestawienia
-każdy przebieg jest ścianą fałszywych błędów.
-
+**Wzorzec regresji wizualnej — PRZESTAWIONY 2026-08-05 (0.8.1).** Zapisany wzorzec nie
+pasował z czterech niezależnych powodów (znaczniki 0.7.1, czołg 0.7.2, przebudowa
+znaczników 0.8.0, korona stolicy 0.8.1), więc każdy przebieg był ścianą fałszywych błędów.
 Przestawia się **ręcznie w przeglądarce**, bo wzorzec siedzi w `localStorage` konkretnej
 maszyny: `node tools/serve.js` → `visual-test.html` → „Ustaw jako wzorzec". Żaden skrypt
-tego za nas nie zrobi. Uwaga przy okazji: `visual-test.html` przypina teraz
-`markDetailView = false` przed przebiegiem — bez tego ten sam kod dawałby inne hasze
-u kogoś, kto włączył widok szczegółowy.
+tego za nas nie zrobi — hasze policzone w headless mogłyby różnić się rasteryzacją i dałyby
+dokładnie tę ścianę błędów, którą przestawienie likwiduje.
+
+**Przy okazji wyszło, dlaczego to nie mogło się udać wcześniej:** pętla AI na tej stronie
+wołała `MOVES_PER_TURN`, czyli nazwę, którą `config.js` dawno zmienił na
+`ACTIVATIONS_PER_TURN`. Strona wywalała się na pierwszym seedzie i nie dochodziła do
+miniatur, więc nie było czego zapisać. Naprawione; pełny domyślny przebieg (24 partie,
+checkpointy 1/30/80, 72 klatki) idzie w kilka sekund bez wyjątków.
+
+Uwaga, która nie straciła ważności: `visual-test.html` przypina `markDetailView = false`
+przed przebiegiem — bez tego ten sam kod dawałby inne hasze u kogoś, kto włączył widok
+szczegółowy.
