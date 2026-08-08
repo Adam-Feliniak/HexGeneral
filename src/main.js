@@ -13,6 +13,10 @@ if (typeof document !== 'undefined' && canvas) {
   if (vt) vt.textContent = 'v' + GAME_VERSION + (BUILD_TAG ? ' · ' + BUILD_TAG : '');
   const ct = document.getElementById('copyright-tag');
   if (ct) ct.textContent = GAME_COPYRIGHT;
+  // Ta sama informacja co w stopce, celowo zdublowana: stopke da sie ukryc
+  // jednym CSS-em przy rehostingu, notki w konsoli trzeba juz szukac w kodzie.
+  console.log('Hex General v' + GAME_VERSION + ' — ' + GAME_COPYRIGHT
+    + '\nAll rights reserved. See LICENSE for terms.');
   state = {
     screen: 'menu',
     spSetup: defaultSpSetup(),
