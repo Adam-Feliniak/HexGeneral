@@ -1,0 +1,16 @@
+# Konfiguracja wdrozenia na Netlify.
+#
+# Gra jest czysta statyka, ale katalogu glownego repo NIE wolno publikowac:
+# poszlyby pod publiczny adres Documents/, CLAUDE.md, CHANGELOG.md i archiwum/.
+# Dlatego build to ten sam allowlistowy pack-build.js, ktory robi paczki dla
+# testerow -- kopiuje wylacznie gre i sam sprawdza, ze nic innego nie wycieklo.
+#
+# Znacznik `web` laduje w BUILD_TAG (tylko w kopii, zrodlo zostaje nietkniete)
+# i jest widoczny w rogu menu -- to sygnal, ze serwowany jest build z CI.
+
+[build]
+  command = "node tools/pack-build.js --tag=web"
+  publish = "dist/web"
+
+[build.environment]
+  NODE_VERSION = "20"
