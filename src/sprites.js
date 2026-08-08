@@ -19,7 +19,7 @@ function loadSprites() {
     cityPort: loadSprite('city_port'),
     crane: loadSprite('crane'),
     trees: [loadSprite('tree_0'), loadSprite('tree_1')],
-    res: { oil: loadSprite('res_oil'), farm: loadSprite('res_farm'), mine: loadSprite('res_mine') },
+    res: { oil: loadSprite('Res_oil'), farm: loadSprite('res_farm'), mine: loadSprite('res_mine') },
     rocks: [loadSprite('rock_0'), loadSprite('rock_1')],
     hexSand: [0, 1, 2].map(v => loadSprite('hex_sand_' + v)),
     hexGrass: [0, 1, 2].map(v => loadSprite('hex_grass_' + v)),
